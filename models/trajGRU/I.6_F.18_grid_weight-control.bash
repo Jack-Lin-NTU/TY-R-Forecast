@@ -1,5 +1,5 @@
 python trajGRU_run.py \
-	--gpu 1	\
+	--gpu 2	\
 	--lr-scheduler	\
 	--input-with-grid	\
 	--clip	\

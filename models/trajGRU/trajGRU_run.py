@@ -121,8 +121,9 @@ def train(net, trainloader, testloader, result_folder, params_folder, max_epochs
 
         time_b = time.time()
         print('The computing time of this epoch = {:.3f} sec'.format(time_b-time_a))
+        print(('Max allocated memory:{:.3f}GB'.format(int(torch.cuda.max_memory_allocated(device=args.gpu)/1024/1024/1024))))
         f_log.writelines('The computing time of this epoch = {:.3f} sec\n'.format(time_b-time_a))
-        f_log.writelines('Max allocated memory:{:.3f}GB'.format(int(torch.cuda.max_memory_allocated(device=args.gpu)/1024/1024/1024)))
+        f_log.writelines('Max allocated memory:{:.3f}GB\n'.format(int(torch.cuda.max_memory_allocated(device=args.gpu)/1024/1024/1024)))
         f_log.close()
 
         if (epoch+1) % 10 == 0 or (epoch+1) == max_epochs:

@@ -40,8 +40,7 @@ def train(net, trainloader, testloader, result_folder, params_folder, max_epochs
     params_pt = os.path.join(params_folder, 'params.pt')
 
     remove_file(log_file)
-    remove_file(train_file)
-    remove_file(test_file)
+    remove_file(result_file)
     remove_file(lr_file)
     remove_file(params_file)
     remove_file(params_pt)
@@ -78,8 +77,8 @@ def train(net, trainloader, testloader, result_folder, params_folder, max_epochs
         train_loss = 0
         for i, data in enumerate(trainloader,0):
             
-            inputs = data["RAD"].to(device, dtype=torch.float)  # inputs.shape = [4,10,1,180,180]
-            labels = data["QPE"].to(device, dtype=torch.float)  # labels.shape = [4,18,60,60]
+            inputs = data['RAD'].to(device, dtype=torch.float)  # inputs.shape = [4,10,1,180,180]
+            labels = data['QPE'].to(device, dtype=torch.float)  # labels.shape = [4,18,60,60]
             
             outputs = net(inputs)                           # outputs.shape = [4, 18, 60, 60]
 
@@ -93,7 +92,7 @@ def train(net, trainloader, testloader, result_folder, params_folder, max_epochs
             # optimize model
             optimizer.zero_grad()
             loss.backward()
-            # "clip_grad_norm" helps prevent the exploding gradient problem in RNNs or LSTMs.
+            # 'clip_grad_norm' helps prevent the exploding gradient problem in RNNs or LSTMs.
             if args.clip:
                 nn.utils.clip_grad_norm_(net.parameters(), max_norm=args.clip_max_norm)
             optimizer.step()
@@ -113,7 +112,7 @@ def train(net, trainloader, testloader, result_folder, params_folder, max_epochs
         # Save the test loss per epoch
         test_loss = test(net, testloader=testloader, loss_function=loss_function, device=device)
         # print out the testing results.
-        print("ConvGRUv2|  Epoch [{}/{}], Test Loss: {:8.3f}".format(epoch+1, max_epochs, test_loss))
+        print('ConvGRUv2|  Epoch [{}/{}], Test Loss: {:8.3f}'.format(epoch+1, max_epochs, test_loss))
         # save the testing results.
         result.iloc[epoch,1] = test_loss
 
@@ -121,8 +120,9 @@ def train(net, trainloader, testloader, result_folder, params_folder, max_epochs
         result.to_csv(result_file)
 
         time_b = time.time()
-        print("The computing time of this epoch = {:.3f} sec".format(time_b-time_a))
-        f_log.writelines("The computing time of this epoch = {:.3f} sec\n".format(time_b-time_a))
+        print('The computing time of this epoch = {:.3f} sec'.format(time_b-time_a))
+        f_log.writelines('The computing time of this epoch = {:.3f} sec\n'.format(time_b-time_a))
+        f_log.writelines('Max allocated memory:{:.3f}GB'.format(int(torch.cuda.max_memory_allocated(device=args.gpu)/1024/1024/1024)))
         f_log.close()
 
         if (epoch+1) % 10 == 0 or (epoch+1) == max_epochs:
@@ -137,13 +137,13 @@ def train(net, trainloader, testloader, result_folder, params_folder, max_epochs
         if (epoch+1) == max_epochs:
             # counts the number of model weightings.
             total_params = sum(p.numel() for p in net.parameters())
-            print("\nConvGRUv2|  Total_params: {:.2e}".format(total_params))
+            print('\nConvGRUv2|  Total_params: {:.2e}'.format(total_params))
             # save the number of model weightings.
-            f_params = open(params_file, "a")
-            f_params.writelines("Total_params: {:.2e}\n".format(total_params))
+            f_params = open(params_file, 'a')
+            f_params.writelines('Total_params: {:.2e}\n'.format(total_params))
             f_params.close()
 
-    print("Training process has finished!")
+    print('Training process has finished!')
 
 def test(net, testloader, loss_function=BMSE, device=args.device):
     '''
@@ -160,7 +160,7 @@ def test(net, testloader, loss_function=BMSE, device=args.device):
 
     with torch.no_grad():
         for _, data in enumerate(testloader,0):
-            inputs, labels = data["RAD"].to(device, dtype=torch.float), data["QPE"].to(device, dtype=torch.float)
+            inputs, labels = data['RAD'].to(device, dtype=torch.float), data['QPE'].to(device, dtype=torch.float)
             outputs = net(inputs)
             outputs = outputs.view(outputs.shape[0], -1)
             labels = labels.view(labels.shape[0], -1)
@@ -202,7 +202,7 @@ def get_dataloader(input_frames, output_frames, with_grid=False, normalize_tartg
                             transform = transfrom)
     inputs_channels = traindataset[0]['RAD'].shape[1]
     # set train and test dataloader
-    params = {"batch_size": args.batch_size, "shuffle": True, "num_workers": 1}
+    params = {'batch_size': args.batch_size, 'shuffle': True, 'num_workers': 1}
     trainloader = DataLoader(traindataset, **params)
     testloader = DataLoader(testdataset, batch_size=args.batch_size*10, shuffle=False)
 
@@ -262,14 +262,14 @@ def run(result_folder, params_folder, channel_factor, input_frames, output_frame
 
     Net = model(n_encoders=input_frames, n_decoders=output_frames, rnn_link_size=rnn_link_size,  encoder_input_channel=encoder_input_channel, encoder_downsample_channels=encoder_downsample_channels, encoder_rnn_channels=encoder_rnn_channels, encoder_downsample_k=encoder_downsample_k, encoder_downsample_s=encoder_downsample_s, encoder_downsample_p=encoder_downsample_p, encoder_rnn_k=encoder_rnn_k,encoder_rnn_s=encoder_rnn_s, encoder_rnn_p=encoder_rnn_p, encoder_n_layers=encoder_n_layers, decoder_input_channel=decoder_input_channel, decoder_upsample_channels=decoder_upsample_channels, decoder_rnn_channels=decoder_rnn_channels, decoder_upsample_k=decoder_upsample_k, decoder_upsample_s=decoder_upsample_s, decoder_upsample_p=decoder_upsample_p, decoder_rnn_k=decoder_rnn_k, decoder_rnn_s=decoder_rnn_s, decoder_rnn_p=decoder_rnn_p, decoder_n_layers=decoder_n_layers, decoder_output=decoder_output, decoder_output_k=decoder_output_k, decoder_output_s=decoder_output_s, decoder_output_p=decoder_output_p, decoder_output_layers=decoder_output_layers, batch_norm=args.batch_norm).to(device, dtype=torch.float)
 
-    info = "| Channel factor c: {:02d}, Forecast frames: {:02d}, Input frames: {:02d} |".format(channel_factor, output_frames,input_frames)
+    info = '| Channel factor c: {:02d}, Forecast frames: {:02d}, Input frames: {:02d} |'.format(channel_factor, output_frames,input_frames)
 
-    print("="*len(info))
+    print('='*len(info))
     print(info)
-    print("="*len(info))
+    print('='*len(info))
     train(net=Net, trainloader=trainloader, testloader=testloader, result_folder=result_folder, params_folder=params_folder, max_epochs=max_epochs, loss_function=loss_function, lr_scheduler=args.lr_scheduler, device=device)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # set the parameters of the experiment
     time_s = time.time()
     output_frames = args.output_frames
@@ -300,11 +300,12 @@ if __name__ == "__main__":
         if args.clip:
             for j in [1,3,5,10]:
                 args.weight_decay = 10**(-i)
-                args.clip_max_norm = j*args.clip_max_norm
-                args.result_folder = os.path.join(args.result_dir, "BMSE_wd{:.4f}_cm{:02d}".format(args.weight_decay, args.clip_max_norm))
-                args.params_folder = os.path.join(args.params_dir, "BMSE_wd{:.4f}_cm{:02d}".format(args.weight_decay, args.clip_max_norm))
-                print(" [The folder path of reslut files]:", args.result_folder)
-                print(" [The folder path of params files]:", args.params_folder)
+                print(args.weight_decay)
+                args.clip_max_norm = int(j*args.clip_max_norm)
+                args.result_folder = os.path.join(args.result_dir, 'BMSE_wd{:.4f}_cm{:02d}'.format(args.weight_decay, args.clip_max_norm))
+                args.params_folder = os.path.join(args.params_dir, 'BMSE_wd{:.4f}_cm{:02d}'.format(args.weight_decay, args.clip_max_norm))
+                print(' [The folder path of reslut files]:', args.result_folder)
+                print(' [The folder path of params files]:', args.params_folder)
                 createfolder(args.result_folder)
                 createfolder(args.params_folder)
                 run(result_folder=args.result_folder, params_folder=args.params_folder, channel_factor=channel_factor, input_frames=input_frames, output_frames=output_frames, loss_function=BMSE, max_epochs=args.max_epochs, batch_norm=args.batch_norm, device=args.device)
@@ -314,13 +315,13 @@ if __name__ == "__main__":
                 m = int((t-h*3600)//60)
                 s = int(t-h*3600-m*60)
 
-                print("The total computing time of this training process: {:d}:{:d}:{:d}".format(h,m,s))
+                print('The total computing time of this training process: {:d}:{:d}:{:d}'.format(h,m,s))
         else:
             args.weight_decay = 10**(-i)
-            args.result_folder = os.path.join(args.result_dir, "BMSE_wd{:.4f}".format(args.weight_decay))
-            args.params_folder = os.path.join(args.params_dir, "BMSE_wd{:.4f}".format(args.weight_decay))
-            print(" [The folder path of reslut files]:", args.result_folder)
-            print(" [The folder path of params files]:", args.params_folder)
+            args.result_folder = os.path.join(args.result_dir, 'BMSE_wd{:.4f}'.format(args.weight_decay))
+            args.params_folder = os.path.join(args.params_dir, 'BMSE_wd{:.4f}'.format(args.weight_decay))
+            print(' [The folder path of reslut files]:', args.result_folder)
+            print(' [The folder path of params files]:', args.params_folder)
             createfolder(args.result_folder)
             createfolder(args.params_folder)
             run(result_folder=args.result_folder, params_folder=args.params_folder, channel_factor=channel_factor, input_frames=input_frames, output_frames=output_frames, loss_function=BMSE, max_epochs=args.max_epochs, batch_norm=args.batch_norm, device=args.device)
@@ -331,4 +332,4 @@ if __name__ == "__main__":
             m = int((t-h*3600)//60)
             s = int(t-h*3600-m*60)
 
-            print("The total computing time of this training process: {:d}:{:d}:{:d}".format(h,m,s))
+            print('The total computing time of this training process: {:d}:{:d}:{:d}'.format(h,m,s))

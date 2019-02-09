@@ -1,4 +1,5 @@
 python trajGRU_run.py \
+    --input-frames 10   \
     --root-dir 01_Radar_data/02_numpy_files \
     --ty-list-file ty_list.xlsx \
     --result-dir 04_results/server \

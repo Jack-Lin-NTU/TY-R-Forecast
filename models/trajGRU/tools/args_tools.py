@@ -6,7 +6,7 @@ import torch
 
 def createfolder(directory):
     '''
-    function to create new folder with given directory
+    This function is used to create new folder with given directory.
     '''
     try:
         if not os.path.exists(directory):
@@ -16,7 +16,7 @@ def createfolder(directory):
 
 def make_path(path, workfolder=None):
     '''
-    this function is to make path
+    This function is to make absolute path.
     '''
     if path[0] == '~':
         new_path = os.path.expanduser(path)
@@ -32,7 +32,7 @@ def remove_file(file):
     if os.path.exists(file):
         os.remove(file)
 
-parser = argparse.ArgumentParser("")
+parser = argparse.ArgumentParser('')
 
 # arguments for gpu settings
 
@@ -65,15 +65,15 @@ parser.add_argument('--normalize-tartget', action='store_true',
 
 working_folder = os.path.expanduser('~/OneDrive/01_IIS/04_TY_research')
 
-parser.add_argument("--working-folder", default=working_folder, type=str,
+parser.add_argument('--working-folder', default=working_folder, type=str,
                     metavar='', help='The path of the mother folder of this code. (the mother folder should have the radar numpy folder, typhoon list excel file, and so on.)')
-parser.add_argument("--root-dir", default='01_Radar_data/02_numpy_files', type=str,
+parser.add_argument('--root-dir', default='01_Radar_data/02_numpy_files', type=str,
                     metavar='', help='The folder path of the Radar numpy data. (default=\'working-folder/01_Radar_data/02_numpy_files\')')
-parser.add_argument("--ty-list-file", default='ty_list.xlsx', type=str,
+parser.add_argument('--ty-list-file', default='ty_list.xlsx', type=str,
                     metavar='', help='The path of ty_list excel file. (default=\'working-folder/ty_list.xlsx\')')
-parser.add_argument("--result-dir", default='04_results', type=str,
+parser.add_argument('--result-dir', default='04_results', type=str,
                     metavar='', help='The folder path of result files. (default=\'working-folder/04_results\')')
-parser.add_argument("--params-dir", default='05_params', type=str,
+parser.add_argument('--params-dir', default='05_params', type=str,
                     metavar='', help='The folder path of parameter files. (default=\'working-folder/05_params\')')
 
 parser.add_argument('--input-frames', default=6, type=int, metavar='',
@@ -85,25 +85,25 @@ parser.add_argument('--input-with-grid', action='store_true',
 parser.add_argument('--channel-factor', default=2, type=int, metavar='',
                     help='The channel factor of trajGRU model. (default=2)')
 
-parser.add_argument("--I-lat-l", default=23.9125, type=float, metavar='',
+parser.add_argument('--I-lat-l', default=23.9125, type=float, metavar='',
                     help='The lowest latitude of the input frames. (default=23.9125)')
-parser.add_argument("--I-lat-h", default=26.15, type=float, metavar='',
+parser.add_argument('--I-lat-h', default=26.15, type=float, metavar='',
                     help='The highest latitude of the input frames. (default=26.15)')
-parser.add_argument("--I-lon-l", default=120.4, type=float, metavar='',
+parser.add_argument('--I-lon-l', default=120.4, type=float, metavar='',
                     help='The lowest longitude of the input frames. (default=120.4)')
-parser.add_argument("--I-lon-h", default=122.6375, type=float, metavar='',
+parser.add_argument('--I-lon-h', default=122.6375, type=float, metavar='',
                     help='The highest longitude of the input frames. (default=122.6375)')
 
-parser.add_argument("--F-lat-l", default=24.6625, type=float, metavar='',
+parser.add_argument('--F-lat-l', default=24.6625, type=float, metavar='',
                     help='The lowest latitude of the forecast frames. (default=24.6625)')
-parser.add_argument("--F-lat-h", default=25.4, type=float, metavar='',
+parser.add_argument('--F-lat-h', default=25.4, type=float, metavar='',
                     help='The highest latitude of the forecast frames. (default=25.4)')
-parser.add_argument("--F-lon-l", default=121.15, type=float, metavar='',
+parser.add_argument('--F-lon-l', default=121.15, type=float, metavar='',
                     help='The lowest longitude of the forecast frames. (default=121.15)')
-parser.add_argument("--F-lon-h", default=121.8875, type=float, metavar='',
+parser.add_argument('--F-lon-h', default=121.8875, type=float, metavar='',
                     help='The highest longitude of the forecast frames. (default=121.8875)')
 
-parser.add_argument("--res-degree", default=0.0125, type=float, metavar='',
+parser.add_argument('--res-degree', default=0.0125, type=float, metavar='',
                     help='The res_degree degree of the data. (default=0.0125)')
 
 args = parser.parse_args()
@@ -142,6 +142,6 @@ args.F_shape = (math.ceil((args.F_lat_h-args.F_lat_l)/args.res_degree)+1,
 args.I_shape = (math.ceil((args.I_lon_h-args.I_lon_l)/args.res_degree)+1,
                     math.ceil((args.I_lon_h-args.I_lon_l)/args.res_degree))
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     print(args.input_with_grid)
     print(args.lr_scheduler)

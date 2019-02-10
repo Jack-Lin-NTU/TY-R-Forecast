@@ -300,7 +300,6 @@ if __name__ == '__main__':
         if args.clip:
             for j in [1,3,5,10]:
                 args.weight_decay = 10**(-i)
-                print(args.weight_decay)
                 args.clip_max_norm = int(j*args.clip_max_norm)
                 args.result_folder = os.path.join(args.result_dir, 'BMSE_wd{:.4f}_cm{:02d}'.format(args.weight_decay, args.clip_max_norm))
                 args.params_folder = os.path.join(args.params_dir, 'BMSE_wd{:.4f}_cm{:02d}'.format(args.weight_decay, args.clip_max_norm))

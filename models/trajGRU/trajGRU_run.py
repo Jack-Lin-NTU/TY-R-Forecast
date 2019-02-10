@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import pandas as pd
+pd.set_option('precision', 4)
 
 ## import torch modules
 import torch
@@ -33,15 +34,13 @@ def train(net, trainloader, testloader, result_folder, params_folder, max_epochs
     device: the device where the training process takes.
     '''
     # set file path for saveing some info.
-    log_file = os.path.join(result_folder, 'log.csv')
+    log_file = os.path.join(result_folder, 'log.txt')
     result_file = os.path.join(result_folder, 'result.csv')
-    lr_file = os.path.join(result_folder, 'lr.csv')
     params_file = os.path.join(result_folder, 'params_counts.csv')
     params_pt = os.path.join(params_folder, 'params.pt')
 
     remove_file(log_file)
     remove_file(result_file)
-    remove_file(lr_file)
     remove_file(params_file)
     remove_file(params_pt)
     
@@ -55,6 +54,10 @@ def train(net, trainloader, testloader, result_folder, params_folder, max_epochs
     
     total_batches = len(trainloader)
     
+    # To declare a DataFrame to store training and testing loss
+    result = pd.DataFrame([],index=range(1,max_epochs+1),columns=['training_loss','testing_loss','lr'])
+    result.index.name = 'epoch'
+
     for epoch in range(max_epochs):
         time_a = time.time()
 
@@ -67,13 +70,9 @@ def train(net, trainloader, testloader, result_folder, params_folder, max_epochs
         # show the current learning rate (optimizer.param_groups returns a list which stores several params.)
         print('lr: {:.1e}'.format(optimizer.param_groups[0]['lr']))
         # Save learning rate per epochs
-        f_lr = open(lr_file,'a')
-        f_lr.writelines('lr: {:1e}\n'.format(optimizer.param_groups[0]['lr']))
-        f_lr.close()
+        result.iloc[epoch,2] = optimizer.param_groups[0]['lr'])
         f_log.writelines('lr: {:1e}\n'.format(optimizer.param_groups[0]['lr']))  
         # training process
-        result = pd.DataFrame([],index=range(1,max_epochs+1),columns=['training loss','testing loss'])
-        result.index.name = 'epoch'
         train_loss = 0
         for i, data in enumerate(trainloader,0):
             
@@ -114,7 +113,7 @@ def train(net, trainloader, testloader, result_folder, params_folder, max_epochs
         # print out the testing results.
         print('ConvGRUv2|  Epoch [{}/{}], Test Loss: {:8.3f}'.format(epoch+1, max_epochs, test_loss))
         # save the testing results.
-        result.iloc[epoch,1] = test_loss
+        result.iloc[epoch,1] = test_loss.item()
 
         # output results per 1 epoch.
         result.to_csv(result_file)

@@ -1,5 +1,6 @@
 python trajGRU_run.py \
 	--gpu 2	\
+	--batch-size 6	\
 	--lr-scheduler	\
 	--input-with-grid	\
 	--clip	\

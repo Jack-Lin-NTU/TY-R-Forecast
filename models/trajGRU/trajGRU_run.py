@@ -70,7 +70,7 @@ def train(net, trainloader, testloader, result_folder, params_folder, max_epochs
         # show the current learning rate (optimizer.param_groups returns a list which stores several params.)
         print('lr: {:.1e}'.format(optimizer.param_groups[0]['lr']))
         # Save learning rate per epochs
-        result.iloc[epoch,2] = optimizer.param_groups[0]['lr'])
+        result.iloc[epoch,2] = optimizer.param_groups[0]['lr']
         f_log.writelines('lr: {:.1e}\n'.format(optimizer.param_groups[0]['lr']))  
         # training process
         train_loss = 0

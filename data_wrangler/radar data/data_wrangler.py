@@ -6,6 +6,10 @@ import os
 from args_tools import args, createfolder
 
 def extract_original_data():
+    '''
+    Arguments:
+        This function is to extract the selected event data form original data.
+    '''
     #load typhoon list file
     ty_list = pd.read_excel(args.ty_list)
 
@@ -46,6 +50,10 @@ def extract_original_data():
         print("|----------------------------------------------------|")
 
 def uncompress_and_output_numpy_files():
+    '''
+    Arguments:
+        This function is to uncompress the extracted files and output the numpy files(*.npz).
+    '''
     # load typhoon list file
     ty_list = pd.read_excel(args.ty_list)
 
@@ -82,10 +90,11 @@ def uncompress_and_output_numpy_files():
                 createfolder(output_folder)
             tmp_uncompressed_file = os.path.join(tmp_uncompressed_folder,name+'_'+outputtime)
 
+            # define the object of gzip
             g_file = gzip.GzipFile(compressed_file)
-            # 创建gzip对象
+            # use read() to open gzip and write into the open file。
             open(tmp_uncompressed_file, "wb").write(g_file.read())
-            # gzip对象用read()打开后，写入open()建立的文件中。
+            # close the object of gzip
             g_file.close()
 
             tmp_file_out = os.path.join(tmp_uncompressed_folder, name+"_"+outputtime+".txt")
@@ -104,6 +113,10 @@ def uncompress_and_output_numpy_files():
     return count_qpe, count_qpf, count_rad
 
 def check_data_and_create_miss_data():
+    '''
+    Arguments:
+        This function is to check whether the wrangled files are continuous in each typhoon events and address missing files.
+    '''
     # Set path
     numpy_files_folder = args.numpy_files_folder
 
@@ -167,6 +180,71 @@ def check_data_and_create_miss_data():
         np.savez_compressed(os.path.join(args.numpy_files_folder,missfiles.index[i],missfiles.iloc[i,0]), data=data)
     return count_qpe, count_qpf, count_rad
 
+def overall_of_data():
+    '''
+    Arguments:
+        This function is to summarize the overall property of the wrangled data.
+    '''
+    # Taipei
+    study_area = args.study_area
+    # Set path
+    numpy_files_folder = args.numpy_files_folder
+    radar_folder = args.radar_folder
+
+    file_out = open(os.path.join(radar_folder,'overall.txt'),'w')
+    file_out_mu_std = open(os.path.join(radar_folder,'mu_std.txt'),'w')
+
+    for i in sorted(os.listdir(numpy_files_folder)):
+        tmp_path = os.path.join(numpy_files_folder,i)
+        # print(tmp_path)
+        tmp=0
+        tmp_max = []
+        tmp_min = []
+        tmp_max_file = []
+        tmp_min_file = []
+        tmp_ty = []
+        mu = 0
+        std = 0
+
+        for j in sorted(os.listdir(tmp_path)):
+            if j[:-17] not in tmp_ty:
+                tmp_ty.append(j[:-17])
+                tmp_max.append(0)
+                tmp_min.append(100)
+                tmp_max_file.append(0)
+                tmp_min_file.append(0)
+                tmp = tmp+1
+
+            file_in = os.path.join(tmp_path,j)
+            # print(file_in)
+            data = np.load(file_in)['data']
+            mu += np.sum(data)
+            if tmp_max[tmp-1] < np.max(data):
+                tmp_max[tmp-1] = np.max(data)
+                tmp_max_file[tmp-1] = j
+            if tmp_min[tmp-1] > np.min(data):
+                tmp_min[tmp-1] = np.min(data)
+                tmp_min_file[tmp-1] = j
+
+        mu = mu/(len(os.listdir(tmp_path))*data.size)
+
+        for j in sorted(os.listdir(tmp_path)):
+            file_in = os.path.join(tmp_path,j)
+            data = np.load(file_in)['data']
+            std += np.sum((data-mu)**2)
+        std = np.sqrt(std/(len(os.listdir(tmp_path))*data.size))
+
+        file_out_mu_std.writelines('{:>5s}: |mu: {:6.3f} |std: {:6.3f}\n'.format(i,mu,std))
+
+        file_out.writelines('-----------------------------------------------------------------------------------------------------------------------------\n')
+        file_out.writelines(i+'\n')
+
+        for i in np.arange(len(tmp_ty)):
+            file_out.writelines('{:<18s}\t|min:{:7.2f}\tfile_min:{:28s}\t|max:{:7.2f} file_max:{:s}\n'.
+                                format(tmp_ty[i],tmp_min[i],tmp_min_file[i],tmp_max[i],tmp_min_file[i]))
+
+    file_out_mu_std.close()
+    file_out.close()
 
 if __name__ == "__main__":
     info = "*{:^58s}*".format('Data extracter')
@@ -190,5 +268,8 @@ if __name__ == "__main__":
         print("-" * len(info))
 
     count_qpe, _, count_rad = check_data_and_create_miss_data()
-    print(count_qpe)
-    print(count_rad)
+    print('The number of the missing files in QPE data:',count_qpe)
+    print('The number of the missing files in RAD data:',count_rad)
+
+    # summarize data
+    overall_of_data()

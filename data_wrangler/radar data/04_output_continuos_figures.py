@@ -7,7 +7,7 @@ from matplotlib.ticker import FormatStrFormatter
 from args_tools import *
 
 
-def output_continous_figures():
+def plot_continous_figures():
     # load typhoon list
     ty_list = pd.read_excel("../ty_list.xlsx")
 
@@ -86,4 +86,4 @@ def output_continous_figures():
     plt.close()
 
 if __name__ == "__main__":
-    output_continous_figures()
+    plot_continous_figures()

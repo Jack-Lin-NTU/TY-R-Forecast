@@ -6,7 +6,13 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.ticker import FormatStrFormatter
 from args_tools import *
 
-def output_figure(fig_type, part):
+def plot_figure(which_data, part):
+    '''
+    Arguments:
+        This function is to plot figure with the wrangled data.
+    which_data(str): Which data wants to be plotted.('QPE','QPF','RAD')
+    part(int):
+    '''
     study_area = args.study_area
     # set lat and lon of inputs
     lat_l = args.I_lat_l
@@ -35,8 +41,8 @@ def output_figure(fig_type, part):
     levels_rad = [-1,0,10,20,30,40,50,60,70]
     c_rad = ('#FFFFFF','#FFD8D8','#FFB8B8','#FF9090','#FF6060','#FF2020','#CC0000','#A00000')
 
-    data_path = wrangled_files_folder+'/'+fig_type
-    fig_path = wrangled_figs_folder+'/'+fig_type
+    data_path = wrangled_files_folder+'/'+which_data
+    fig_path = wrangled_figs_folder+'/'+which_data
     createfolder(fig_path)
 
     tmp=0
@@ -64,7 +70,7 @@ def output_figure(fig_type, part):
         m.readshapefile(TW_map_file, name='Taiwan', linewidth=0.25, drawbounds=True, color='gray')
         X, Y = np.meshgrid(x,y)
 
-        if fig_type == "QPE" or fig_type == "QPF":
+        if which_data == "QPE" or which_data == "QPF":
             cp = m.contourf(X,Y,data,levels_qp,colors=c_qp,alpha=0.95)
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="5%", pad=0.1)
@@ -103,15 +109,15 @@ def multiprocess():
     print("*" * len(tt))
 
     # set multiprocessing
-    p1 = mp.Process(target=output_figure,args=("RAD",1))
-    p2 = mp.Process(target=output_figure,args=("QPE",1))
-    p3 = mp.Process(target=output_figure,args=("QPF",1))
-    p4 = mp.Process(target=output_figure,args=("RAD",2))
-    p5 = mp.Process(target=output_figure,args=("QPE",2))
-    p6 = mp.Process(target=output_figure,args=("QPF",2))
-    p7 = mp.Process(target=output_figure,args=("RAD",3))
-    p8 = mp.Process(target=output_figure,args=("QPE",3))
-    p9 = mp.Process(target=output_figure,args=("QPF",3))
+    p1 = mp.Process(target=plot_figure,args=("RAD",1))
+    p2 = mp.Process(target=plot_figure,args=("QPE",1))
+    p3 = mp.Process(target=plot_figure,args=("QPF",1))
+    p4 = mp.Process(target=plot_figure,args=("RAD",2))
+    p5 = mp.Process(target=plot_figure,args=("QPE",2))
+    p6 = mp.Process(target=plot_figure,args=("QPF",2))
+    p7 = mp.Process(target=plot_figure,args=("RAD",3))
+    p8 = mp.Process(target=plot_figure,args=("QPE",3))
+    p9 = mp.Process(target=plot_figure,args=("QPF",3))
     p1.start()
     p2.start()
     p3.start()

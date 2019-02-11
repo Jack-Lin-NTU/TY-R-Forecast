@@ -20,13 +20,13 @@ def make_path(path, workfolder):
         p = path
 
     if not os.path.isabs(p):
-        return os.path.join(workfolder,p)
+        return os.path.join(os.path.expanduser(workfolder), p)
     else:
         return p
 
 parser = argparse.ArgumentParser()
 
-working_folder = os.path.expanduser('~/GoogleDrive/01_IIS/04_TY_research/01_Radar_data')
+working_folder = os.path.expanduser('~/OneDrive/01_IIS/04_TY_research/01_Radar_data')
 
 parser.add_argument("--study-area", default="Taipei", metavar='', type=str)
 

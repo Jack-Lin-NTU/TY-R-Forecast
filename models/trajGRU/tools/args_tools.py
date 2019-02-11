@@ -55,12 +55,12 @@ parser.add_argument('--weight-decay', default=1e-2, type=float, metavar='',
                     help='The factor of weight decay. (default=1e-2)')
 parser.add_argument('--clip', action='store_true',
                     help='To clip the weightings of the model or not. (default=False)')
-parser.add_argument('--clip-max-norm', default=10, type=float, metavar='',
-                    help='Max clip norm. (default=10)')
+parser.add_argument('--clip-max-norm', default=100, type=float, metavar='',
+                    help='Max clip norm. (default=100)')
 
 parser.add_argument('--batch-norm', action='store_true',
                     help='To do batch normalization or not. (default=False)')
-parser.add_argument('--normalize-tartget', action='store_true',
+parser.add_argument('--normalize-target', action='store_true',
                     help='To nomalize target data or not. (default=False)')
 
 working_folder = os.path.expanduser('~/OneDrive/01_IIS/04_TY_research')

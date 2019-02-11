@@ -169,7 +169,7 @@ def test(net, testloader, loss_function=BMSE, device=args.device):
         loss = loss/n_batch
     return loss
 
-def get_dataloader(input_frames, output_frames, with_grid=False, normalize_tartget=False):
+def get_dataloader(input_frames, output_frames, with_grid=False, normalize_target=False):
     '''
     Arguments: this function divides the data properly with given condition to provide training and testing dataloader.
     input_frames(int): the number of input frames for the constructed model.
@@ -180,7 +180,7 @@ def get_dataloader(input_frames, output_frames, with_grid=False, normalize_tartg
     # Normalize data
     mean = [7.044] * input_frames
     std = [12.180] * input_frames
-    if normalize_tartget:
+    if normalize_target:
         mean += [1.122] * output_frames
         std += [3.858] * output_frames
     transfrom = transforms.Compose([ToTensor(),Normalize(mean=mean, std=std)])
@@ -213,7 +213,7 @@ def run(result_folder, params_folder, channel_factor, input_frames, output_frame
         loss_function=BMSE, max_epochs=100, batch_norm=args.batch_norm, device=args.device):
 
     # get dataloader
-    inputs_channels, trainloader, testloader = get_dataloader(input_frames, output_frames, with_grid=with_grid, normalize_tartget=args.normalize_tartget)
+    inputs_channels, trainloader, testloader = get_dataloader(input_frames, output_frames, with_grid=with_grid, normalize_target=args.normalize_target)
 
     # set the factor of cnn channels
     c = channel_factor
@@ -295,11 +295,11 @@ if __name__ == '__main__':
     createfolder(args.result_dir)
     createfolder(args.params_dir)
     ## test weight decay and clip max norm
-    # i is the factor of weight decay, j is the factor to control the value of max norm
-    for i in range(1,4):
+    # i is a factor of weight decay, j is a factor to control the thresold norm of parameters in the model.
+    for i in range(2,6):
         if args.clip:
-            for j in [1,3,5,10]:
-                args.weight_decay = 10**(-i)
+            for j in [1]:
+                args.weight_decay = i*args.weight_decay
                 args.clip_max_norm = int(j*args.clip_max_norm)
                 args.result_folder = os.path.join(args.result_dir, 'BMSE_wd{:.4f}_cm{:02d}'.format(args.weight_decay, args.clip_max_norm))
                 args.params_folder = os.path.join(args.params_dir, 'BMSE_wd{:.4f}_cm{:02d}'.format(args.weight_decay, args.clip_max_norm))
@@ -307,6 +307,7 @@ if __name__ == '__main__':
                 print(' [The folder path of params files]:', args.params_folder)
                 createfolder(args.result_folder)
                 createfolder(args.params_folder)
+
                 run(result_folder=args.result_folder, params_folder=args.params_folder, channel_factor=channel_factor, input_frames=input_frames, output_frames=output_frames, loss_function=BMSE, max_epochs=args.max_epochs, batch_norm=args.batch_norm, device=args.device)
                 time_e = time.time()
                 t = time_e-time_s

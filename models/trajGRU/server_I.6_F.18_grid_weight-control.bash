@@ -1,10 +1,11 @@
 python trajGRU_run.py \
 	--gpu 2	\
-	--batch-size 6	\
+	--max-epochs 30	\
+	--batch-size 5	\
 	--lr-scheduler	\
 	--input-with-grid	\
 	--clip	\
-	--clip-max-norm	100	\
+	--clip-max-norm	1500	\
     --root-dir 01_Radar_data/02_numpy_files	\
     --ty-list-file ty_list.xlsx	\
     --result-dir 04_results/server	\

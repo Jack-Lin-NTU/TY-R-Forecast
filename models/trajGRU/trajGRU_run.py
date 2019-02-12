@@ -107,6 +107,7 @@ def train(net, trainloader, testloader, result_folder, params_folder, max_epochs
         train_loss = train_loss/len(trainloader)
         # save the training results.
         result.iloc[epoch,0] = train_loss
+        print('ConvGRUv2|  Epoch [{}/{}], Train Loss: {:8.3f}'.format(epoch+1, max_epochs, train_loss))
 
         # Save the test loss per epoch
         test_loss = test(net, testloader=testloader, loss_function=loss_function, device=device)
@@ -297,9 +298,10 @@ if __name__ == '__main__':
     ## test weight decay and clip max norm
     # i is a factor of weight decay, j is a factor to control the thresold norm of parameters in the model.
     for i in range(2,6):
+        origin_wd = args.weight_decay
         if args.clip:
             for j in [1]:
-                args.weight_decay = i*args.weight_decay
+                args.weight_decay = i*origin_wd
                 args.clip_max_norm = int(j*args.clip_max_norm)
                 args.result_folder = os.path.join(args.result_dir, 'BMSE_wd{:.4f}_cm{:02d}'.format(args.weight_decay, args.clip_max_norm))
                 args.params_folder = os.path.join(args.params_dir, 'BMSE_wd{:.4f}_cm{:02d}'.format(args.weight_decay, args.clip_max_norm))

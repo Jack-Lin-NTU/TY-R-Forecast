@@ -51,8 +51,8 @@ parser.add_argument('--lr', default=1e-4, type=float, metavar='',
 parser.add_argument('--lr-scheduler', action='store_true',
                     help='To set the scheduler for learning rate or not. (default=False)')
 
-parser.add_argument('--weight-decay', default=1e-2, type=float, metavar='',
-                    help='The factor of weight decay. (default=1e-2)')
+parser.add_argument('--weight-decay', default=0.1, type=float, metavar='',
+                    help='The factor of weight decay. (default=0.1)')
 parser.add_argument('--clip', action='store_true',
                     help='To clip the weightings of the model or not. (default=False)')
 parser.add_argument('--clip-max-norm', default=100, type=float, metavar='',

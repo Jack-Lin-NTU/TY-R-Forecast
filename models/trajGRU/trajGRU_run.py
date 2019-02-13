@@ -48,14 +48,14 @@ def train(net, trainloader, testloader, result_folder, params_folder, max_epochs
     optimizer = optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     # Set scheduler
     if lr_scheduler:
-        milestone = [int(((x+1)/10)*50) for x in range(9)]
+        # milestone = [int(((x+1)/10)*50) for x in range(9)]
         # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=3)
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5,10,15,20,25,30,35,40,45], gamma=0.4)
     
     total_batches = len(trainloader)
     
-    # To declare a DataFrame to store training and testing loss
-    result = pd.DataFrame([],index=range(1,max_epochs+1),columns=['training_loss','testing_loss','lr'])
+    # To declare a pd.DataFrame to store training, testing loss, and learning rate.
+    result = pd.DataFrame([], index=range(1,max_epochs+1), columns=['training_loss','testing_loss','lr'])
     result.index.name = 'epoch'
 
     for epoch in range(max_epochs):
@@ -64,12 +64,12 @@ def train(net, trainloader, testloader, result_folder, params_folder, max_epochs
         f_log = open(log_file, 'a')
         # set training process
         net.train()
-        # update learning rate
+        # update the learning rate
         if lr_scheduler:
             scheduler.step()
-        # show the current learning rate (optimizer.param_groups returns a list which stores several params.)
+        # show the current learning rate (optimizer.param_groups returns a list which stores several params)
         print('lr: {:.1e}'.format(optimizer.param_groups[0]['lr']))
-        # Save learning rate per epochs
+        # Save the learning rate per epoch
         result.iloc[epoch,2] = optimizer.param_groups[0]['lr']
         f_log.writelines('lr: {:.1e}\n'.format(optimizer.param_groups[0]['lr']))  
         # training process

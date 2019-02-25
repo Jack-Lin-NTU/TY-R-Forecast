@@ -19,6 +19,7 @@ from tools.loss_function import BMAE, BMSE
 from tools.trajGRU_model import model
 from tools.args_tools import args, createfolder, remove_file
 
+
 def train(net, trainloader, testloader, result_folder, params_folder, max_epochs=50, loss_function=BMSE, optimizer=optim.Adam, lr_scheduler=args.lr_scheduler, device=args.device):
     '''
     Arguments: This function is for training process.

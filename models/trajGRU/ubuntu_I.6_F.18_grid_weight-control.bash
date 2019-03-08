@@ -10,4 +10,4 @@ python trajGRU_run.py \
     --ty-list-file ty_list.xlsx	\
     --result-dir 04_results/ubuntu	\
 	--params-dir 05_params/ubuntu	\
-    --I-lat-l 24.6625 --I-lat-h 25.4 --I-lon-l 121.15 --I-lon-h 121.8875 \
+    --I-lat-l 24.6625 --I-lat-h 25.4 --I-lon-l 121.15 --I-lon-h 121.8875

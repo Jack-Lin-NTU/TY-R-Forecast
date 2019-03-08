@@ -63,7 +63,7 @@ parser.add_argument('--batch-norm', action='store_true',
 parser.add_argument('--normalize-target', action='store_true',
                     help='To nomalize target data or not. (default=False)')
 
-working_folder = os.path.expanduser('~/OneDrive/01_IIS/04_TY_research')
+working_folder = os.path.expanduser('~/Onedrive/01_IIS/04_TY_research')
 
 parser.add_argument('--working-folder', default=working_folder, type=str,
                     metavar='', help='The path of the mother folder of this code. (the mother folder should have the radar numpy folder, typhoon list excel file, and so on.)')

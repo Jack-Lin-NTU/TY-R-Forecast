@@ -26,7 +26,7 @@ def make_path(path, workfolder=None):
 
 parser = argparse.ArgumentParser("")
 
-working_folder = os.path.expanduser('~/OneDrive/01_IIS/04_TY_research')
+working_folder = os.path.expanduser('~/Onedrive/01_IIS/04_TY_research')
 
 parser.add_argument("--working-folder", default=working_folder, type=str,
                     metavar='', help='The folder path of the Radar numpy data')

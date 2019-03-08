@@ -30,7 +30,7 @@ parser.add_argument('--disable-cuda', action='store_true',
 parser.add_argument('--gpu', default=0, type=int, metavar='',
                     help='Set the gpu device(default=0)')
 
-working_folder = os.path.expanduser('~/OneDrive/01_IIS/04_TY_research')
+working_folder = os.path.expanduser('~/Onedrive/01_IIS/04_TY_research')
 parser.add_argument("--working-folder", default=working_folder, type=str,
                     metavar='', help='The folder path of the Radar numpy data')
 parser.add_argument("--root-dir", default='01_Radar_data/02_numpy_files', type=str,

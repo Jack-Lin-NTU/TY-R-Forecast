@@ -298,10 +298,12 @@ if __name__ == '__main__':
     createfolder(args.params_dir)
     ## test weight decay and clip max norm
     # i is a factor of weight decay, j is a factor to control the thresold norm of parameters in the model.
-    for i in range(2,6):
-        origin_wd = args.weight_decay
+    
+    origin_wd = args.weight_decay
+
+    for i in range(1,6):
         if args.clip:
-            for j in [1,3,4,5]:
+            for j in [1]:
                 args.weight_decay = i*origin_wd
                 args.clip_max_norm = int(j*args.clip_max_norm)
                 args.result_folder = os.path.join(args.result_dir, 'BMSE_wd{:.4f}_cm{:02d}'.format(args.weight_decay, args.clip_max_norm))

@@ -180,33 +180,3 @@ class DetrajGRUCell(nn.Module):
             new_state = prev_state*(1-update) + out_inputs*update
 
         return new_state
-
-if __name__ == '__main__':
-    torch.manual_seed(seed=1)
-    b = 4
-    l = 13
-    ci = 3
-    ch = 192
-    h = 60
-    w = 60
-    net = subCNN(channel_input=ci, channel_hidden=ch, link_size=l).to(torch.device('cuda:00'), dtype= torch.float)
-    # net = trajGRUCell(input_size=ci, hidden_size=ch, link_size=l, kernel_size=3).to(torch.device('cuda:00'), dtype= torch.float)
-    I = torch.rand(b,ci,h,w).to(torch.device('cuda:00'), dtype= torch.float)
-    H = torch.rand(b,ch,h,w).to(torch.device('cuda:00'), dtype= torch.float)
-    X = torch.rand(b,l,h,w).to(torch.device('cuda:00'), dtype= torch.float)
-    Y = torch.rand(b,l,h,w).to(torch.device('cuda:00'), dtype= torch.float)
-    output = net(input=I,prev_state=H)
-    print(output.shape)
-    print('{:.4f}GB'.format(torch.cuda.max_memory_allocated(0)/1024/1024/1024))
-
-    net = trajGRUCell(channel_input=ci, channel_hidden=ch, link_size=l, kernel_size=3).to(torch.device('cuda:00'), dtype= torch.float)
-    output = net(input=I,prev_state=H)
-    print(output.shape)
-    print('{:.4f}GB'.format(torch.cuda.max_memory_allocated(0)/1024/1024/1024))
-
-    net = DetrajGRUCell(channel_input=ci, channel_hidden=ch, link_size=l, kernel_size=3).to(torch.device('cuda:00'), dtype= torch.float)
-    output = net(input=I,prev_state=H)
-    print(output.shape)
-    print('{:.4f}GB'.format(torch.cuda.max_memory_allocated(0)/1024/1024/1024))
-
-    # print('{:.4f} GB'.format(torch.cuda.max_memory_cached(0)/1024/1024/1024))

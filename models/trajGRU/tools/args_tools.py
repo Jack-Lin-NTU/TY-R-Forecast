@@ -141,7 +141,3 @@ args.F_shape = (math.ceil((args.F_lat_h-args.F_lat_l)/args.res_degree)+1,
                 math.ceil((args.F_lon_h-args.F_lon_l)/args.res_degree)+1)
 args.I_shape = (math.ceil((args.I_lat_h-args.I_lat_l)/args.res_degree)+1,
                 math.ceil((args.I_lon_h-args.I_lon_l)/args.res_degree)+1)
-
-if __name__ == '__main__':
-    print(args.input_with_grid)
-    print(args.I_shape)

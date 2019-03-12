@@ -166,44 +166,44 @@ class Normalize(object):
                 'QPE': qpe_data}
 
 
-if __name__ == "__main__":
-    # test dataloader
-    input_frames = 5
-    output_frames = 18
-    mean = [12.834] * input_frames
-    mean += [12.834] * output_frames
-    std = [14.14] * input_frames
-    std += [14.14] * output_frames
+# if __name__ == "__main__":
+#     # test dataloader
+#     input_frames = 5
+#     output_frames = 18
+#     mean = [12.834] * input_frames
+#     mean += [12.834] * output_frames
+#     std = [14.14] * input_frames
+#     std += [14.14] * output_frames
 
-    train_dataset = TyDataset(ty_list_file=args.ty_list_file,
-                              root_dir=args.root_dir,
-                              input_frames=5,
-                              output_frames=18,
-                              train=True,
-                              with_grid=True,
-                              transform = Compose([ToTensor(),Normalize(mean,std,with_grid=True)]))
-    # print(train_dataset.print_idx_list())
-    ## torch size = [5,3,180,180]
-    # print(train_dataset[0]["RAD"][0][0].sum())
-    print(train_dataset[0]["RAD"].shape)
+#     train_dataset = TyDataset(ty_list_file=args.ty_list_file,
+#                               root_dir=args.root_dir,
+#                               input_frames=5,
+#                               output_frames=18,
+#                               train=True,
+#                               with_grid=True,
+#                               transform = Compose([ToTensor(),Normalize(mean,std,with_grid=True)]))
+#     # print(train_dataset.print_idx_list())
+#     ## torch size = [5,3,180,180]
+#     # print(train_dataset[0]["RAD"][0][0].sum())
+#     print(train_dataset[0]["RAD"].shape)
 
-    train_dataset = TyDataset(ty_list_file=args.ty_list_file,
-                              root_dir=args.root_dir,
-                              input_frames=5,
-                              output_frames=18,
-                              train=True,
-                              transform = Compose([ToTensor(),Normalize(mean,std,normalize_target=True)]))
-    # print(train_dataset.print_idx_list())
-    ## torch size = [5,1,180,180]
-    print(train_dataset[0]["RAD"][0][0].sum())
-    print(train_dataset[0]["RAD"].shape)
+#     train_dataset = TyDataset(ty_list_file=args.ty_list_file,
+#                               root_dir=args.root_dir,
+#                               input_frames=5,
+#                               output_frames=18,
+#                               train=True,
+#                               transform = Compose([ToTensor(),Normalize(mean,std,normalize_target=True)]))
+#     # print(train_dataset.print_idx_list())
+#     ## torch size = [5,1,180,180]
+#     print(train_dataset[0]["RAD"][0][0].sum())
+#     print(train_dataset[0]["RAD"].shape)
 
-    train_dataset = TyDataset(ty_list_file=args.ty_list_file,
-                              root_dir=args.root_dir,
-                              input_frames=5,
-                              output_frames=18,
-                              train=True,
-                              transform = Compose([ToTensor()]))
-    # print(train_dataset.print_idx_list())
-    # print(train_dataset[0]["RAD"].sum())
-    # print(train_dataset[0]["RAD"].shape)
+#     train_dataset = TyDataset(ty_list_file=args.ty_list_file,
+#                               root_dir=args.root_dir,
+#                               input_frames=5,
+#                               output_frames=18,
+#                               train=True,
+#                               transform = Compose([ToTensor()]))
+#     # print(train_dataset.print_idx_list())
+#     # print(train_dataset[0]["RAD"].sum())
+#     # print(train_dataset[0]["RAD"].shape)

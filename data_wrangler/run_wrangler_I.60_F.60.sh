@@ -4,4 +4,4 @@ if [ ! -d "../01_readable_files" ]; then
 fi
 
 # run the data wrangler
-python 02_data_wrangler.py --I-lat-l 24.6625 --I-lat-h 25.4 --I-lon-l 121.15 --I-lon-h 121.8875
+python data_wrangler.py --I-lat-l 24.6625 --I-lat-h 25.4 --I-lon-l 121.15 --I-lon-h 121.8875

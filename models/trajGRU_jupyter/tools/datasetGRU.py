@@ -8,7 +8,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import Compose
 
-from args_tools import args
+from .args_tools import args
 
 class TyDataset(Dataset):
     """

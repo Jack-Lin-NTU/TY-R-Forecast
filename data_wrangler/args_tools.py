@@ -26,7 +26,7 @@ def make_path(path, workfolder):
 
 parser = argparse.ArgumentParser()
 
-working_folder = os.path.expanduser('~/OneDrive/01_IIS/04_TY_research/01_Radar_data')
+working_folder = os.path.expanduser('~/Onedrive/01_IIS/04_TY_research/01_Radar_data')
 
 parser.add_argument("--study-area", default="Taipei", metavar='', type=str)
 
@@ -43,7 +43,7 @@ parser.add_argument("--TW-map-file", default='TW_shapefile/gadm36_TWN_2',
 
 parser.add_argument("--fortran-code-folder", default="fortran_codes/", metavar='', type=str, help="The path of the fortran-code folder")
 
-parser.add_argument("--origin-files-folder", default="/ssd/research/origianal_radar_data_2012-2018", metavar='', type=str,
+parser.add_argument("--origin-files-folder", default="~/ssd/research/origianal_radar_data_2012-2018", metavar='', type=str,
                     help="The path of the original files folder")
 
 parser.add_argument("--compressed-files-folder", default='01_compressed_files',

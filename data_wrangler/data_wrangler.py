@@ -1,6 +1,7 @@
 import sys
 import gzip
 import pandas as pd
+import numpy as np
 import datetime as dt
 import os
 from args_tools import args, createfolder
@@ -260,7 +261,7 @@ if __name__ == "__main__":
         print(extract_original_data())
         print("-" * len(info))
 
-    if args.numpy_files_folder.exists():
+    if os.path.exists(args.numpy_files_folder):
         print('Already output numpy files')
         print("-" * len(info))
     else:
@@ -268,8 +269,8 @@ if __name__ == "__main__":
         print("-" * len(info))
 
     count_qpe, _, count_rad = check_data_and_create_miss_data()
-    print('The number of the missing files in QPE data:',count_qpe)
-    print('The number of the missing files in RAD data:',count_rad)
+    print('The number of the missing files in QPE data:', count_qpe)
+    print('The number of the missing files in RAD data:', count_rad)
 
     # summarize data
     overall_of_data()

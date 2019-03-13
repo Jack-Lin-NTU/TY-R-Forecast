@@ -203,19 +203,15 @@ def overall_of_data():
     Arguments:
         This function is to summarize the overall property of the wrangled data.
     '''
-    # Taipei
-    study_area = args.study_area
     # Set path
     files_folder = args.files_folder
     radar_folder = args.radar_folder
-
-    file_out = open(os.path.join(radar_folder, 'overall.txt'), 'w')
-    file_out_mu_std = open(os.path.join(radar_folder, 'mu_std.txt'), 'w')
+    fileout = os.path.join(radar_folder, 'overall.csv')
+    fileout_mu_std = os.path.join(radar_folder, 'mu_std.csv')
 
     for i in sorted(os.listdir(files_folder)):
         tmp_path = os.path.join(files_folder, i)
-        # print(tmp_path)
-        tmp=0
+        tmp = 0
         tmp_max = []
         tmp_min = []
         tmp_max_file = []

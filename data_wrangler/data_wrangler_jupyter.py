@@ -102,7 +102,7 @@ def output_files():
 
             tmp_file_out = os.path.join(tmp_uncompressed_folder, name+'_'+outputtime+'.txt')
             bashcommand = os.path.join('.', args.fortran_code_folder, '{:s}.out {:s} {:s}'.format(name, tmp_uncompressed_file, tmp_file_out))
-
+#             print(bashcommand)
             os.system(bashcommand)
 
             data = pd.read_table(tmp_file_out, delim_whitespace=True, header=None)
@@ -231,6 +231,23 @@ def overall_of_data():
     return measures
 
 if __name__ == '__main__':
+    ## server
+    args.radar_folder = '/home/utmostof9/ssd/research/radar_data'
+    ## my ubuntu
+    # args.radar_folder = '/home/jack/Desktop/ty_research/01_radar_data'
+
+    args.ty_list = make_path('~/Onedrive/01_IIS/04_TY_research/ty_list.xlsx')
+    args.sta_list = make_path('~/Onedrive/01_IIS/04_TY_research/sta_list_all.xlsx')
+    args.TW_map_file = make_path('~/Onedrive/01_IIS/04_TY_research/01_Radar_data/TW_shapefile/gadm36_TWN_2')
+    args.fortran_code_folder = 'fortran_codes/'
+
+    args.compressed_files_folder = make_path('01_compressed_files', args.radar_folder)
+    args.files_type = 'pandas'
+    args.files_folder = make_path('02_pandas_files', args.radar_folder)
+    args.figures_folder = make_path('03_figures', args.radar_folder)
+    args.compression = 'bz2'
+    
+    ## 
     info = '*{:^58s}*'.format('Data extracter')
     print('*' * len(info))
     print(info)
@@ -248,7 +265,7 @@ if __name__ == '__main__':
         print('Already output numpy files')
         print('-' * len(info))
     else:
-        print(uncompress_and_output_numpy_files())
+        print(output_files())
         print('-' * len(info))
 
     count_qpe, _, count_rad = check_data_and_create_miss_data()
@@ -256,4 +273,5 @@ if __name__ == '__main__':
     print('The number of the missing files in RAD data:', count_rad)
 
     # summarize data
-    overall_of_data()
+    measures = overall_of_data()
+    print(measures)

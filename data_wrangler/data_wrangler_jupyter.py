@@ -55,7 +55,7 @@ def extract_original_data():
 def output_files():
     '''
     Arguments:
-        This function is to uncompress the extracted files and output the numpy files(*.npz).
+        This function is to uncompress the extracted files and output the wrangled files.
     '''
     # load typhoon list file
     ty_list = pd.read_excel(args.ty_list)

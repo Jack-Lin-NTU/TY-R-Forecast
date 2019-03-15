@@ -20,7 +20,7 @@ def plot_figure(which_data, part):
     lon_l = args.I_lon_l
     lon_h = args.I_lon_h
     # Set path
-    numpy_files_folder = args.numpy_files_folder
+    files_folder = args.files_folder
     figures_folder = os.path.join(args.figures_folder,study_area)
 
     TW_map_file = args.TW_map_file
@@ -41,8 +41,8 @@ def plot_figure(which_data, part):
     levels_rad = [-1,0,10,20,30,40,50,60,70]
     c_rad = ('#FFFFFF','#FFD8D8','#FFB8B8','#FF9090','#FF6060','#FF2020','#CC0000','#A00000')
 
-    data_path = wrangled_files_folder+'/'+which_data
-    fig_path = wrangled_figs_folder+'/'+which_data
+    data_path = os.path.join(wrangled_files_folder,which_data)
+    fig_path = os.path.join(wrangled_figs_folder,which_data)
     createfolder(fig_path)
 
     tmp=0
@@ -76,8 +76,10 @@ def plot_figure(which_data, part):
             cax = divider.append_axes("right", size="5%", pad=0.1)
             cbar = plt.colorbar(cp,cax=cax)
             cbar.set_label('Rainfall (mm)',fontsize=10)
-            # ax.plot(sta_list["Longitude"].iloc[man_num:].values, sta_list["Latitude"].iloc[man_num:].values, marker='.', mfc='#A00000', mec='#A00000', linestyle='None', markersize=1, label="Auto station")
-            ax.plot(sta_list["Longitude"].iloc[:man_num].values, sta_list["Latitude"].iloc[:man_num].values, marker='^', mfc='#FF2020', mec='k', linestyle='None', markeredgewidth = 0.3, markersize=3, label="Man station")
+            # ax.plot(sta_list["Longitude"].iloc[man_num:].values, sta_list["Latitude"].iloc[man_num:].values, marker='.', 
+            # mfc='#A00000', mec='#A00000', linestyle='None', markersize=1, label="Auto station")
+            ax.plot(sta_list["Longitude"].iloc[:man_num].values, sta_list["Latitude"].iloc[:man_num].values, marker='^', 
+                    mfc='#FF2020', mec='k', linestyle='None', markeredgewidth = 0.3, markersize=3, label="Man station")
             ax.legend(fontsize=7,loc='upper left')
         else:
             cp = m.contourf(X,Y,data,levels_rad,colors=c_rad,alpha=0.95)

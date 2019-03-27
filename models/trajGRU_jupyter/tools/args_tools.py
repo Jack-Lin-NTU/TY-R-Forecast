@@ -1,8 +1,10 @@
 # import modules
 import os
 import math
-import easydict
 import torch
+import pandas as pd
+import easydict
+from .loss_function import BMSE, BMAE
 
 def createfolder(directory):
     '''
@@ -21,6 +23,7 @@ def make_path(path, workfolder=None):
     if path[0] == '~':
         new_path = os.path.expanduser(path)
     else:
+        
         new_path = path
 
     if workfolder is not None:
@@ -31,58 +34,102 @@ def make_path(path, workfolder=None):
 def remove_file(file):
     if os.path.exists(file):
         os.remove(file)
+        
+def print_dict(d):
+    for key, value in d.items():
+        print('{}: {}'.format(key, value))
 
-working_folder = os.path.expanduser('~/Onedrive/01_IIS/04_TY_research')
+
+working_folder = os.path.expanduser('~/ssd/01_ty_research')
+
+radar_folder = make_path('01_radar_data', working_folder)
+meteorology_folder = make_path('02_meteorological_data', working_folder)
+ty_info_folder =  make_path('03_ty_info', working_folder)
 
 args = easydict.EasyDict({
+    # define the path of folders
+    'working_folder': working_folder,
+    'radar_folder': radar_folder,
+    'radar_wrangled_data_folder': make_path('02_wrangled_files', radar_folder),
+    'meteorology_folder': meteorology_folder,
+    'meteorology_wrangled_folder': make_path('01_wrangled_files', meteorology_folder),
+    'ty_info_folder': ty_info_folder,
+    'ty_info_wrangled_folder': make_path('01_wrangled_files', ty_info_folder),
+    
+    'ty_list': make_path('ty_list.csv', working_folder),
+    'result_folder': os.path.join(working_folder, '04_results'),
+    'params_folder': os.path.join(working_folder, '05_params'),
+    
     # control the gpu computation
-    'disable_cuda': False,
-    'gpu': 0,
+    'able_cuda': True,
+    'gpu': 2,
+    'value_dtype': torch.float,
+    
     # hyperparameters for training
-    'max_epochs':50,
+    'max_epochs':30,
+    'batch_size':8,
+    'loss_function': BMSE,
+    'optimizer': torch.optim.Adam,
     'lr': 1e-4,
-    'lr_scheduler': False,
+    'lr_scheduler': True,
     'weight_decay': 0.1,
-    'clip': False,
-    'clip_max_norm': 100,
-    'batch_norm': False,
+    'clip': True,
+    'clip_max_norm': 500,
+    'batch_norm': True,
     'normalize_target': False,
     'input_frames': 6,
     'output_frames': 18,
-    'input_with_grid': False,
+    'input_with_grid': True,
     'channel_factor': 2,
-    'I_y': [23.9125, 26.15],
-    'I_x': [120.4, 122.6375],
-    'F_y': [24.6625, 25.4],
-    'F_x': [121.15, 121.8875],
+    
+    # image size
     'res_degree': 0.0125,
+    'I_x': [120.9625, 122.075],
+    'I_y': [24.4375, 25.55],
+    'F_x': [121.3375, 121.7],
+    'F_y': [24.8125, 25.175],
+    'O_x': [118, 123.5],
     'O_y': [20, 27],
-    'O_x': [118,123.5],
-    # define the path of folders
-    'working_folder': working_folder,
-    'root_dir': os.path.join(working_folder, '01_Radar_data/02_numpy_files'),
-    'ty_list_file': os.path.join(working_folder, 'ty_list.xlsx'),
-    'result_dir': os.path.join(working_folder, '04_results'),
-    'params_dir': os.path.join(working_folder, '05_params'),
 })
 
-args.I_x_left = int((args.I_lon_l-args.origin_lon_l)/args.res_degree + 1)
-args.I_x_right = int(args.I_x_left + (args.I_lon_h-args.I_lon_l)/args.res_degree + 1)
-args.I_y_low = int((args.I_lat_l-args.origin_lat_l)/args.res_degree + 1)
-args.I_y_high = int(args.I_y_low + (args.I_lat_h-args.I_lat_l)/args.res_degree + 1)
-
-args.F_x_left = int((args.F_lon_l-args.origin_lon_l)/args.res_degree + 1)
-args.F_x_right = int(args.F_x_left + (args.F_lon_h-args.F_lon_l)/args.res_degree + 1)
-args.F_y_low = int((args.F_lat_l-args.origin_lat_l)/args.res_degree + 1)
-args.F_y_high = int(args.F_y_low + (args.F_lat_h-args.F_lat_l)/args.res_degree + 1)
-
-
-if not args.disable_cuda and torch.cuda.is_available():
+if args.able_cuda and torch.cuda.is_available():
     args.device = torch.device('cuda:{:02d}'.format(args.gpu))
 else:
     args.device = torch.device('cpu')
 
-args.F_shape = (math.ceil((args.F_lat_h-args.F_lat_l)/args.res_degree)+1,
-                math.ceil((args.F_lon_h-args.F_lon_l)/args.res_degree)+1)
-args.I_shape = (math.ceil((args.I_lat_h-args.I_lat_l)/args.res_degree)+1,
-                math.ceil((args.I_lon_h-args.I_lon_l)/args.res_degree)+1)
+args.I_shape = (round((args.I_x[1]-args.I_x[0])/args.res_degree)+1, round((args.I_y[1]-args.I_y[0])/args.res_degree)+1)
+args.F_shape = (round((args.F_x[1]-args.F_x[0])/args.res_degree)+1, round((args.F_y[1]-args.F_y[0])/args.res_degree)+1)
+args.O_shape = (round((args.O_x[1]-args.O_x[0])/args.res_degree)+1, round((args.O_y[1]-args.O_y[0])/args.res_degree)+1)
+
+# overall info for normalization
+rad_overall = pd.read_csv(os.path.join(args.radar_folder, 'overall.csv'), index_col='Measures').loc['max':'min',:]
+meteo_overall = pd.read_csv(os.path.join(args.meteorology_folder, 'overall.csv'), index_col='Measures')
+args.max_values = pd.concat([rad_overall, meteo_overall], axis=1, sort=False).T['max']
+args.min_values = pd.concat([rad_overall, meteo_overall], axis=1, sort=False).T['min']
+
+# args.I_x_iloc = [int((args.I_x[0]-args.O_x[0])/args.res_degree), int((args.I_x[1]-args.O_x[0])/args.res_degree + 1)]
+# args.I_y_iloc = [int((args.I_y[0]-args.O_y[0])/args.res_degree), int((args.I_y[1]-args.O_y[0])/args.res_degree + 1)]
+# args.F_x_iloc = [int((args.F_x[0]-args.O_x[0])/args.res_degree), int((args.F_x[1]-args.O_x[0])/args.res_degree + 1)]
+# args.F_y_iloc = [int((args.F_y[0]-args.O_y[0])/args.res_degree), int((args.F_y[1]-args.O_y[0])/args.res_degree + 1)]
+
+# args.meteorology_list = ['PP01', 'PS01', 'RH01', 'TX01','WD01', 'WD02']
+args.meteorology_list = []
+
+args.compression = 'bz2'
+args.figure_dpi = 150
+
+args.RAD_level = [-5, 0, 10, 20, 30, 40, 50, 60, 70]
+args.QPE_level = [-5, 0, 10, 20, 35, 50, 80, 120, 160, 200]
+args.QPF_level = [-5, 0, 10, 20, 35, 50, 80, 120, 160, 200]
+
+args.RAD_cmap = ['#FFFFFF','#FFD8D8','#FFB8B8','#FF9090','#FF6060','#FF2020','#CC0000','#A00000','#600000']
+args.QPE_cmap = ['#FFFFFF','#D2D2FF','#AAAAFF','#8282FF','#6A6AFF','#4242FF','#1A1AFF','#000090','#000040','#000030']
+args.QPF_cmap = ['#FFFFFF','#D2D2FF','#AAAAFF','#8282FF','#6A6AFF','#4242FF','#1A1AFF','#000090','#000040','#000030']
+
+# args.xaxis_list = np.around(np.linspace(args.I_x[0], args.I_x[1], args.I_shape[0]), decimals=4)
+# args.yaxis_list = np.around(np.linspace(args.I_y[1], args.I_y[0], args.I_shape[1]), decimals=4)
+
+
+
+if __name__ == '__main__':
+    print(args)

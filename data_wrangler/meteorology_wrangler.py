@@ -45,6 +45,13 @@ def read_data(data_man, data_auto, sta_list):
     data.replace(-9997, np.nan, inplace=True)
     data.replace(-9999, np.nan, inplace=True)
     data.replace(-9991, np.nan, inplace=True)
+
+    data.replace(-999.8, 0.1, inplace=True)
+    data.replace(-999.7, np.nan, inplace=True)
+    data.replace(-999.9, np.nan, inplace=True)
+    data.replace(-999.1, np.nan, inplace=True)
+    data.replace(999.9, np.nan, inplace=True)
+    
     data.dropna(inplace=True)
     
     # data.set_index(['yyyymmddhh'], inplace=True)

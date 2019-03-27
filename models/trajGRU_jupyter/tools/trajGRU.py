@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 
 import torch
@@ -8,7 +7,6 @@ from torch.nn import init
 
 from .cnn2D_model import *
 from .args_tools import args
-
 
 class subCNN(nn.Module):
     def __init__(self, channel_input, channel_hidden, link_size):
@@ -35,7 +33,7 @@ class subCNN(nn.Module):
         input = input[:,:,None,:,:].expand((b,c,l,h,w))
         grids_x = grids_x.unsqueeze(4)
         grids_y = grids_y.unsqueeze(4)
-        grids_l = torch.arange(1,l+1).unsqueeze(1).unsqueeze(2).unsqueeze(3).expand((b,l,h,w,1)).to(args.device, dtype=torch.float)
+        grids_l = torch.arange(1,l+1).unsqueeze(1).unsqueeze(2).unsqueeze(3).expand((b,l,h,w,1)).to(args.device, dtype=args.value_dtype)
         grids = torch.cat([grids_x/(w-1), grids_y/(h-1), grids_l/(l-1)],4)
         grids = grids*2-1
 
@@ -125,7 +123,7 @@ class trajGRUCell(nn.Module):
         if prev_state is None:
             state_size = (batch_size, self.channel_hidden, H, W)
             if torch.cuda.is_available():
-                prev_state = torch.zeros(state_size).to(args.device, dtype=torch.float)
+                prev_state = torch.zeros(state_size).to(args.device, dtype=args.value_dtype)
             else:
                 prev_state = torch.zeros(state_size)
 
@@ -501,19 +499,19 @@ class Forecaster(nn.Module):
 
 
 class model(nn.Module):
-    def __init__(self, n_encoders, n_decoders, rnn_link_size,
+    def __init__(self, n_encoders, n_forecasters, rnn_link_size,
                 encoder_input_channel, encoder_downsample_channels, encoder_rnn_channels,
                 encoder_downsample_k, encoder_downsample_s, encoder_downsample_p,
                 encoder_rnn_k, encoder_rnn_s, encoder_rnn_p, encoder_n_layers,
-                decoder_input_channel, decoder_upsample_channels, decoder_rnn_channels,
-                decoder_upsample_k, decoder_upsample_s, decoder_upsample_p,
-                decoder_rnn_k, decoder_rnn_s, decoder_rnn_p, decoder_n_layers,
-                decoder_output=1, decoder_output_k=1, decoder_output_s=1, decoder_output_p=0, decoder_output_layers=1,
+                forecaster_input_channel, forecaster_upsample_channels, forecaster_rnn_channels,
+                forecaster_upsample_k, forecaster_upsample_s, forecaster_upsample_p,
+                forecaster_rnn_k, forecaster_rnn_s, forecaster_rnn_p, forecaster_n_layers,
+                forecaster_output=1, forecaster_output_k=1, forecaster_output_s=1, forecaster_output_p=0, forecaster_output_layers=1,
                 batch_norm=False):
 
         super().__init__()
         self.n_encoders = n_encoders
-        self.n_decoders = n_decoders
+        self.n_forecasters = n_forecasters
 
         models = []
         for i in range(self.n_encoders):
@@ -525,13 +523,13 @@ class model(nn.Module):
             setattr(self, name, model)
             models.append(getattr(self, name))
 
-        for i in range(self.n_decoders):
-            model = Forecaster(channel_input=decoder_input_channel, channel_upsample=decoder_upsample_channels,
-                                channel_rnn=decoder_rnn_channels,
-                                upsample_k=decoder_upsample_k, upsample_s=decoder_upsample_s, upsample_p=decoder_upsample_p,
-                                rnn_link_size=rnn_link_size, rnn_k=decoder_rnn_k, rnn_s=decoder_rnn_s, rnn_p=decoder_rnn_p, n_layers=decoder_n_layers,
-                                channel_output=decoder_output, output_k=decoder_output_k, output_s=decoder_output_s,
-                                output_p=decoder_output_p, n_output_layers=decoder_output_layers, batch_norm=batch_norm)
+        for i in range(self.n_forecasters):
+            model = Forecaster(channel_input=forecaster_input_channel, channel_upsample=forecaster_upsample_channels,
+                                channel_rnn=forecaster_rnn_channels,
+                                upsample_k=forecaster_upsample_k, upsample_s=forecaster_upsample_s, upsample_p=forecaster_upsample_p,
+                                rnn_link_size=rnn_link_size, rnn_k=forecaster_rnn_k, rnn_s=forecaster_rnn_s, rnn_p=forecaster_rnn_p, n_layers=forecaster_n_layers,
+                                channel_output=forecaster_output, output_k=forecaster_output_k, output_s=forecaster_output_s,
+                                output_p=forecaster_output_p, n_output_layers=forecaster_output_layers, batch_norm=batch_norm)
             name = 'Forecaster_' + str(i+1).zfill(2)
             setattr(self, name, model)
             models.append(getattr(self, name))
@@ -552,7 +550,7 @@ class model(nn.Module):
 
         hidden = hidden[::-1]
 
-        for i in range(self.n_encoders,self.n_encoders+self.n_decoders):
+        for i in range(self.n_encoders,self.n_encoders+self.n_forecasters):
 
             model = self.models[i]
             hidden, output = model(hidden=hidden)

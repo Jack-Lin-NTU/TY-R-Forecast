@@ -16,7 +16,7 @@ from tools.run import train, test, get_dataloader
 trainloader, testloader = get_dataloader(args)
 
 # initilize model
-inputs_channels = 1 + len(args.meteorology_list) + args.input_with_grid*2
+inputs_channels = 1 + len(args.weather_list) + args.input_with_grid*2
 # set the factor of cnn channels
 c = args.channel_factor
 
@@ -63,7 +63,7 @@ forecaster_output_s = 1
 forecaster_output_p = 1
 forecaster_output_layers = 1
 
-Net = model(n_encoders=args.input_frames, n_forecasters=args.output_frames, rnn_link_size=rnn_link_size, 
+Net = model(n_encoders=args.input_frames, n_forecasters=args.target_frames, rnn_link_size=rnn_link_size, 
             encoder_input_channel=encoder_input_channel, encoder_downsample_channels=encoder_downsample_channels,
             encoder_rnn_channels=encoder_rnn_channels, encoder_downsample_k=encoder_downsample_k,
             encoder_downsample_s=encoder_downsample_s, encoder_downsample_p=encoder_downsample_p, 
@@ -78,11 +78,10 @@ Net = model(n_encoders=args.input_frames, n_forecasters=args.output_frames, rnn_
             batch_norm=args.batch_norm).to(args.device, dtype=args.value_dtype)
 
 # train process
-
 time_s = time.time()
-
-args.result_folder = os.path.join(args.result_folder, '{}X{}'.format(args.I_shape[0], args.I_shape[1]), 'RAD_no_METEO')
-args.params_folder = os.path.join(args.params_folder, '{}X{}'.format(args.I_shape[0], args.I_shape[1]), 'RAD_no_METEO')
+if args.weather_list == []:
+    args.result_folder = os.path.join(args.result_folder, '{}X{}'.format(args.I_shape[0], args.I_shape[1]), 'RAD_no_weather')
+    args.params_folder = os.path.join(args.params_folder, '{}X{}'.format(args.I_shape[0], args.I_shape[1]), 'RAD_no_weather')
 
 train(net=Net, trainloader=trainloader, testloader=testloader, args=args)
 

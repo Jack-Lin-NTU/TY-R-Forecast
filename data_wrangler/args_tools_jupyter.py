@@ -42,7 +42,7 @@ def print_dict(d):
 working_folder = os.path.expanduser('~/ssd/01_ty_research')
 
 radar_folder = make_path('01_radar_data', working_folder)
-meteorology_folder = make_path('02_meteorological_data', working_folder)
+weather_folder = make_path('02_meteorological_data', working_folder)
 ty_info_folder =  make_path('03_ty_info', working_folder)
 
 args = easydict.EasyDict({
@@ -58,27 +58,27 @@ args = easydict.EasyDict({
     'radar_compressed_data_folder': make_path('01_compressed_files', radar_folder),
     'radar_wrangled_data_folder': make_path('02_wrangled_files', radar_folder),
     'radar_figures_folder': make_path('03_figures', radar_folder),
-    # To set the path of meteorology data and ty_info folders
-    'meteorology_folder': meteorology_folder,
-    'meteorology_raw_data_folder': make_path(os.path.join('00_raw_data', 'raw_meteorological_data_2012_2018'), working_folder),
-    'meteorology_wrangled_folder': make_path('01_wrangled_files', meteorology_folder),
+    # To set the path of weather data and ty_info folders
+    'weather_folder': weather_folder,
+    'weather_raw_data_folder': make_path(os.path.join('00_raw_data', 'raw_meteorological_data_2012_2018'), working_folder),
+    'weather_wrangled_data_folder': make_path('01_wrangled_files', weather_folder),
     # To set the path of ty info folders
     'ty_info_folder': ty_info_folder,
     'ty_info_raw_data_folder': make_path(os.path.join('00_raw_data', 'raw_meteorological_data_2012_2018'), working_folder),
-    'ty_info_wrangled_folder': make_path('01_wrangled_files', ty_info_folder),
+    'ty_info_wrangled_data_folder': make_path('01_wrangled_files', ty_info_folder),
     'res_degree': 0.0125,
-    'I_y': [23.9125, 26.15],
-    'I_x': [120.4, 122.6375],
-    'F_y': [24.6625, 25.4],
-    'F_x': [121.15, 121.8875],
+    'I_x': [120.9625, 122.075],
+    'I_y': [24.4375, 25.55],
+    'F_x': [121.3375, 121.7],
+    'F_y': [24.8125, 25.175],
     'O_y': [20, 27],
     'O_x': [118,123.5],
 })
 
 
-args.I_shape = (math.ceil((args.I_x[1]-args.I_x[0])/args.res_degree)+1, math.ceil((args.I_y[1]-args.I_y[0])/args.res_degree)+1)
-args.F_shape = (math.ceil((args.F_x[1]-args.F_x[0])/args.res_degree)+1, math.ceil((args.F_y[1]-args.F_y[0])/args.res_degree)+1)
-args.O_shape = (math.ceil((args.O_x[1]-args.O_x[0])/args.res_degree)+1, math.ceil((args.O_y[1]-args.O_y[0])/args.res_degree)+1)
+args.I_shape = (round((args.I_x[1]-args.I_x[0])/args.res_degree)+1, round((args.I_y[1]-args.I_y[0])/args.res_degree)+1)
+args.F_shape = (round((args.F_x[1]-args.F_x[0])/args.res_degree)+1, round((args.F_y[1]-args.F_y[0])/args.res_degree)+1)
+args.O_shape = (round((args.O_x[1]-args.O_x[0])/args.res_degree)+1, round((args.O_y[1]-args.O_y[0])/args.res_degree)+1)
 
 args.I_x_iloc = [int((args.I_x[0]-args.O_x[0])/args.res_degree), int((args.I_x[1]-args.O_x[0])/args.res_degree + 1)]
 args.I_y_iloc = [int((args.I_y[0]-args.O_y[0])/args.res_degree), int((args.I_y[1]-args.O_y[0])/args.res_degree + 1)]

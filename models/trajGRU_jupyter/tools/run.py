@@ -25,14 +25,14 @@ def get_dataloader(args):
     # dataset
     traindataset = TyDataset(ty_list = args.ty_list,
                              input_frames = args.input_frames,
-                             output_frames = args.output_frames,
+                             target_frames = args.target_frames,
                              train = True,
                              with_grid = args.input_with_grid,
                              transform = transform)
 
     testdataset = TyDataset(ty_list = args.ty_list,
                             input_frames = args.input_frames,
-                            output_frames = args.output_frames,
+                            target_frames = args.target_frames,
                             train = False,
                             with_grid = args.input_with_grid,
                              transform = transform)

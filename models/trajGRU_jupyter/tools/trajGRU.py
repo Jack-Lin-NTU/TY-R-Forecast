@@ -34,7 +34,7 @@ class subCNN(nn.Module):
         grids_x = grids_x.unsqueeze(4)
         grids_y = grids_y.unsqueeze(4)
         grids_l = torch.arange(1,l+1).unsqueeze(1).unsqueeze(2).unsqueeze(3).expand((b,l,h,w,1)).to(args.device, dtype=args.value_dtype)
-        grids = torch.cat([grids_x/(w-1), grids_y/(h-1), grids_l/(l-1)],4)
+        grids = torch.cat([grids_x/(w-1), grids_y/(h-1), grids_l/(l-1)], 4)
         grids = grids*2-1
 
         return F.grid_sample(input, grids)

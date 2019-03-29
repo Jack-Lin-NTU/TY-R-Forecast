@@ -13,9 +13,9 @@ class TyDataset(Dataset):
     Typhoon dataset
     '''
     def __init__(self, ty_list=args.ty_list, radar_wrangled_data_folder=args.radar_wrangled_data_folder,
-                 meteorology_wrangled_folder=args.meteorology_wrangled_folder, ty_info_wrangled_folder=args.ty_info_wrangled_folder,
-                 meteorology_list=args.meteorology_list, radar_only=False, train=True, train_num=None, input_frames=args.input_frames,
-                 output_frames=args.output_frames, with_grid=True, transform=None):
+                 weather_wrangled_data_folder=args.weather_wrangled_data_folder, ty_info_wrangled_data_folder=args.ty_info_wrangled_data_folder,
+                 weather_list=args.weather_list, radar_only=False, train=True, train_num=None, input_frames=args.input_frames,
+                 target_frames=args.target_frames, with_grid=True, transform=None):
         '''
         Args:
             ty_list (string): Path of the typhoon list file.
@@ -24,7 +24,7 @@ class TyDataset(Dataset):
             train_num (int): The event number of training set.
             test_num (int): The event number of testing set.
             input_frames (int, 10-minutes-based): The frames of input data.
-            output_frames (int, 10-minutes-based): The frames of output data.
+            target_frames (int, 10-minutes-based): The frames of output data.
             with_grid (boolean): The option to add gird info into input frames.
             transform (callable, optional): Optional transform to be applied on a sample.
         '''
@@ -36,12 +36,12 @@ class TyDataset(Dataset):
         
         self.ty_list = ty_list
         self.radar_wrangled_data_folder = radar_wrangled_data_folder
-        self.meteorology_wrangled_folder = meteorology_wrangled_folder
-        self.ty_info_wrangled_folder = ty_info_wrangled_folder
-        self.meteorology_list = meteorology_list
-        args.meteorology_list = meteorology_list
+        self.weather_wrangled_data_folder = weather_wrangled_data_folder
+        self.ty_info_wrangled_data_folder = ty_info_wrangled_data_folder
+        self.weather_list = weather_list
+        args.weather_list = weather_list
         self.input_frames = input_frames
-        self.output_frames = output_frames
+        self.target_frames = target_frames
         self.transform = transform
         self.with_grid = with_grid
         
@@ -68,7 +68,7 @@ class TyDataset(Dataset):
     
         for i in self.idx_list.index:
             frame_s = self.ty_list.loc[i, 'Time of issuing']
-            frame_e = self.ty_list.loc[i, 'Time of canceling'] - dt.timedelta(minutes=(input_frames+output_frames-1)*10)
+            frame_e = self.ty_list.loc[i, 'Time of canceling'] - dt.timedelta(minutes=(input_frames+target_frames-1)*10)
             
             self.total_frames = tmp + int((frame_e-frame_s).days*24*6 + (frame_e-frame_s).seconds/600)+1
             self.idx_list.loc[i,:] = [frame_s, frame_e, tmp, self.total_frames-1]
@@ -110,8 +110,8 @@ class TyDataset(Dataset):
                     data_path = os.path.join(self.radar_wrangled_data_folder, 'RAD', year+'.'+ty_name+'.'+file_time+'.pkl')
                     tmp_data.append(pd.read_pickle(data_path, compression=args.compression).loc[args.I_y[1]:args.I_y[0], args.I_x[0]:args.I_x[1]].to_numpy())
                     
-                    for k in self.meteorology_list:
-                        data_path = os.path.join(self.meteorology_wrangled_folder, k, (year+'.'+ty_name+'.'+file_time+'.pkl'))
+                    for k in self.weather_list:
+                        data_path = os.path.join(self.weather_wrangled_data_folder, k, (year+'.'+ty_name+'.'+file_time+'.pkl'))
                         tmp_data.append(pd.read_pickle(data_path, compression=args.compression).loc[args.I_y[1]:args.I_y[0], args.I_x[0]:args.I_x[1]].to_numpy())
                     
                     if self.with_grid:
@@ -120,10 +120,10 @@ class TyDataset(Dataset):
                         input_data.append(np.array(tmp_data))
                 input_data = np.array(input_data)
 
-                # QPE data(a tensor with shape (output_frames X H X W))
+                # QPE data(a tensor with shape (target_frames X H X W))
                 target_data = []
 
-                for j in range(self.input_frames, self.input_frames+self.output_frames):
+                for j in range(self.input_frames, self.input_frames+self.target_frames):
                     file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)),format='%Y%m%d%H%M')
                     data_path = os.path.join(self.radar_wrangled_data_folder, 'QPE', year+'.'+ty_name+'.'+file_time+'.pkl')
                     target_data.append(pd.read_pickle(data_path, compression=args.compression).loc[args.F_y[1]:args.F_y[0], args.F_x[0]:args.F_x[1]].to_numpy())
@@ -159,14 +159,14 @@ class Normalize(object):
         input_data, target_data = sample['input'], sample['target']
         if self.with_grid:
             input_data[:,0,:,:] = (input_data[:,0,:,:] - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
-            for idx, value in enumerate(args.meteorology_list):
+            for idx, value in enumerate(args.weather_list):
                 input_data[:,idx+1,:,:] = (input_data[:,0,:,:] - self.min_values[value]) / (self.max_values[value] - self.min_values[value])
             
             input_data[:,-2,:,:] = input_data[:,-2,:,:] / args.I_shape[0]
             input_data[:,-1,:,:] = input_data[:,-1,:,:] / args.I_shape[1]
         else:
             input_data[:,0,:,:] = (input_data[:,0,:,:] - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
-            for idx, value in enumerate(args.meteorology_list):
+            for idx, value in enumerate(args.weather_list):
                 input_data[:,idx+1,:,:] = (input_data[:,0,:,:] - self.min_values[value]) / (self.max_values[value] - self.min_values[value])
         
         if self.normalize_target:

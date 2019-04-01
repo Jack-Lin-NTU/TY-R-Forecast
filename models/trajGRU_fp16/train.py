@@ -57,6 +57,7 @@ forecaster_rnn_s = [1,1,1]
 forecaster_rnn_p = [1,1,1]
 forecaster_n_layers = 6
 
+
 forecaster_output = 1
 forecaster_output_k = 3
 forecaster_output_s = 1

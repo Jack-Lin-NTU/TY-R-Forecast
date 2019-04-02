@@ -16,7 +16,7 @@ from tools.run import train, test, get_dataloader
 trainloader, testloader = get_dataloader(args)
 
 # initilize model
-inputs_channels = 1 + len(args.weather_list) + args.input_with_grid*2
+inputs_channels = 2 + len(args.weather_list) + args.input_with_grid*2
 
 # set the factor of cnn channels
 c = args.channel_factor

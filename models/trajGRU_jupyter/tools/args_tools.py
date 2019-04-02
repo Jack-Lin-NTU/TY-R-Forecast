@@ -4,7 +4,7 @@ import math
 import torch
 import pandas as pd
 import argparse
-from loss_function import BMSE, BMAE
+from .loss_function import BMSE, BMAE
 
 def createfolder(directory):
     '''

@@ -12,6 +12,14 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import transforms, utils
 
+try:
+    from apex.parallel import DistributedDataParallel as DDP
+    from apex.fp16_utils import *
+    from apex import amp, optimizers
+    from apex.multi_tensor_apply import multi_tensor_applier
+except ImportError:
+    raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
+
 
 # import our model and dataloader
 from tools.datasetGRU import TyDataset, ToTensor, Normalize
@@ -72,6 +80,11 @@ def train(net, trainloader, testloader, args):
         # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=3)
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[x for x in range(1, args.max_epochs) if x % 5 == 0], gamma=0.4)
     
+    net, optimizer = amp.initialize(net, optimizer,
+                                      opt_level='O1',
+                                      loss_scale=0.0001
+                                      )
+    
     total_batches = len(trainloader)
     
     # To declare a pd.DataFrame to store training, testing loss, and learning rate.
@@ -109,7 +122,9 @@ def train(net, trainloader, testloader, args):
 
             # optimize model
             optimizer.zero_grad()
-            loss.backward()
+            
+            with amp.scale_loss(loss, optimizer) as scaled_loss:
+                scaled_loss.backward()
             # 'clip_grad_norm' helps prevent the exploding gradient problem in RNNs or LSTMs.
             if args.clip:
                 nn.utils.clip_grad_norm_(net.parameters(), max_norm=args.clip_max_norm)

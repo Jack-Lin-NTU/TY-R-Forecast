@@ -30,15 +30,15 @@ def get_dataloader(args):
                              input_frames = args.input_frames,
                              target_frames = args.target_frames,
                              train = True,
-                             with_grid = args.input_with_grid,
+                             input_with_grid = args.input_with_grid,
                              transform = transform)
 
     testdataset = TyDataset(ty_list = args.ty_list,
                             input_frames = args.input_frames,
                             target_frames = args.target_frames,
                             train = False,
-                            with_grid = args.input_with_grid,
-                             transform = transform)
+                            input_with_grid = args.input_with_grid,
+                            transform = transform)
     # datloader
     trainloader = DataLoader(dataset=traindataset, batch_size=args.batch_size, shuffle=True)
     testloader = DataLoader(dataset=testdataset, batch_size=args.batch_size, shuffle=False)

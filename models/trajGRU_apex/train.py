@@ -24,7 +24,7 @@ c = args.channel_factor
 ## construct Traj GRU
 # initialize the parameters of the encoders and forecasters
 
-rnn_link_size = [13, 13, 9]
+rnn_link_size = [13, 8, 5]
 
 encoder_input_channel = inputs_channels
 encoder_downsample_channels = [9*c,32*c,96*c]
@@ -57,7 +57,6 @@ forecaster_rnn_s = [1,1,1]
 forecaster_rnn_p = [1,1,1]
 forecaster_n_layers = 6
 
-
 forecaster_output = 1
 forecaster_output_k = 3
 forecaster_output_s = 1
@@ -80,12 +79,19 @@ Net = model(n_encoders=args.input_frames, n_forecasters=args.target_frames, rnn_
 # print(Net)
 # train process
 time_s = time.time()
+
+size = '{}X{}'.format(args.I_shape[0], args.I_shape[1])
+
 if args.weather_list == []:
-    args.result_folder = os.path.join(args.result_folder, '{}X{}'.format(args.I_shape[0], args.I_shape[1]), 'RAD_no_weather')
-    args.params_folder = os.path.join(args.params_folder, '{}X{}'.format(args.I_shape[0], args.I_shape[1]), 'RAD_no_weather')
+    args.result_folder = os.path.join(args.result_folder, size, 'RAD_no_weather')
+    args.params_folder = os.path.join(args.params_folder, size, 'RAD_no_weather')
 else:
-    args.result_folder = os.path.join(args.result_folder, '{}X{}'.format(args.I_shape[0], args.I_shape[1]), 'RAD_weather')
-    args.params_folder = os.path.join(args.params_folder, '{}X{}'.format(args.I_shape[0], args.I_shape[1]), 'RAD_weather')
+    args.result_folder = os.path.join(args.result_folder, size, 'RAD_weather')
+    args.params_folder = os.path.join(args.params_folder, size, 'RAD_weather')
+
+    
+args.result_folder = os.path.join(args.result_folder, 'wd{:.2f}_lr{:f}'.format(args.weight_decay, args.lr))
+args.params_folder = os.path.join(args.params_folder, 'wd{:.2f}_lr{:f}'.format(args.weight_decay, args.lr))
     
 train(net=Net, trainloader=trainloader, testloader=testloader, args=args)
 

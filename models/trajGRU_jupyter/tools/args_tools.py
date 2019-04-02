@@ -4,7 +4,7 @@ import math
 import torch
 import pandas as pd
 import argparse
-from .loss_function import BMSE, BMAE
+from loss_function import BMSE, BMAE
 
 def createfolder(directory):
     '''
@@ -90,6 +90,7 @@ parser.add_argument('--normalize-target', action='store_true', help='Normalize t
 
 parser.add_argument('--input-frames', metavar='', type=int, default=6, help='The size of input frames. (default: 6)')
 parser.add_argument('--input-with-grid', action='store_true', help='Input with grid data.')
+parser.add_argument('--input-with-QPE', action='store_true', help='Input with QPE data.')
 parser.add_argument('--target-frames', metavar='', type=int, default=18, help='The size of target frames. (default: 18)')
 parser.add_argument('--channel-factor', metavar='', type=int, default=3, help='Channel factor. (default: 3)')
 

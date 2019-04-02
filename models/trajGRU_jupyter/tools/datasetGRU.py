@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import Compose
 
-from .args_tools import args
+from args_tools import args
 
 class TyDataset(Dataset):
     '''
@@ -14,18 +14,21 @@ class TyDataset(Dataset):
     '''
     def __init__(self, ty_list=args.ty_list, radar_wrangled_data_folder=args.radar_wrangled_data_folder,
                  weather_wrangled_data_folder=args.weather_wrangled_data_folder, ty_info_wrangled_data_folder=args.ty_info_wrangled_data_folder,
-                 weather_list=args.weather_list, radar_only=False, train=True, train_num=None, input_frames=args.input_frames,
-                 target_frames=args.target_frames, with_grid=True, transform=None):
+                 weather_list=args.weather_list, input_with_QPE=args.input_with_QPE, radar_only=False, train=True, train_num=None, 
+                 input_frames=args.input_frames, target_frames=args.target_frames, input_with_grid=True, transform=None):
         '''
         Args:
             ty_list (string): Path of the typhoon list file.
-            root_dir (string): Directory with all the files.
+            radar_wrangled_data_folder (string): Folder of radar wrangled data.
+            weather_wrangled_data_folder (string): Folder of weather wrangled data.
+            ty_info_wrangled_data_folder (string): Folder of ty-info wrangled data.
+            weather_list (list): A list of weather infos.
             train (boolean): Construct training set or not.
             train_num (int): The event number of training set.
             test_num (int): The event number of testing set.
             input_frames (int, 10-minutes-based): The frames of input data.
             target_frames (int, 10-minutes-based): The frames of output data.
-            with_grid (boolean): The option to add gird info into input frames.
+            input_with_grid (boolean): The option to add gird info into input frames.
             transform (callable, optional): Optional transform to be applied on a sample.
         '''
         super().__init__
@@ -43,9 +46,10 @@ class TyDataset(Dataset):
         self.input_frames = input_frames
         self.target_frames = target_frames
         self.transform = transform
-        self.with_grid = with_grid
+        self.input_with_grid = input_with_grid
+        self.input_with_QPE = input_with_QPE
         
-        if with_grid:
+        if input_with_grid:
             self.gird_x, self.gird_y = np.meshgrid(np.arange(0, args.I_shape[0]), np.arange(0, args.I_shape[0]))
         
         if train:
@@ -110,11 +114,15 @@ class TyDataset(Dataset):
                     data_path = os.path.join(self.radar_wrangled_data_folder, 'RAD', year+'.'+ty_name+'.'+file_time+'.pkl')
                     tmp_data.append(pd.read_pickle(data_path, compression=args.compression).loc[args.I_y[1]:args.I_y[0], args.I_x[0]:args.I_x[1]].to_numpy())
                     
+                    if self.input_with_QPE:
+                        data_path = os.path.join(self.radar_wrangled_data_folder, 'QPE', year+'.'+ty_name+'.'+file_time+'.pkl')
+                        tmp_data.append(pd.read_pickle(data_path, compression=args.compression).loc[args.I_y[1]:args.I_y[0], args.I_x[0]:args.I_x[1]].to_numpy())
+                    
                     for k in self.weather_list:
                         data_path = os.path.join(self.weather_wrangled_data_folder, k, (year+'.'+ty_name+'.'+file_time+'.pkl'))
                         tmp_data.append(pd.read_pickle(data_path, compression=args.compression).loc[args.I_y[1]:args.I_y[0], args.I_x[0]:args.I_x[1]].to_numpy())
                     
-                    if self.with_grid:
+                    if self.input_with_grid:
                         input_data.append(np.array(tmp_data+[self.gird_x, self.gird_y]))
                     else:
                         input_data.append(np.array(tmp_data))
@@ -147,18 +155,21 @@ class Normalize(object):
     '''
     Normalize samples
     '''
-    def __init__(self, max_values, min_values, with_grid=True, normalize_target=False):
+    def __init__(self, max_values, min_values, input_with_QPE=args.input_with_QPE, input_with_grid=True, normalize_target=False):
         assert type(max_values) == pd.Series or list, 'max_values is a not pd.series or list.'
         assert type(min_values) == pd.Series or list, 'min_values is a not pd.series or list.'
         self.max_values = max_values
         self.min_values = min_values
         self.normalize_target = normalize_target
-        self.with_grid = with_grid
+        self.input_with_grid = input_with_grid
+        self.input_with_QPE = input_with_QPE
         
     def __call__(self, sample):
         input_data, target_data = sample['input'], sample['target']
-        if self.with_grid:
+        if self.input_with_grid:
             input_data[:,0,:,:] = (input_data[:,0,:,:] - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
+            input_data[:,1,:,:] = (input_data[:,0,:,:] - self.min_values['QPE']) / (self.max_values['QPE'] - self.min_values['QPE'])
+            
             for idx, value in enumerate(args.weather_list):
                 input_data[:,idx+1,:,:] = (input_data[:,0,:,:] - self.min_values[value]) / (self.max_values[value] - self.min_values[value])
             
@@ -176,3 +187,17 @@ class Normalize(object):
         # torch data: x_tsteps X H X W
         return {'input': input_data,
                 'target': target_data}
+    
+    
+if __name__ == '__main__':
+    transform = Compose([ToTensor(), Normalize(max_values=args.max_values, min_values=args.min_values)])
+    a = TyDataset(ty_list = args.ty_list,
+                  input_frames = args.input_frames,
+                  target_frames = args.target_frames,
+                  train = True,
+                  input_with_grid = args.input_with_grid,
+                  input_with_QPE = args.input_with_QPE,
+                  transform=transform
+                 )
+    
+    print(a[0]['input'][:,1,:,:])

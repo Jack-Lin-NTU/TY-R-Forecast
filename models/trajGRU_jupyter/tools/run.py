@@ -12,10 +12,10 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import transforms, utils
 
-
 # import our model and dataloader
 from tools.datasetGRU import TyDataset, ToTensor, Normalize
-from .args_tools import createfolder, remove_file
+from tools.args_tools import args, createfolder, remove_file
+    
 
 
 def get_dataloader(args):
@@ -65,7 +65,7 @@ def train(net, trainloader, testloader, args):
     remove_file(params_pt)
     
     # set the optimizer (learning rate is from args)
-    optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay, eps=1e-04)
     # Set scheduler
     if args.lr_scheduler:
         # milestone = [int(((x+1)/10)*50) for x in range(9)]
@@ -95,8 +95,8 @@ def train(net, trainloader, testloader, args):
         train_loss = 0
         for i, data in enumerate(trainloader):
 #             print(data['input'].shape)
-            inputs = data['input'].to(args.device, dtype=args.value_dtype)  # inputs.shape = [4,10,1,180,180]
-            labels = data['target'].to(args.device, dtype=args.value_dtype)  # labels.shape = [4,18,60,60]
+            inputs = data['input'].to(args.device, dtype=args.value_dtype)  # inputs.shape = [4,10,1,90,90]
+            labels = data['target'].to(args.device, dtype=args.value_dtype)  # labels.shape = [4,18,30,30]
 
             outputs = net(inputs)                           # outputs.shape = [4, 18, 60, 60]
 
@@ -105,7 +105,7 @@ def train(net, trainloader, testloader, args):
 
             # calculate loss function
             loss = args.loss_function(outputs, labels)
-            train_loss += loss.item()
+            train_loss += loss.item()/len(trainloader)
 
             # optimize model
             optimizer.zero_grad()
@@ -113,6 +113,7 @@ def train(net, trainloader, testloader, args):
             # 'clip_grad_norm' helps prevent the exploding gradient problem in RNNs or LSTMs.
             if args.clip:
                 nn.utils.clip_grad_norm_(net.parameters(), max_norm=args.clip_max_norm)
+#             breakpoint()
             optimizer.step()
 
             # print training loss per 40 batches.
@@ -123,7 +124,7 @@ def train(net, trainloader, testloader, args):
                 f_log.writelines('trajGRU|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}\n'.format(epoch+1, args.max_epochs, i+1, total_batches, loss.item()))
         
         # calculate average training loss per 1 epoch.
-        train_loss = train_loss/len(trainloader)
+        train_loss = train_loss
         # save the training results.
         result.iloc[epoch,0] = train_loss
         print('trajGRU|  Epoch [{}/{}], Train Loss: {:8.3f}'.format(epoch+1, args.max_epochs, train_loss))

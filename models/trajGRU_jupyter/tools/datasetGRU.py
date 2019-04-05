@@ -68,7 +68,8 @@ class TyDataset(Dataset):
             self.events_list = self.ty_list.index[self.events_num]
 
         tmp = 0
-        self.idx_list = pd.DataFrame([], columns=['The starting time', 'The ending time', 'The starting idx', 'The ending idx'], index=self.events_list)
+        self.idx_list = pd.DataFrame([], columns=['The starting time', 'The ending time', 'The starting idx', 'The ending idx'], 
+                                     index=self.events_list)
     
         for i in self.idx_list.index:
             frame_s = self.ty_list.loc[i, 'Time of issuing']
@@ -110,7 +111,7 @@ class TyDataset(Dataset):
                 for j in range(self.input_frames):
                     tmp_data = []
                     # Radar
-                    file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time'] + dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
+                    file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
                     data_path = os.path.join(self.radar_wrangled_data_folder, 'RAD', year+'.'+ty_name+'.'+file_time+'.pkl')
                     tmp_data.append(pd.read_pickle(data_path, compression=args.compression).loc[args.I_y[1]:args.I_y[0], args.I_x[0]:args.I_x[1]].to_numpy())
                     
@@ -155,7 +156,7 @@ class Normalize(object):
     '''
     Normalize samples
     '''
-    def __init__(self, max_values, min_values, input_with_QPE=args.input_with_QPE, input_with_grid=True, normalize_target=False):
+    def __init__(self, max_values, min_values, input_with_QPE=args.input_with_QPE, input_with_grid=True, normalize_target=args.normalize_target):
         assert type(max_values) == pd.Series or list, 'max_values is a not pd.series or list.'
         assert type(min_values) == pd.Series or list, 'min_values is a not pd.series or list.'
         self.max_values = max_values
@@ -168,7 +169,7 @@ class Normalize(object):
         input_data, target_data = sample['input'], sample['target']
         if self.input_with_grid:
             input_data[:,0,:,:] = (input_data[:,0,:,:] - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
-            input_data[:,1,:,:] = (input_data[:,0,:,:] - self.min_values['QPE']) / (self.max_values['QPE'] - self.min_values['QPE'])
+            input_data[:,1,:,:] = (input_data[:,1,:,:] - self.min_values['QPE']) / (self.max_values['QPE'] - self.min_values['QPE'])
             
             for idx, value in enumerate(args.weather_list):
                 input_data[:,idx+1,:,:] = (input_data[:,0,:,:] - self.min_values[value]) / (self.max_values[value] - self.min_values[value])
@@ -200,4 +201,4 @@ if __name__ == '__main__':
                   transform=transform
                  )
     
-    print(a[0]['input'][:,1,:,:])
+    print(a[0]['target'])

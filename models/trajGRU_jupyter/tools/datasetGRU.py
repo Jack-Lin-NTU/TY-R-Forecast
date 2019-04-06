@@ -14,8 +14,8 @@ class TyDataset(Dataset):
     '''
     def __init__(self, ty_list=args.ty_list, radar_wrangled_data_folder=args.radar_wrangled_data_folder,
                  weather_wrangled_data_folder=args.weather_wrangled_data_folder, ty_info_wrangled_data_folder=args.ty_info_wrangled_data_folder,
-                 weather_list=args.weather_list, input_with_QPE=args.input_with_QPE, radar_only=False, train=True, train_num=None, 
-                 input_frames=args.input_frames, target_frames=args.target_frames, input_with_grid=True, transform=None):
+                 weather_list=args.weather_list, input_with_QPE=args.input_with_QPE, input_with_grid=args.input_with_grid, train=True, train_num=None, 
+                 input_frames=args.input_frames, target_frames=args.target_frames,  transform=None):
         '''
         Args:
             ty_list (string): Path of the typhoon list file.
@@ -42,12 +42,12 @@ class TyDataset(Dataset):
         self.weather_wrangled_data_folder = weather_wrangled_data_folder
         self.ty_info_wrangled_data_folder = ty_info_wrangled_data_folder
         self.weather_list = weather_list
-        args.weather_list = weather_list
+        self.input_with_grid = input_with_grid
+        self.input_with_QPE = input_with_QPE
+        
         self.input_frames = input_frames
         self.target_frames = target_frames
         self.transform = transform
-        self.input_with_grid = input_with_grid
-        self.input_with_QPE = input_with_QPE
         
         if input_with_grid:
             self.gird_x, self.gird_y = np.meshgrid(np.arange(0, args.I_shape[0]), np.arange(0, args.I_shape[0]))
@@ -156,7 +156,7 @@ class Normalize(object):
     '''
     Normalize samples
     '''
-    def __init__(self, max_values, min_values, input_with_QPE=args.input_with_QPE, input_with_grid=True, normalize_target=args.normalize_target):
+    def __init__(self, max_values, min_values, input_with_QPE=args.input_with_QPE, input_with_grid=args.input_with_grid, normalize_target=args.normalize_target):
         assert type(max_values) == pd.Series or list, 'max_values is a not pd.series or list.'
         assert type(min_values) == pd.Series or list, 'min_values is a not pd.series or list.'
         self.max_values = max_values
@@ -167,19 +167,23 @@ class Normalize(object):
         
     def __call__(self, sample):
         input_data, target_data = sample['input'], sample['target']
-        if self.input_with_grid:
-            input_data[:,0,:,:] = (input_data[:,0,:,:] - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
-            input_data[:,1,:,:] = (input_data[:,1,:,:] - self.min_values['QPE']) / (self.max_values['QPE'] - self.min_values['QPE'])
-            
-            for idx, value in enumerate(args.weather_list):
-                input_data[:,idx+1,:,:] = (input_data[:,0,:,:] - self.min_values[value]) / (self.max_values[value] - self.min_values[value])
-            
-            input_data[:,-2,:,:] = input_data[:,-2,:,:] / args.I_shape[0]
-            input_data[:,-1,:,:] = input_data[:,-1,:,:] / args.I_shape[1]
-        else:
-            input_data[:,0,:,:] = (input_data[:,0,:,:] - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
-            for idx, value in enumerate(args.weather_list):
-                input_data[:,idx+1,:,:] = (input_data[:,0,:,:] - self.min_values[value]) / (self.max_values[value] - self.min_values[value])
+        
+        index = 0
+        input_data[:,index,:,:] = (input_data[:,index,:,:] - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
+        
+        if self.input_with_QPE:
+            index += 1
+            input_data[:,index,:,:] = (input_data[:,index,:,:] - self.min_values['QPE']) / (self.max_values['QPE'] - self.min_values['QPE'])
+
+        for idx, value in enumerate(args.weather_list):
+            index += 1
+            input_data[:,index,:,:] = (input_data[:,index,:,:] - self.min_values[value]) / (self.max_values[value] - self.min_values[value])
+        
+        if self.input_with_grid:    
+            index += 1
+            input_data[:,index,:,:] = input_data[:,index,:,:] / args.I_shape[0]
+            index += 1
+            input_data[:,index,:,:] = input_data[:,index,:,:] / args.I_shape[1]
         
         if self.normalize_target:
             target_data = (target_data - self.min_values['QPE']) / (self.max_values['QPE'] - self.min_values['QPE'])
@@ -196,9 +200,8 @@ if __name__ == '__main__':
                   input_frames = args.input_frames,
                   target_frames = args.target_frames,
                   train = True,
-                  input_with_grid = args.input_with_grid,
                   input_with_QPE = args.input_with_QPE,
-                  transform=transform
-                 )
+                  input_with_grid = args.input_with_grid,
+                  transform=transform)
     
-    print(a[0]['target'])
+    print(a[0]['input'])

@@ -13,8 +13,10 @@ class TyDataset(Dataset):
     Typhoon dataset
     '''
     def __init__(self, ty_list=args.ty_list, radar_wrangled_data_folder=args.radar_wrangled_data_folder,
-                 weather_wrangled_data_folder=args.weather_wrangled_data_folder, ty_info_wrangled_data_folder=args.ty_info_wrangled_data_folder,
-                 weather_list=args.weather_list, input_with_QPE=args.input_with_QPE, input_with_grid=args.input_with_grid, train=True, train_num=None, 
+                 weather_wrangled_data_folder=args.weather_wrangled_data_folder, 
+                 ty_info_wrangled_data_folder=args.ty_info_wrangled_data_folder,
+                 weather_list=args.weather_list, input_with_QPE=args.input_with_QPE, 
+                 input_with_grid=args.input_with_grid, train=True, train_num=None, 
                  input_frames=args.input_frames, target_frames=args.target_frames,  transform=None):
         '''
         Args:
@@ -75,10 +77,10 @@ class TyDataset(Dataset):
             frame_s = self.ty_list.loc[i, 'Time of issuing']
             frame_e = self.ty_list.loc[i, 'Time of canceling'] - dt.timedelta(minutes=(input_frames+target_frames-1)*10)
             
-            self.total_frames = tmp + int((frame_e-frame_s).days*24*6 + (frame_e-frame_s).seconds/600)+1
+            self.total_frames = tmp + int((frame_e-frame_s).days*24*6 + (frame_e-frame_s).seconds/600) + 1
             self.idx_list.loc[i,:] = [frame_s, frame_e, tmp, self.total_frames-1]
             tmp = self.total_frames
-            
+        
         self.idx_list.index = self.events_list
         self.idx_list.index.name = 'Typhoon'
 

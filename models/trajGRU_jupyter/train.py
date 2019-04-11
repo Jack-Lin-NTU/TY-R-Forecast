@@ -90,8 +90,8 @@ else:
     args.params_folder = os.path.join(args.params_folder, size, 'RAD_weather')
 
     
-args.result_folder = os.path.join(args.result_folder, 'wd{:.2f}_lr{:f}'.format(args.weight_decay, args.lr))
-args.params_folder = os.path.join(args.params_folder, 'wd{:.2f}_lr{:f}'.format(args.weight_decay, args.lr))
+args.result_folder = os.path.join(args.result_folder, 'wd{:.5f}_lr{:f}'.format(args.weight_decay, args.lr))
+args.params_folder = os.path.join(args.params_folder, 'wd{:.5f}_lr{:f}'.format(args.weight_decay, args.lr))
     
 train(net=Net, trainloader=trainloader, testloader=testloader, args=args)
 

@@ -52,7 +52,7 @@ class TyDataset(Dataset):
         self.transform = transform
         
         if input_with_grid:
-            self.gird_x, self.gird_y = np.meshgrid(np.arange(0, args.I_shape[0]), np.arange(0, args.I_shape[0]))
+            self.gird_x, self.gird_y = np.meshgrid(np.arange(0, args.I_shape[0]), np.arange(0, args.I_shape[1]))
         
         if train:
             if train_num is None:
@@ -135,7 +135,7 @@ class TyDataset(Dataset):
                 target_data = []
 
                 for j in range(self.input_frames, self.input_frames+self.target_frames):
-                    file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)),format='%Y%m%d%H%M')
+                    file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
                     data_path = os.path.join(self.radar_wrangled_data_folder, 'QPE', year+'.'+ty_name+'.'+file_time+'.pkl')
                     target_data.append(pd.read_pickle(data_path, compression=args.compression).loc[args.F_y[1]:args.F_y[0], args.F_x[0]:args.F_x[1]].to_numpy())
                 target_data = np.array(target_data)
@@ -158,7 +158,8 @@ class Normalize(object):
     '''
     Normalize samples
     '''
-    def __init__(self, max_values, min_values, input_with_QPE=args.input_with_QPE, input_with_grid=args.input_with_grid, normalize_target=args.normalize_target):
+    def __init__(self, max_values, min_values, input_with_QPE=args.input_with_QPE, input_with_grid=args.input_with_grid, 
+                 normalize_target=args.normalize_target):
         assert type(max_values) == pd.Series or list, 'max_values is a not pd.series or list.'
         assert type(min_values) == pd.Series or list, 'min_values is a not pd.series or list.'
         self.max_values = max_values
@@ -206,4 +207,4 @@ if __name__ == '__main__':
                   input_with_grid = args.input_with_grid,
                   transform=transform)
     
-    print(a[0]['input'])
+    print(a.print_idx_list())

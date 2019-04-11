@@ -31,7 +31,7 @@ class TyDataset(Dataset):
             input_with_grid (boolean): The option to add gird info into input frames.
             transform (callable, optional): Optional transform to be applied on a sample.
         '''
-        super().__init__
+        super().__init__()
         ty_list = pd.read_csv(ty_list, index_col='En name').drop('Ch name', axis=1)
         ty_list['Time of issuing'] = pd.to_datetime(ty_list['Time of issuing'])
         ty_list['Time of canceling'] = pd.to_datetime(ty_list['Time of canceling'])

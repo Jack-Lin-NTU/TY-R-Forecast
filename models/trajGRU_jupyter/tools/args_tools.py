@@ -16,8 +16,7 @@ from torch.optim.optimizer import Optimizer
 # do multi-GPU you may need to deal with this.
 class Adam16(Optimizer):
 
-    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8,
-                 weight_decay=0):
+    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0):
         defaults = dict(lr=lr, betas=betas, eps=eps,
                         weight_decay=weight_decay)
         params = list(params)
@@ -86,15 +85,13 @@ def BMSE(outputs, labels):
     outputs_size = outputs.shape[0]
     if args.normalize_target:
         value_list = [0, 2/200, 5/200, 10/200, 30/200, 500/200]
+        weights = [1, 2, 5, 10, 30]
     else:
         value_list = [0, 2, 5, 10, 30, 500]
+        weights = [1, 2, 5, 10, 30]
     for i in range(len(value_list)-1):
         chosen = torch.stack([value_list[i] <= labels, labels < value_list[i+1]]).all(dim=0)
-        if i == 0:
-            bmse += torch.sum(1*(outputs[chosen] - labels[chosen])**2)/outputs_size
-        else:
-            bmse += torch.sum(value_list[i]*(outputs[chosen] - labels[chosen])**2)/outputs_size
-#         print(bmse)ㄋ
+        bmse += torch.sum(weights[i] * (outputs[chosen]-labels[chosen])**2) / outputs_size
     return bmse
 
 def BMAE(outputs, labels):
@@ -102,14 +99,13 @@ def BMAE(outputs, labels):
     outputs_size = outputs.shape[0]    
     if args.normalize_target:
         value_list = [0, 2/200, 5/200, 10/200, 30/200, 500/200]
+        weights = [1, 2, 5, 10, 30]
     else:
         value_list = [0, 2, 5, 10, 30, 500]
+        weights = [1, 2, 5, 10, 30]
     for i in range(len(value_list)-1):
         chosen = torch.stack([value_list[i] <= labels, labels < value_list[i+1]]).all(dim=0)
-        if i == 0:
-            bmae += torch.sum(1*torch.abs(outputs[chosen] - labels[chosen]))/outputs_size
-        else:
-            bmae += torch.sum(value_list[i]*torch.abs(outputs[chosen] - labels[chosen])**2)/outputs_size
+        bmae += torch.sum(weights[i] * torch.abs(outputs[chosen]-labels[chosen])**2) / outputs_size
 
     return bmse
 
@@ -126,7 +122,7 @@ def createfolder(directory):
 
 def make_path(path, workfolder=None):
     '''
-    This function is to make absolute path.
+    This function is used to transform path to absolute path.
     '''
     if path[0] == '~':
         new_path = os.path.expanduser(path)

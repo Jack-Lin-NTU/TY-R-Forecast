@@ -109,11 +109,13 @@ class TyDataset(Dataset):
                 year = str(self.idx_list.loc[i, 'The starting time'].year)
 
                 # Input data(a tensor with shape (input_frames X C X H X W))
+                
                 input_data = []
                 for j in range(self.input_frames):
                     tmp_data = []
                     # Radar
                     file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
+                    
                     data_path = os.path.join(self.radar_wrangled_data_folder, 'RAD', year+'.'+ty_name+'.'+file_time+'.pkl')
                     tmp_data.append(pd.read_pickle(data_path, compression=args.compression).loc[args.I_y[1]:args.I_y[0], args.I_x[0]:args.I_x[1]].to_numpy())
                     

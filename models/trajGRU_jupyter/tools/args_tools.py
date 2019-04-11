@@ -4,6 +4,7 @@ import math
 import torch
 import pandas as pd
 import argparse
+import torch.optim as optim
 from torch.optim.optimizer import Optimizer
 
 # This version of Adam keeps an fp32 copy of the parameters and 
@@ -226,15 +227,16 @@ else:
 
 if args.dtype == 'float16':
     args.value_dtype = torch.float16
+    args.optimizer = Adam16
 elif args.dtype == 'float32':
     args.value_dtype = torch.float32
+    args.optimizer = optim.Adam
     
 if args.loss_function == 'BMSE':
     args.loss_function = BMSE
 elif args.loss_function == 'BMAE':
     args.loss_function = BMAE
 
-args.optimizer = Adam16
 
 args.res_degree = 0.0125
 args.I_x = [args.I_x_l, args.I_x_h]

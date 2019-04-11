@@ -14,7 +14,7 @@ from tools.run import train, test, get_dataloader
 
 # get trainloader and testloader
 trainloader, testloader = get_dataloader(args)
-
+# breakpoint()
 # initilize model
 inputs_channels = 1 + args.input_with_QPE*1 + len(args.weather_list) + args.input_with_grid*2
 
@@ -92,6 +92,11 @@ else:
     
 args.result_folder = os.path.join(args.result_folder, 'wd{:.5f}_lr{:f}'.format(args.weight_decay, args.lr))
 args.params_folder = os.path.join(args.params_folder, 'wd{:.5f}_lr{:f}'.format(args.weight_decay, args.lr))
+
+if args.lr_scheduler:
+    args.result_folder += '_scheduler'
+    args.params_folder += '_scheduler'
+    
     
 train(net=Net, trainloader=trainloader, testloader=testloader, args=args)
 

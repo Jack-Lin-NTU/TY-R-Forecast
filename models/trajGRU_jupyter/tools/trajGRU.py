@@ -5,12 +5,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import init
 
-from .cnn2D_model import *
-from .args_tools import args
+from tools.cnn2D_model import *
 
-class subCNN(nn.Module):
-    def __init__(self, channel_input, channel_hidden, link_size):
+class displace_CNN(nn.Module):
+    def __init__(self, args, channel_input, channel_hidden, link_size):
         super().__init__()
+        self.args = args
         self.channel_input = channel_input
         self.channel_hidden = channel_hidden
         self.link_size = link_size
@@ -27,26 +27,29 @@ class subCNN(nn.Module):
 
         self.layer = nn.Sequential(*layer_sublist)
 
-    def grid_sample(self, input, grids_x, grids_y):
-        b, c, h, w = input.shape
+    def grid_sample(self, x, grids_x, grids_y):
+        input_ = x
+        b, c, h, w = input_.shape
         l = grids_x.shape[1]
-        input = input[:,:,None,:,:].expand((b,c,l,h,w))
+        input_ = input_[:,:,None,:,:].expand((b,c,l,h,w))
         grids_x = grids_x.unsqueeze(4)
         grids_y = grids_y.unsqueeze(4)
-        grids_l = torch.arange(1,l+1).unsqueeze(1).unsqueeze(2).unsqueeze(3).expand((b,l,h,w,1)).to(args.device, dtype=args.value_dtype)
+        grids_l = torch.arange(1,l+1).unsqueeze(1).unsqueeze(2).unsqueeze(3).expand((b,l,h,w,1)).to(self.args.device, dtype=self.args.value_dtype)
         grids = torch.cat([grids_x/(w-1), grids_y/(h-1), grids_l/(l-1)], 4)
         grids = grids*2-1
 
-        return F.grid_sample(input, grids)
+        return F.grid_sample(input_, grids)
 
-    def forward(self, input=None, prev_state=None):
+    def forward(self, x=None, prev_state=None):
         # get batch and spatial sizes
-#         print('Prev:',prev_state.shape)
+#         print('Prev:', prev_state.shape)
+        input_ = x
+    
         if self.channel_input == 0:
             stacked_inputs = prev_state
         else:
-#             print('Input:',input.shape)
-            stacked_inputs = torch.cat([input, prev_state], dim=1)
+#             print('Input:', input_.shape)
+            stacked_inputs = torch.cat([input_, prev_state], dim=1)
 
         output = self.layer(stacked_inputs)
 
@@ -92,13 +95,14 @@ class trajGRUCell(nn.Module):
     """
     Generate a convolutional traj GRU cell
     """
-    def __init__(self, channel_input, channel_hidden, link_size, kernel_size, stride=1, padding=1, batch_norm=False):
+    def __init__(self, args, channel_input, channel_hidden, link_size, kernel_size, stride=1, padding=1, batch_norm=False):
         super().__init__()
+        self.args = args
         self.channel_input = channel_input
         self.channel_hidden = channel_hidden
         self.link_size = link_size
 
-        self.subnetwork = subCNN(channel_input, channel_hidden, link_size)
+        self.subnetwork = displace_CNN(args, channel_input, channel_hidden, link_size)
 
         self.reset_gate_input = nn.Conv2d(channel_input, channel_hidden, kernel_size, stride, padding)
         self.update_gate_input = nn.Conv2d(channel_input, channel_hidden, kernel_size, stride, padding)
@@ -115,25 +119,25 @@ class trajGRUCell(nn.Module):
         init.constant_(self.update_gate_input.bias, 0.)
         init.constant_(self.out_gate_input.bias, 0.)
 
-
-    def forward(self, input, prev_state=None):
+    def forward(self, x, prev_state=None):
+        input_ = x
         # get batch and spatial sizes
-        batch_size = input.data.shape[0]
-        H, W = input.data.shape[2:]
+        batch_size = input_.data.shape[0]
+        H, W = input_.data.shape[2:]
 
         # generate empty prev_state, if None is provided
         if prev_state is None:
             state_size = (batch_size, self.channel_hidden, H, W)
             if torch.cuda.is_available():
-                prev_state = torch.zeros(state_size).to(args.device, dtype=args.value_dtype)
+                prev_state = torch.zeros(state_size).to(self.args.device, dtype=self.args.value_dtype)
             else:
                 prev_state = torch.zeros(state_size)
 
         # data size is [batch, channel, height, width]
-        M = self.subnetwork(input, prev_state)
-        update = torch.sigmoid(self.update_gate_input(input)+self.update_gate_warp(M))
-        reset = torch.sigmoid(self.reset_gate_input(input)+self.reset_gate_warp(M))
-        out_inputs = F.leaky_relu((self.out_gate_input(input)+reset*self.out_gate_warp(M)), negative_slope=0.2)
+        M = self.subnetwork(input_, prev_state)
+        update = torch.sigmoid(self.update_gate_input(input_)+self.update_gate_warp(M))
+        reset = torch.sigmoid(self.reset_gate_input(input_)+self.reset_gate_warp(M))
+        out_inputs = F.leaky_relu((self.out_gate_input(input_)+reset*self.out_gate_warp(M)), negative_slope=0.2)
         new_state = prev_state*update + out_inputs*(1-update)
         return new_state
 
@@ -141,12 +145,14 @@ class DetrajGRUCell(nn.Module):
     """
     Generate a deconvolutional traj GRU cell
     """
-    def __init__(self, channel_input, channel_hidden, link_size, kernel_size, stride=1, padding=1, batch_norm=False):
+    def __init__(self, args, channel_input, channel_hidden, link_size, kernel_size, stride=1, padding=1, batch_norm=False):
         super().__init__()
+        self.args = args
         self.channel_input = channel_input
         self.channel_hidden = channel_hidden
 
-        self.subnetwork = subCNN(channel_input, channel_hidden, link_size)
+        self.subnetwork = displace_CNN(args, channel_input, channel_hidden, link_size)
+        
         if channel_input != 0:
             self.reset_gate_input = nn.ConvTranspose2d(channel_input, channel_hidden, kernel_size, stride, padding)
             self.update_gate_input = nn.ConvTranspose2d(channel_input, channel_hidden, kernel_size, stride, padding)
@@ -162,7 +168,8 @@ class DetrajGRUCell(nn.Module):
         self.update_gate_warp = warp_DECNN(channel_hidden, link_size, 1, 1, 0)
         self.out_gate_warp = warp_DECNN(channel_hidden, link_size, 1, 1, 0)
 
-    def forward(self, input=None, prev_state=None):
+    def forward(self, x=None, prev_state=None):
+        input_ = x
         # get batch and spatial sizes
         batch_size = prev_state.data.shape[0]
         H, W = prev_state.data.shape[2:]
@@ -175,10 +182,10 @@ class DetrajGRUCell(nn.Module):
             new_state = prev_state*(1-update) + out_inputs*update
 
         else:
-            M = self.subnetwork(input=input, prev_state=prev_state)
-            update = torch.sigmoid(self.update_gate_input(input)+self.update_gate_warp(M))
-            reset = torch.sigmoid(self.reset_gate_input(input)+self.reset_gate_warp(M))
-            out_inputs = F.leaky_relu((self.out_gate_input(input)+reset*self.out_gate_warp(M)), negative_slope=0.2)
+            M = self.subnetwork(x=input_, prev_state=prev_state)
+            update = torch.sigmoid(self.update_gate_input(input_)+self.update_gate_warp(M))
+            reset = torch.sigmoid(self.reset_gate_input(input_)+self.reset_gate_warp(M))
+            out_inputs = F.leaky_relu((self.out_gate_input(input_)+reset*self.out_gate_warp(M)), negative_slope=0.2)
             new_state = prev_state*(1-update) + out_inputs*update
 
         return new_state
@@ -186,10 +193,8 @@ class DetrajGRUCell(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, channel_input, channel_downsample, channel_rnn,
-                downsample_k, downsample_s, downsample_p,
-                rnn_link_size, rnn_k, rnn_s, rnn_p, n_layers,
-                batch_norm=False):
+    def __init__(self, args, channel_input, channel_downsample, channel_rnn, downsample_k, downsample_s, downsample_p,
+                 rnn_link_size, rnn_k, rnn_s, rnn_p, n_layers, batch_norm=False):
         '''
         Generates a multi-layer convolutional GRU.
         Preserves spatial dimensions across cells, only altering depth.
@@ -208,7 +213,7 @@ class Encoder(nn.Module):
         n_layers: (integer.) number of chained "ConvGRUCell".
         '''
         super().__init__()
-
+        self.args = args
         self.channel_input = channel_input
 
         # channel size
@@ -284,8 +289,8 @@ class Encoder(nn.Module):
             setattr(self, name, cell)
             cells.append(getattr(self, name))
 
-            cell = trajGRUCell(self.channel_downsample[i], self.channel_rnn[i], self.rnn_link_size[i],
-                                self.rnn_k[i], self.rnn_s[i], self.rnn_p[i])
+            cell = trajGRUCell(args, self.channel_downsample[i], self.channel_rnn[i], self.rnn_link_size[i],
+                               self.rnn_k[i], self.rnn_s[i], self.rnn_p[i])
             name = 'trajGRUCell_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
@@ -318,11 +323,9 @@ class Encoder(nn.Module):
 
 
 class Forecaster(nn.Module):
-    def __init__(self, channel_input, channel_upsample, channel_rnn,
-                upsample_k, upsample_p, upsample_s,
-                rnn_link_size, rnn_k, rnn_s, rnn_p, n_layers,
-                channel_output=1, output_k=1, output_s = 1, output_p=0, n_output_layers=1,
-                batch_norm=False):
+    def __init__(self, args, channel_input, channel_upsample, channel_rnn, upsample_k, upsample_p, upsample_s,
+                 rnn_link_size, rnn_k, rnn_s, rnn_p, n_layers, channel_output=1, output_k=1, output_s = 1, 
+                 output_p=0, n_output_layers=1, batch_norm=False):
         '''
         Generates a multi-layer convolutional GRU.
         Preserves spatial dimensions across cells, only altering depth.
@@ -346,7 +349,8 @@ class Forecaster(nn.Module):
         n_output_layers=1
         '''
         super().__init__()
-
+        
+        self.args = args
         self.channel_input = channel_input
         # channel size
         if type(channel_upsample) != list:
@@ -438,10 +442,10 @@ class Forecaster(nn.Module):
         for i in range(int(self.n_layers/2)):
             if i == 0:
                 cell = DetrajGRUCell(self.channel_input, self.channel_rnn[i], self.rnn_link_size[i],
-                                    self.rnn_k[i], self.rnn_s[i], self.rnn_p[i])
+                                     self.rnn_k[i], self.rnn_s[i], self.rnn_p[i])
             else:
                 cell = DetrajGRUCell(self.channel_upsample[i-1], self.channel_rnn[i], self.rnn_link_size[i],
-                                    self.rnn_k[i], self.rnn_s[i], self.rnn_p[i])
+                                     self.rnn_k[i], self.rnn_s[i], self.rnn_p[i])
 
             name = 'DetrajGRUCelll_' + str(i).zfill(2)
             setattr(self, name, cell)
@@ -485,7 +489,7 @@ class Forecaster(nn.Module):
                 cell_hidden = hidden[int(i/2)]
                 # pass through layer
 
-                upd_cell_hidden = cell(input=input_, prev_state=cell_hidden)
+                upd_cell_hidden = cell(x=input_, prev_state=cell_hidden)
 
                 upd_hidden.append(upd_cell_hidden)
                 # update input_ to the last updated hidden layer for next pass
@@ -495,13 +499,13 @@ class Forecaster(nn.Module):
                 input_ = cell(input_)
         cell = self.cells[-1]
         output = cell(input_)
-
+        output = ((10**(output/10))/200)**(5/8)
         # retain tensors in list to allow different hidden sizes
         return upd_hidden, output
 
 
-class model(nn.Module):
-    def __init__(self, n_encoders, n_forecasters, rnn_link_size,
+class Model(nn.Module):
+    def __init__(self, args, n_encoders, n_forecasters, rnn_link_size,
                 encoder_input_channel, encoder_downsample_channels, encoder_rnn_channels,
                 encoder_downsample_k, encoder_downsample_s, encoder_downsample_p,
                 encoder_rnn_k, encoder_rnn_s, encoder_rnn_p, encoder_n_layers,
@@ -517,21 +521,21 @@ class model(nn.Module):
 
         models = []
         for i in range(self.n_encoders):
-            model = Encoder(channel_input=encoder_input_channel, channel_downsample=encoder_downsample_channels, channel_rnn=encoder_rnn_channels,
-                            downsample_k=encoder_downsample_k, downsample_s=encoder_downsample_s, downsample_p=encoder_downsample_p,
-                            rnn_link_size=rnn_link_size, rnn_k=encoder_rnn_k, rnn_s=encoder_rnn_s, rnn_p=encoder_rnn_p,
-                            n_layers=encoder_n_layers, batch_norm=batch_norm)
+            model = Encoder(args=args, channel_input=encoder_input_channel, channel_downsample=encoder_downsample_channels,
+                            channel_rnn=encoder_rnn_channels, downsample_k=encoder_downsample_k, downsample_s=encoder_downsample_s, 
+                            downsample_p=encoder_downsample_p, rnn_link_size=rnn_link_size, rnn_k=encoder_rnn_k, rnn_s=encoder_rnn_s, 
+                            rnn_p=encoder_rnn_p, n_layers=encoder_n_layers, batch_norm=batch_norm)
             name = 'Encoder_' + str(i+1).zfill(2)
             setattr(self, name, model)
             models.append(getattr(self, name))
 
         for i in range(self.n_forecasters):
-            model = Forecaster(channel_input=forecaster_input_channel, channel_upsample=forecaster_upsample_channels,
-                                channel_rnn=forecaster_rnn_channels,
-                                upsample_k=forecaster_upsample_k, upsample_s=forecaster_upsample_s, upsample_p=forecaster_upsample_p,
-                                rnn_link_size=rnn_link_size, rnn_k=forecaster_rnn_k, rnn_s=forecaster_rnn_s, rnn_p=forecaster_rnn_p, n_layers=forecaster_n_layers,
-                                channel_output=forecaster_output, output_k=forecaster_output_k, output_s=forecaster_output_s,
-                                output_p=forecaster_output_p, n_output_layers=forecaster_output_layers, batch_norm=batch_norm)
+            model = Forecaster(args=args, channel_input=forecaster_input_channel, channel_upsample=forecaster_upsample_channels, 
+                               channel_rnn=forecaster_rnn_channels, upsample_k=forecaster_upsample_k, upsample_s=forecaster_upsample_s, 
+                               upsample_p=forecaster_upsample_p, rnn_link_size=rnn_link_size, rnn_k=forecaster_rnn_k, 
+                               rnn_s=forecaster_rnn_s, rnn_p=forecaster_rnn_p, n_layers=forecaster_n_layers,
+                               channel_output=forecaster_output, output_k=forecaster_output_k, output_s=forecaster_output_s,
+                               output_p=forecaster_output_p, n_output_layers=forecaster_output_layers, batch_norm=batch_norm)
             name = 'Forecaster_' + str(i+1).zfill(2)
             setattr(self, name, model)
             models.append(getattr(self, name))
@@ -539,8 +543,9 @@ class model(nn.Module):
         self.models = models
 
     def forward(self, x):
-        if x.size()[1] != self.n_encoders:
-            assert x.size()[1] == self.n_encoders, '`x` must have the same as n_encoders'
+        input_ = x
+        if input_.size()[1] != self.n_encoders:
+            assert input_.size()[1] == self.n_encoders, '`x` must have the same as n_encoders'
 
         forecast = []
 
@@ -548,11 +553,11 @@ class model(nn.Module):
             if i == 0:
                 hidden=None
             model = self.models[i]
-            hidden = model(x = x[:,i,:,:,:], hidden=hidden)
+            hidden = model(x = input_[:,i,:,:,:], hidden=hidden)
 
         hidden = hidden[::-1]
 
-        for i in range(self.n_encoders,self.n_encoders+self.n_forecasters):
+        for i in range(self.n_encoders, self.n_encoders+self.n_forecasters):
 
             model = self.models[i]
             hidden, output = model(hidden=hidden)

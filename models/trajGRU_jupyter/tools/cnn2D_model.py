@@ -23,8 +23,8 @@ class CNN2D_cell(nn.Module):
 
         self.layer = nn.Sequential(*layer_sublist)
 
-    def forward(self, input_):
-        out = self.layer(input_)
+    def forward(self, x):
+        out = self.layer(x)
         return out
 
 class DeCNN2D_cell(nn.Module):
@@ -47,8 +47,8 @@ class DeCNN2D_cell(nn.Module):
 
         self.layer = nn.Sequential(*layer_sublist)
 
-    def forward(self, input_):
-        out = self.layer(input_)
+    def forward(self, x):
+        out = self.layer(x)
         return out
 
 class Encoder(nn.Module):
@@ -266,8 +266,7 @@ class Fully_Connect(nn.Module):
         return output
 
 
-
-class model(nn.Module):
+class Model(nn.Module):
     def __init__(self, encoder_input, encoder_hidden, encoder_kernel, encoder_n_layer, encoder_stride, encoder_padding,
                     decoder_input, decoder_hidden, decoder_kernel, decoder_n_layer, decoder_stride, decoder_padding,
                     fully_input=None, fully_hidden=None, fully_layers=None, batch_norm=False):
@@ -282,7 +281,8 @@ class model(nn.Module):
             self.fc = Fully_Connect(n_input=fully_input,n_hidden=fully_hidden,n_layers=fully_layers)
 
     def forward(self, x):
-        output = self.encoder(x)
+        input_ = x
+        output = self.encoder(input_)
         output = self.decoder(output)
         if self.fully:
             output = output.reshape(output.size(0), -1)

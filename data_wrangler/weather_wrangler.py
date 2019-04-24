@@ -76,3 +76,10 @@ def localP_2_seaP(p: int or list, h, t):
     if type(t) == list:
         t = np.array(list)
     return p*10**(h/(18400*(1+t/273)))
+
+def localT_2_seaT(t: int or list, h):
+    if type(h) == list:
+        h = np.array(list)
+    if type(t) == list:
+        t = np.array(list)
+    return t+(h*0.6)

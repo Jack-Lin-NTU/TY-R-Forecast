@@ -7,7 +7,7 @@ import argparse
 import torch.optim as optim
 from torch.optim.optimizer import Optimizer
 
-# This version of Adam keeps an fp32 copy of the parameters and 
+# This version of Adam keeps an fp32 copy of the paramargseters and 
 # does all of the parameter updates in fp32, while still doing the
 # forwards and backwards passes using fp16 (i.e. fp16 copies of the 
 # parameters and fp16 activations).
@@ -16,7 +16,6 @@ from torch.optim.optimizer import Optimizer
 # moves them to gpu 0--if you're using a different GPU or want to 
 # do multi-GPU you may need to deal with this.
 class Adam16(Optimizer):
-
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0):
         defaults = dict(lr=lr, betas=betas, eps=eps,
                         weight_decay=weight_decay)
@@ -187,7 +186,7 @@ parser.add_argument('--lr', metavar='', type=float, default=1e-4, help='Max epoc
 parser.add_argument('--lr-scheduler', action='store_true', help='Set lr-scheduler.')
 parser.add_argument('--weight-decay', metavar='', type=float, default=0.1, help='Wegiht decay.(default: 0.1)')
 parser.add_argument('--clip', action='store_true', help='Clip model weightings.')
-parser.add_argument('--clip-max-norm', metavar='', type=int, default=500, help='Max norm value for clip model weightings. (default: 500)')
+parser.add_argument('--clip-max-norm', metavar='', type=int, default=300, help='Max norm value for clip model weightings. (default: 300)')
 parser.add_argument('--batch-norm', action='store_true', help='Do batch normalization.')
 
 parser.add_argument('--normalize-target', action='store_true', help='Normalize target maps.')
@@ -217,7 +216,6 @@ parser.add_argument('--O-y-h', metavar='', type=float, default=27, help='The hig
 parser.add_argument('--weather-list', metavar='', action='append', default=[],
                     help='Weather list. (default: [])')
 
-
 args = parser.parse_args()
 
 if args.able_cuda and torch.cuda.is_available():
@@ -227,10 +225,10 @@ else:
 
 if args.dtype == 'float16':
     args.value_dtype = torch.float16
-    args.optimizer = Adam16
+    args.optimizer = optim.SGD
 elif args.dtype == 'float32':
     args.value_dtype = torch.float32
-    args.optimizer = optim.Adam
+    args.optimizer = optim.SGD
     
 if args.loss_function == 'BMSE':
     args.loss_function = BMSE
@@ -263,19 +261,19 @@ args.min_values = pd.concat([rad_overall, meteo_overall], axis=1, sort=False).T[
 
 
 args.compression = 'bz2'
-args.figure_dpi = 150
+args.figure_dpi = 120
 
 args.RAD_level = [-5, 0, 10, 20, 30, 40, 50, 60, 70]
 args.QPE_level = [-5, 0, 10, 20, 35, 50, 80, 120, 160, 200]
 args.QPF_level = [-5, 0, 10, 20, 35, 50, 80, 120, 160, 200]
 
 args.RAD_cmap = ['#FFFFFF','#FFD8D8','#FFB8B8','#FF9090','#FF6060','#FF2020','#CC0000','#A00000','#600000']
-args.QPE_cmap = ['#FFFFFF','#D2D2FF','#AAAAFF','#8282FF','#6A6AFF','#4242FF','#1A1AFF','#000090','#000040','#000030']
-args.QPF_cmap = ['#FFFFFF','#D2D2FF','#AAAAFF','#8282FF','#6A6AFF','#4242FF','#1A1AFF','#000090','#000040','#000030']
+args.QPE_cmap = ['#FFFFFF','#D2D2FF','#AAAAFF','#8282FF','#6A6AFF','#4242FF','#1A1AFF','#000090','#000050','#000030']
+args.QPF_cmap = ['#FFFFFF','#D2D2FF','#AAAAFF','#8282FF','#6A6AFF','#4242FF','#1A1AFF','#000090','#000050','#000030']
 
 # # args.xaxis_list = np.around(np.linspace(args.I_x[0], args.I_x[1], args.I_shape[0]), decimals=4)
 # # args.yaxis_list = np.around(np.linspace(args.I_y[1], args.I_y[0], args.I_shape[1]), decimals=4)
 
 
 if __name__ == '__main__':
-    print(args.lr)
+    print(args.batch_norm)

@@ -17,28 +17,16 @@ from tools.datasetGRU import TyDataset, ToTensor, Normalize
 from tools.args_tools import args, createfolder, remove_file
     
 
-
 def get_dataloader(args):
     '''
     This function is used to get dataloaders.
     '''
     # transform
-    transform = transforms.Compose([ToTensor(), Normalize(max_values=args.max_values, min_values=args.min_values)])
+    transform = transforms.Compose([ToTensor(), Normalize(args)])
+    
+    traindataset = TyDataset(args=args, train = True, transform=transform)
+    testdataset = TyDataset(args=args, train = False, transform=transform)
 
-    # dataset
-    traindataset = TyDataset(ty_list = args.ty_list,
-                             input_frames = args.input_frames,
-                             target_frames = args.target_frames,
-                             train = True,
-                             input_with_grid = args.input_with_grid,
-                             transform = transform)
-
-    testdataset = TyDataset(ty_list = args.ty_list,
-                            input_frames = args.input_frames,
-                            target_frames = args.target_frames,
-                            train = False,
-                            input_with_grid = args.input_with_grid,
-                            transform = transform)
     # datloader
     trainloader = DataLoader(dataset=traindataset, batch_size=args.batch_size, shuffle=True)
     testloader = DataLoader(dataset=testdataset, batch_size=args.batch_size, shuffle=False)
@@ -64,7 +52,7 @@ def train(net, trainloader, testloader, args):
     remove_file(params_pt)
     
     # set the optimizer (learning rate is from args)
-    optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay, eps=1e-04)
+    optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     # Set scheduler
     if args.lr_scheduler:
         # milestone = [int(((x+1)/10)*50) for x in range(9)]
@@ -100,6 +88,8 @@ def train(net, trainloader, testloader, args):
             outputs = net(inputs)                           # outputs.shape = [4, 18, 60, 60]
 
             outputs = outputs.view(outputs.shape[0], -1)    # outputs.shape = [4, 64800]
+            if args.normalize_target:
+                outputs = (outputs - args.min_values['QPE']) / (args.max_values['QPE'] - args.min_values['QPE'])
             labels = labels.view(labels.shape[0], -1)       # labels.shape = [4, 64800]
 
             # calculate loss function
@@ -116,7 +106,7 @@ def train(net, trainloader, testloader, args):
             optimizer.step()
 
             # print training loss per 40 batches.
-            if (i+1) % 40 == 0:
+            if (i+1) % 10 == 0:
                 # print out the training results.
                 print('trajGRU|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}'.format(epoch+1, args.max_epochs, i+1, total_batches, loss.item()))
                 # print the trainging results to the log file.

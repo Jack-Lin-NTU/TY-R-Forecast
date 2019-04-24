@@ -6,18 +6,12 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import Compose
 
-from .args_tools import args
 
 class TyDataset(Dataset):
     '''
     Typhoon dataset
     '''
-    def __init__(self, ty_list=args.ty_list, radar_wrangled_data_folder=args.radar_wrangled_data_folder,
-                 weather_wrangled_data_folder=args.weather_wrangled_data_folder, 
-                 ty_info_wrangled_data_folder=args.ty_info_wrangled_data_folder,
-                 weather_list=args.weather_list, input_with_QPE=args.input_with_QPE, 
-                 input_with_grid=args.input_with_grid, train=True, train_num=None, 
-                 input_frames=args.input_frames, target_frames=args.target_frames,  transform=None):
+    def __init__(self, args, train=True, train_num=None, transform=None):
         '''
         Args:
             ty_list (string): Path of the typhoon list file.
@@ -34,24 +28,26 @@ class TyDataset(Dataset):
             transform (callable, optional): Optional transform to be applied on a sample.
         '''
         super().__init__()
-        ty_list = pd.read_csv(ty_list, index_col='En name').drop('Ch name', axis=1)
+        ty_list = pd.read_csv(args.ty_list, index_col='En name').drop('Ch name', axis=1)
         ty_list['Time of issuing'] = pd.to_datetime(ty_list['Time of issuing'])
         ty_list['Time of canceling'] = pd.to_datetime(ty_list['Time of canceling'])
         ty_list.index.name = 'Typhoon'
         
         self.ty_list = ty_list
-        self.radar_wrangled_data_folder = radar_wrangled_data_folder
-        self.weather_wrangled_data_folder = weather_wrangled_data_folder
-        self.ty_info_wrangled_data_folder = ty_info_wrangled_data_folder
-        self.weather_list = weather_list
-        self.input_with_grid = input_with_grid
-        self.input_with_QPE = input_with_QPE
+        self.radar_wrangled_data_folder = args.radar_wrangled_data_folder
+        self.weather_wrangled_data_folder = args.weather_wrangled_data_folder
+        self.ty_info_wrangled_data_folder = args.ty_info_wrangled_data_folder
+        self.weather_list = args.weather_list
+        self.input_with_grid = args.input_with_grid
+        self.input_with_QPE = args.input_with_QPE
         
-        self.input_frames = input_frames
-        self.target_frames = target_frames
+        self.input_frames = args.input_frames
+        self.target_frames = args.target_frames
+        self.args = args
         self.transform = transform
         
-        if input_with_grid:
+        
+        if self.input_with_grid:
             self.gird_x, self.gird_y = np.meshgrid(np.arange(0, args.I_shape[0]), np.arange(0, args.I_shape[1]))
         
         if train:
@@ -75,7 +71,7 @@ class TyDataset(Dataset):
     
         for i in self.idx_list.index:
             frame_s = self.ty_list.loc[i, 'Time of issuing']
-            frame_e = self.ty_list.loc[i, 'Time of canceling'] - dt.timedelta(minutes=(input_frames+target_frames-1)*10)
+            frame_e = self.ty_list.loc[i, 'Time of canceling'] - dt.timedelta(minutes=(self.input_frames+self.target_frames-1)*10)
             
             self.total_frames = tmp + int((frame_e-frame_s).days*24*6 + (frame_e-frame_s).seconds/600) + 1
             self.idx_list.loc[i,:] = [frame_s, frame_e, tmp, self.total_frames-1]
@@ -117,15 +113,18 @@ class TyDataset(Dataset):
                     file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
                     
                     data_path = os.path.join(self.radar_wrangled_data_folder, 'RAD', year+'.'+ty_name+'.'+file_time+'.pkl')
-                    tmp_data.append(pd.read_pickle(data_path, compression=args.compression).loc[args.I_y[1]:args.I_y[0], args.I_x[0]:args.I_x[1]].to_numpy())
+                    tmp_data.append(pd.read_pickle(data_path, compression=self.args.compression).loc[self.args.I_y[1]:self.args.I_y[0], 
+                                                                                                     self.args.I_x[0]:self.args.I_x[1]].to_numpy())
                     
                     if self.input_with_QPE:
                         data_path = os.path.join(self.radar_wrangled_data_folder, 'QPE', year+'.'+ty_name+'.'+file_time+'.pkl')
-                        tmp_data.append(pd.read_pickle(data_path, compression=args.compression).loc[args.I_y[1]:args.I_y[0], args.I_x[0]:args.I_x[1]].to_numpy())
+                        tmp_data.append(pd.read_pickle(data_path, compression=self.args.compression).loc[self.args.I_y[1]:self.args.I_y[0], 
+                                                                                                         self.args.I_x[0]:self.args.I_x[1]].to_numpy())
                     
                     for k in self.weather_list:
                         data_path = os.path.join(self.weather_wrangled_data_folder, k, (year+'.'+ty_name+'.'+file_time+'.pkl'))
-                        tmp_data.append(pd.read_pickle(data_path, compression=args.compression).loc[args.I_y[1]:args.I_y[0], args.I_x[0]:args.I_x[1]].to_numpy())
+                        tmp_data.append(pd.read_pickle(data_path, compression=self.args.compression).loc[self.args.I_y[1]:self.args.I_y[0], 
+                                                                                                         self.args.I_x[0]:self.args.I_x[1]].to_numpy())
                     
                     if self.input_with_grid:
                         input_data.append(np.array(tmp_data+[self.gird_x, self.gird_y]))
@@ -139,7 +138,8 @@ class TyDataset(Dataset):
                 for j in range(self.input_frames, self.input_frames+self.target_frames):
                     file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
                     data_path = os.path.join(self.radar_wrangled_data_folder, 'QPE', year+'.'+ty_name+'.'+file_time+'.pkl')
-                    target_data.append(pd.read_pickle(data_path, compression=args.compression).loc[args.F_y[1]:args.F_y[0], args.F_x[0]:args.F_x[1]].to_numpy())
+                    target_data.append(pd.read_pickle(data_path, compression=self.args.compression).loc[self.args.F_y[1]:self.args.F_y[0], 
+                                                                                                        self.args.F_x[0]:self.args.F_x[1]].to_numpy())
                 target_data = np.array(target_data)
                 # return the idx of sample
                 self.sample = {'input': input_data, 'target': target_data}
@@ -160,35 +160,35 @@ class Normalize(object):
     '''
     Normalize samples
     '''
-    def __init__(self, max_values, min_values, input_with_QPE=args.input_with_QPE, input_with_grid=args.input_with_grid, 
-                 normalize_target=args.normalize_target):
-        assert type(max_values) == pd.Series or list, 'max_values is a not pd.series or list.'
-        assert type(min_values) == pd.Series or list, 'min_values is a not pd.series or list.'
-        self.max_values = max_values
-        self.min_values = min_values
-        self.normalize_target = normalize_target
-        self.input_with_grid = input_with_grid
-        self.input_with_QPE = input_with_QPE
+    def __init__(self, args):
+        assert type(args.max_values) == pd.Series or list, 'max_values is a not pd.series or list.'
+        assert type(args.min_values) == pd.Series or list, 'min_values is a not pd.series or list.'
+        self.max_values = args.max_values
+        self.min_values = args.min_values
+        self.normalize_target = args.normalize_target
+        self.input_with_grid = args.input_with_grid
+        self.input_with_QPE = args.input_with_QPE
+        self.args = args
         
     def __call__(self, sample):
         input_data, target_data = sample['input'], sample['target']
         
         index = 0
-        input_data[:,index,:,:] = (input_data[:,index,:,:] - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
+        input_data[:,index,:,:] = (input_data[:,index, :, :] - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
         
         if self.input_with_QPE:
             index += 1
             input_data[:,index,:,:] = (input_data[:,index,:,:] - self.min_values['QPE']) / (self.max_values['QPE'] - self.min_values['QPE'])
 
-        for idx, value in enumerate(args.weather_list):
+        for idx, value in enumerate(self.args.weather_list):
             index += 1
             input_data[:,index,:,:] = (input_data[:,index,:,:] - self.min_values[value]) / (self.max_values[value] - self.min_values[value])
         
         if self.input_with_grid:    
             index += 1
-            input_data[:,index,:,:] = input_data[:,index,:,:] / args.I_shape[0]
+            input_data[:,index,:,:] = input_data[:,index,:,:] / self.args.I_shape[0]
             index += 1
-            input_data[:,index,:,:] = input_data[:,index,:,:] / args.I_shape[1]
+            input_data[:,index,:,:] = input_data[:,index,:,:] / self.args.I_shape[1]
         
         if self.normalize_target:
             target_data = (target_data - self.min_values['QPE']) / (self.max_values['QPE'] - self.min_values['QPE'])
@@ -200,13 +200,8 @@ class Normalize(object):
     
     
 if __name__ == '__main__':
-    transform = Compose([ToTensor(), Normalize(max_values=args.max_values, min_values=args.min_values)])
-    a = TyDataset(ty_list = args.ty_list,
-                  input_frames = args.input_frames,
-                  target_frames = args.target_frames,
-                  train = True,
-                  input_with_QPE = args.input_with_QPE,
-                  input_with_grid = args.input_with_grid,
-                  transform=transform)
+    from tools.args_tools import args
+    transform = Compose([ToTensor(), Normalize(args),])
+    a = TyDataset(args, transform=transform)
     
-    print(a.print_idx_list())
+    print(a[0]['target'])

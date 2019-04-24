@@ -9,8 +9,10 @@ import torch.optim as optim
 
 from tools.args_tools import args, print_dict
 
-from tools.trajGRU import model
+from tools.trajGRU import trajGRUs
 from tools.run import train, test, get_dataloader
+
+
 
 # get trainloader and testloader
 trainloader, testloader = get_dataloader(args)
@@ -63,7 +65,9 @@ forecaster_output_s = 1
 forecaster_output_p = 1
 forecaster_output_layers = 1
 
-Net = model(n_encoders=args.input_frames, n_forecasters=args.target_frames, rnn_link_size=rnn_link_size, 
+# breakpoint()
+
+Net = Model(args=args, n_encoders=args.input_frames, n_forecasters=args.target_frames, rnn_link_size=rnn_link_size,
             encoder_input_channel=encoder_input_channel, encoder_downsample_channels=encoder_downsample_channels,
             encoder_rnn_channels=encoder_rnn_channels, encoder_downsample_k=encoder_downsample_k,
             encoder_downsample_s=encoder_downsample_s, encoder_downsample_p=encoder_downsample_p, 
@@ -96,8 +100,7 @@ args.params_folder = os.path.join(args.params_folder, 'wd{:.5f}_lr{:f}'.format(a
 if args.lr_scheduler:
     args.result_folder += '_scheduler'
     args.params_folder += '_scheduler'
-    
-    
+
 train(net=Net, trainloader=trainloader, testloader=testloader, args=args)
 
 time_e = time.time()

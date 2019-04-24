@@ -4,7 +4,7 @@ import gzip
 import pandas as pd
 import numpy as np
 import datetime as dt
-from args_jupyter import args, createfolder
+from args_tools_jupyter import args, createfolder
 
 pd.set_option('precision', 4)
 
@@ -14,7 +14,7 @@ def extract_original_data():
         This function is to extract the selected event data form original data.
     '''
     #load typhoon list file
-    ty_list = pd.read_excel(args.ty_list)
+    ty_list = pd.read_csv(args.ty_list)
     ty_list.loc[:, 'Time of issuing'] = pd.to_datetime(ty_list.loc[:, 'Time of issuing'])
     ty_list.loc[:, 'Time of canceling'] = pd.to_datetime(ty_list.loc[:, 'Time of canceling'])
     
@@ -58,7 +58,9 @@ def output_files():
         This function is to uncompress the extracted files and output the wrangled files.
     '''
     # load typhoon list file
-    ty_list = pd.read_excel(args.ty_list)
+    ty_list = pd.read_csv(args.ty_list)
+    ty_list.loc[:, 'Time of issuing'] = pd.to_datetime(ty_list.loc[:, 'Time of issuing'])
+    ty_list.loc[:, 'Time of canceling'] = pd.to_datetime(ty_list.loc[:, 'Time of canceling'])
 
     radar_compressed_data_folder = args.radar_compressed_data_folder
     tmp_uncompressed_folder = os.path.join(args.radar_folder, 'tmp')
@@ -75,6 +77,7 @@ def output_files():
         count_qpe[i] = len([x for x in os.listdir(radar_compressed_data_folder) if 'C' == x[0]])
         count_qpf[i] = len([x for x in os.listdir(radar_compressed_data_folder) if 'M' == x[0]])
         count_rad[i] = len([x for x in os.listdir(radar_compressed_data_folder) if 'q' == x[0]])
+        
         for j in sorted(os.listdir(radar_compressed_data_folder)):
             compressed_file = os.path.join(radar_compressed_data_folder, j)
             outputtime = j[-16:-8]+j[-7:-3]
@@ -106,11 +109,11 @@ def output_files():
             bashcommand = os.path.join('.', args.fortran_code_folder, '{:s}.out {:s} {:s}'.format(name, tmp_uncompressed_file, tmp_file_out))
             os.system(bashcommand)
 
-            data = pd.read_table(tmp_file_out, delim_whitespace=True, header=None)
+            data = pd.read_csv(tmp_file_out, sep='\s+', header=None)
             output_path = os.path.join(output_folder, i+'.'+outputtime)
             
-            data.columns = pd.Index(np.linspace(args.O_x[0], args.O_x[1], args.O_shape[0]), name='xgitude')
-            data.index = pd.Index(np.linspace(args.O_y[1], args.O_y[0], args.O_shape[1]), name='yitude')
+            data.columns = pd.Index(np.linspace(args.O_x[0], args.O_x[1], args.O_shape[0]), name='longitude')
+            data.index = pd.Index(np.linspace(args.O_y[1], args.O_y[0], args.O_shape[1]), name='latitude')
             data.to_pickle(output_path+'.pkl', compression=args.compression)
             
             os.remove(tmp_uncompressed_file)
@@ -126,8 +129,9 @@ def check_data_and_create_miss_data():
     # Set path
     radar_wrangled_data_folder = args.radar_wrangled_data_folder
 
-    ty_list = pd.read_excel(args.ty_list)
-
+    ty_list = pd.read_csv(args.ty_list)
+    ty_list.loc[:, 'Time of issuing'] = pd.to_datetime(ty_list.loc[:, 'Time of issuing'])
+    ty_list.loc[:, 'Time of canceling'] = pd.to_datetime(ty_list.loc[:, 'Time of canceling'])
     count_qpe = {}
     count_qpf = {}
     count_rad = {}

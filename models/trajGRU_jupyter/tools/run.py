@@ -42,7 +42,6 @@ def get_dataloader(args):
     # datloader
     trainloader = DataLoader(dataset=traindataset, batch_size=args.batch_size, shuffle=True)
     testloader = DataLoader(dataset=testdataset, batch_size=args.batch_size, shuffle=False)
-    
     return trainloader, testloader
 
 
@@ -70,7 +69,7 @@ def train(net, trainloader, testloader, args):
     if args.lr_scheduler:
         # milestone = [int(((x+1)/10)*50) for x in range(9)]
         # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=3)
-        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[x for x in range(1, args.max_epochs) if x % 5 == 0], gamma=0.4)
+        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[x for x in range(1, args.max_epochs) if x % 5 == 0], gamma=0.7)
     
     total_batches = len(trainloader)
     

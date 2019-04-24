@@ -7,12 +7,10 @@ pd.set_option('precision', 4)
 import torch
 import torch.optim as optim
 
-from tools.args_tools import args, print_dict
+from tools.args_tools import args
 
-from tools.trajGRU import trajGRUs
+from tools.trajGRU import Model
 from tools.run import train, test, get_dataloader
-
-
 
 # get trainloader and testloader
 trainloader, testloader = get_dataloader(args)
@@ -65,7 +63,6 @@ forecaster_output_s = 1
 forecaster_output_p = 1
 forecaster_output_layers = 1
 
-# breakpoint()
 
 Net = Model(args=args, n_encoders=args.input_frames, n_forecasters=args.target_frames, rnn_link_size=rnn_link_size,
             encoder_input_channel=encoder_input_channel, encoder_downsample_channels=encoder_downsample_channels,
@@ -80,6 +77,7 @@ Net = Model(args=args, n_encoders=args.input_frames, n_forecasters=args.target_f
             forecaster_output_k=forecaster_output_k, forecaster_output_s=forecaster_output_s, 
             forecaster_output_p=forecaster_output_p, forecaster_output_layers=forecaster_output_layers, 
             batch_norm=args.batch_norm).to(args.device, dtype=args.value_dtype)
+breakpoint()
 # print(Net)
 # train process
 time_s = time.time()

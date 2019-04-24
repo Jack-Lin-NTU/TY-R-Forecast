@@ -79,7 +79,6 @@ class Adam16(Optimizer):
         return loss
 
 
-
 def BMSE(outputs, labels):
     bmse = 0
     outputs_size = outputs.shape[0]

@@ -13,8 +13,8 @@ from torch.utils.data import DataLoader
 from torchvision import transforms, utils
 
 # import our model and dataloader
-from .dataseters.trajGRU import TyDataset, ToTensor, Normalize
-from .argstools.args_tools import args, createfolder, remove_file
+from src.dataseters.trajGRU import TyDataset, ToTensor, Normalize
+from src.argstools.argstools import createfolder, remove_file
 
 def get_dataloader(args):
     '''

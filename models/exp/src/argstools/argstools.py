@@ -15,8 +15,9 @@ from torch.optim.optimizer import Optimizer
 # Note that this calls .float().cuda() on the params such that it 
 # moves them to gpu 0--if you're using a different GPU or want to 
 # do multi-GPU you may need to deal with this.
+
 class Adam16(Optimizer):
-    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0):
+    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0, args=None):
         defaults = dict(lr=lr, betas=betas, eps=eps,
                         weight_decay=weight_decay)
         params = list(params)
@@ -78,35 +79,38 @@ class Adam16(Optimizer):
 
         return loss
 
+class loss_rainfall():
+    def __init__(self, args):
+        self.args = args
 
-def BMSE(outputs, labels):
-    bmse = 0
-    outputs_size = outputs.shape[0]
-    if args.normalize_target:
-        value_list = [0, 2/200, 5/200, 10/200, 30/200, 500/200]
-        weights = [1, 2, 5, 10, 30]
-    else:
-        value_list = [0, 2, 5, 10, 30, 500]
-        weights = [1, 2, 5, 10, 30]
-    for i in range(len(value_list)-1):
-        chosen = torch.stack([value_list[i] <= labels, labels < value_list[i+1]]).all(dim=0)
-        bmse += torch.sum(weights[i] * (outputs[chosen]-labels[chosen])**2) / outputs_size
-    return bmse
+    def bmse(self, outputs, labels):
+        loss = 0
+        outputs_size = outputs.shape[0]
+        if args.normalize_target:
+            value_list = [0, 2/args.max['QPE'], 5/200, 10/200, 30/200, 500/200]
+            weights = [1, 2, 5, 10, 30]
+        else:
+            value_list = [0, 2, 5, 10, 30, 500]
+            weights = [1, 2, 5, 10, 30]
+        for i in range(len(value_list)-1):
+            chosen = torch.stack([value_list[i] <= labels, labels < value_list[i+1]]).all(dim=0)
+            loss += torch.sum(weights[i] * (outputs[chosen]-labels[chosen])**2) / outputs_size
+        return loss
 
-def BMAE(outputs, labels):
-    bmae = 0
-    outputs_size = outputs.shape[0]    
-    if args.normalize_target:
-        value_list = [0, 2/200, 5/200, 10/200, 30/200, 500/200]
-        weights = [1, 2, 5, 10, 30]
-    else:
-        value_list = [0, 2, 5, 10, 30, 500]
-        weights = [1, 2, 5, 10, 30]
-    for i in range(len(value_list)-1):
-        chosen = torch.stack([value_list[i] <= labels, labels < value_list[i+1]]).all(dim=0)
-        bmae += torch.sum(weights[i] * torch.abs(outputs[chosen]-labels[chosen])**2) / outputs_size
+    def bmae(outputs, labels):
+        loss = 0
+        outputs_size = outputs.shape[0]    
+        if args.normalize_target:
+            value_list = [0, 2/200, 5/200, 10/200, 30/200, 500/200]
+            weights = [1, 2, 5, 10, 30]
+        else:
+            value_list = [0, 2, 5, 10, 30, 500]
+            weights = [1, 2, 5, 10, 30]
+        for i in range(len(value_list)-1):
+            chosen = torch.stack([value_list[i] <= labels, labels < value_list[i+1]]).all(dim=0)
+            loss += torch.sum(weights[i] * torch.abs(outputs[chosen]-labels[chosen])**2) / outputs_size
 
-    return bmse
+        return loss
 
 
 def createfolder(directory):
@@ -228,12 +232,6 @@ if args.dtype == 'float16':
 elif args.dtype == 'float32':
     args.value_dtype = torch.float32
     args.optimizer = optim.SGD
-    
-if args.loss_function == 'BMSE':
-    args.loss_function = BMSE
-elif args.loss_function == 'BMAE':
-    args.loss_function = BMAE
-
 
 args.res_degree = 0.0125
 args.I_x = [args.I_x_l, args.I_x_h]

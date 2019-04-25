@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import init
 
-from tools.cnn2D_model import *
+from .cnn2D import *
 
 class warp_CNN(nn.Module):
     '''

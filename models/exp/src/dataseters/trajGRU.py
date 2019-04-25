@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
-from torchvision.transforms import Compose
 
 class TyDataset(Dataset):
     '''
@@ -200,6 +199,8 @@ class Normalize(object):
     
 if __name__ == '__main__':
     from tools.args_tools import args
+    from torchvision.transforms import Compose
+    
     transform = Compose([ToTensor(), Normalize(args),])
     a = TyDataset(args, transform=transform)
     

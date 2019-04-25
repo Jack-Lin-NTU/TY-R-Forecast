@@ -13,9 +13,8 @@ from torch.utils.data import DataLoader
 from torchvision import transforms, utils
 
 # import our model and dataloader
-from tools.datasetGRU import TyDataset, ToTensor, Normalize
-from tools.args_tools import args, createfolder, remove_file
-    
+from .dataseters.trajGRU import TyDataset, ToTensor, Normalize
+from .argstools.args_tools import args, createfolder, remove_file
 
 def get_dataloader(args):
     '''
@@ -95,7 +94,6 @@ def train(net, trainloader, testloader, args):
             # calculate loss function
             loss = args.loss_function(outputs, labels)
             train_loss += loss.item()/len(trainloader)
-
             # optimize model
             optimizer.zero_grad()
             loss.backward()

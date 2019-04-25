@@ -7,16 +7,16 @@ pd.set_option('precision', 4)
 import torch
 import torch.optim as optim
 
-from tools.args_tools import args, print_dict
-
-from tools.trajGRU import model
-from tools.run import train, test, get_dataloader
+from src.argstools.argstools import args
+from src.models.trajGRU import Model
+from src.trajGRU import train, test, get_dataloader
 
 # get trainloader and testloader
 trainloader, testloader = get_dataloader(args)
-
+# breakpoint()
 # initilize model
-inputs_channels = 1 + len(args.meteorology_list) + args.input_with_grid*2
+inputs_channels = 1 + args.input_with_QPE*1 + len(args.weather_list) + args.input_with_grid*2
+
 # set the factor of cnn channels
 c = args.channel_factor
 
@@ -26,7 +26,7 @@ c = args.channel_factor
 rnn_link_size = [13, 13, 9]
 
 encoder_input_channel = inputs_channels
-encoder_downsample_channels = [2*c,32*c,96*c]
+encoder_downsample_channels = [9*c,32*c,96*c]
 encoder_rnn_channels = [32*c,96*c,96*c]
 
 forecaster_input_channel = 0
@@ -38,7 +38,7 @@ if args.I_shape[0] == args.F_shape[0]*3:
     encoder_downsample_s = [3,2,2]
     encoder_downsample_p = [1,1,1]
 elif args.I_shape[0] == args.F_shape[0]:
-    encoder_downsample_k = [3,4,4]
+    encoder_downsample_k = [3,4,3]
     encoder_downsample_s = [1,2,2]
     encoder_downsample_p = [1,1,1]
 
@@ -56,14 +56,14 @@ forecaster_rnn_s = [1,1,1]
 forecaster_rnn_p = [1,1,1]
 forecaster_n_layers = 6
 
-
 forecaster_output = 1
 forecaster_output_k = 3
 forecaster_output_s = 1
 forecaster_output_p = 1
 forecaster_output_layers = 1
 
-Net = model(n_encoders=args.input_frames, n_forecasters=args.output_frames, rnn_link_size=rnn_link_size, 
+
+Net = Model(args=args, n_encoders=args.input_frames, n_forecasters=args.target_frames, rnn_link_size=rnn_link_size,
             encoder_input_channel=encoder_input_channel, encoder_downsample_channels=encoder_downsample_channels,
             encoder_rnn_channels=encoder_rnn_channels, encoder_downsample_k=encoder_downsample_k,
             encoder_downsample_s=encoder_downsample_s, encoder_downsample_p=encoder_downsample_p, 
@@ -76,13 +76,27 @@ Net = model(n_encoders=args.input_frames, n_forecasters=args.output_frames, rnn_
             forecaster_output_k=forecaster_output_k, forecaster_output_s=forecaster_output_s, 
             forecaster_output_p=forecaster_output_p, forecaster_output_layers=forecaster_output_layers, 
             batch_norm=args.batch_norm).to(args.device, dtype=args.value_dtype)
-
+# breakpoint()
+# print(Net)
 # train process
-
 time_s = time.time()
 
-args.result_folder = os.path.join(args.result_folder, '{}X{}'.format(args.I_shape[0], args.I_shape[1]), 'RAD_with_METEO_ALL')
-args.params_folder = os.path.join(args.params_folder, '{}X{}'.format(args.I_shape[0], args.I_shape[1]), 'RAD_with_METEO_ALL')
+size = '{}X{}'.format(args.I_shape[0], args.I_shape[1])
+
+if args.weather_list == []:
+    args.result_folder = os.path.join(args.result_folder, size, 'RAD_no_weather')
+    args.params_folder = os.path.join(args.params_folder, size, 'RAD_no_weather')
+else:
+    args.result_folder = os.path.join(args.result_folder, size, 'RAD_weather')
+    args.params_folder = os.path.join(args.params_folder, size, 'RAD_weather')
+
+    
+args.result_folder = os.path.join(args.result_folder, 'wd{:.5f}_lr{:f}'.format(args.weight_decay, args.lr))
+args.params_folder = os.path.join(args.params_folder, 'wd{:.5f}_lr{:f}'.format(args.weight_decay, args.lr))
+
+if args.lr_scheduler:
+    args.result_folder += '_scheduler'
+    args.params_folder += '_scheduler'
 
 train(net=Net, trainloader=trainloader, testloader=testloader, args=args)
 

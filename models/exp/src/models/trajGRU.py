@@ -17,9 +17,10 @@ class warp_CNN(nn.Module):
         The link size of each pixels are needed as well.
         The outputs of this model is two component of displacement of each pixels.
     '''
-    def __init__(self, args, channel_input, channel_hidden, link_size, kernel_size=1, stride=1, padding=0):
+    def __init__(self, channel_input, channel_hidden, link_size, kernel_size=1, stride=1, padding=0, device=None, value_dtype=None):
         super().__init__()
-        self.args = args
+        self.device = device
+        self.value_dtype = value_dtype
         self.channel_input = channel_input
         self.channel_hidden = channel_hidden
         self.link_size = link_size
@@ -31,14 +32,18 @@ class warp_CNN(nn.Module):
         displacement_layers.append(nn.ReLU())
 
         # initialize the weightings in each layers.
-        nn.init.orthogonal_(displacement_layers[0].weight)
-        nn.init.constant_(displacement_layers[0].bias, 0.)
-        nn.init.orthogonal_(displacement_layers[2].weight)
-        nn.init.constant_(displacement_layers[2].bias, 0.)
+        # nn.init.orthogonal_(displacement_layers[0].weight)
+        init.constant_(displacement_layers[0].weight, 0.)
+        init.constant_(displacement_layers[0].bias, 0.)
+        init.constant_(displacement_layers[2].weight, 0.)
+        init.constant_(displacement_layers[2].bias, 0.)
+        
         # make seqwence
         self.displacement_layers = nn.Sequential(*displacement_layers)
-
         self.warplayer = nn.Conv2d(channel_hidden*link_size, channel_hidden, kernel_size, stride, padding)
+        init.constant_(self.warplayer.weight, 0.)
+        init.constant_(self.warplayer.bias, 0.)
+
     def grid_sample(self, x, grids_x, grids_y):
         '''
         Function for sampling pixels based on given grid data.
@@ -49,7 +54,7 @@ class warp_CNN(nn.Module):
         input_ = input_[:,:,None,:,:].expand((b,c,l,h,w))
         grids_x = grids_x.unsqueeze(4)
         grids_y = grids_y.unsqueeze(4)
-        grids_l = torch.arange(1,l+1).unsqueeze(1).unsqueeze(2).unsqueeze(3).expand((b,l,h,w,1)).to(self.args.device, dtype=self.args.value_dtype)
+        grids_l = torch.arange(1,l+1).unsqueeze(1).unsqueeze(2).unsqueeze(3).expand((b,l,h,w,1)).to(self.device, dtype=self.value_dtype)
         grids = torch.cat([grids_x/(w-1), grids_y/(h-1), grids_l/(l-1)], 4)
         grids = grids*2-1
 
@@ -70,7 +75,7 @@ class warp_CNN(nn.Module):
 
         B, C, L, H, W = output.shape
         output = output.view(B, C*L, H, W)
-
+        print(output)
         return self.warplayer(output)
 
 
@@ -79,9 +84,10 @@ class trajGRUCell(nn.Module):
     Arguments: 
         This class is to generate a convolutional traj_GRU cell.
     """
-    def __init__(self, args, channel_input, channel_hidden, link_size, kernel_size, stride=1, padding=1, batch_norm=False):
+    def __init__(self, channel_input, channel_hidden, link_size, kernel_size, stride=1, padding=1, batch_norm=False, device=None, value_dtype=None):
         super().__init__()
-        self.args = args
+        self.device = device
+        self.value_dtype = value_dtype
         self.channel_input = channel_input
         self.channel_hidden = channel_hidden
         self.link_size = link_size
@@ -90,13 +96,17 @@ class trajGRUCell(nn.Module):
         self.update_gate_input = nn.Conv2d(channel_input, channel_hidden, kernel_size, stride, padding)
         self.out_gate_input = nn.Conv2d(channel_input, channel_hidden, kernel_size, stride, padding)
 
-        self.reset_gate_warp = warp_CNN(args, channel_input, channel_hidden, link_size, 1, 1, 0)
-        self.update_gate_warp = warp_CNN(args, channel_input, channel_hidden, link_size, 1, 1, 0)
-        self.out_gate_warp = warp_CNN(args, channel_input, channel_hidden, link_size, 1, 1, 0)
+        self.reset_gate_warp = warp_CNN(channel_input, channel_hidden, link_size, 1, 1, 0, device, value_dtype)
+        self.update_gate_warp = warp_CNN(channel_input, channel_hidden, link_size, 1, 1, 0, device, value_dtype)
+        self.out_gate_warp = warp_CNN(channel_input, channel_hidden, link_size, 1, 1, 0, device, value_dtype)
 
-        init.orthogonal_(self.reset_gate_input.weight)
-        init.orthogonal_(self.update_gate_input.weight)
-        init.orthogonal_(self.out_gate_input.weight)
+        # init.orthogonal_(self.reset_gate_input.weight)
+        # init.orthogonal_(self.update_gate_input.weight)
+        # init.orthogonal_(self.out_gate_input.weight)
+        init.constant_(self.reset_gate_input.weight, 0.)
+        init.constant_(self.update_gate_input.weight, 0.)
+        init.constant_(self.out_gate_input.weight, 0.)
+
         init.constant_(self.reset_gate_input.bias, 0.)
         init.constant_(self.update_gate_input.bias, 0.)
         init.constant_(self.out_gate_input.bias, 0.)
@@ -110,8 +120,8 @@ class trajGRUCell(nn.Module):
         # generate empty prev_state, if None is provided
         if prev_state is None:
             state_size = (batch_size, self.channel_hidden, H, W)
-            if self.args.able_cuda:
-                prev_state = torch.zeros(state_size).to(self.args.device, dtype=self.args.value_dtype)
+            if torch.cuda.is_available():
+                prev_state = torch.zeros(state_size).to(device=self.device, dtype=self.value_dtype)
             else:
                 prev_state = torch.zeros(state_size)
 
@@ -128,9 +138,10 @@ class DetrajGRUCell(nn.Module):
     Arguments: 
         This class is to generate a deconvolutional traj_GRU cell.
     """
-    def __init__(self, args, channel_input, channel_hidden, link_size, kernel_size, stride=1, padding=1, batch_norm=False):
+    def __init__(self, channel_input, channel_hidden, link_size, kernel_size, stride=1, padding=1, device=None, value_dtype=None):
         super().__init__()
-        self.args = args
+        self.device = device
+        self.value_dtype = value_dtype
         self.channel_input = channel_input
         self.channel_hidden = channel_hidden
         
@@ -138,16 +149,19 @@ class DetrajGRUCell(nn.Module):
             self.reset_gate_input = nn.ConvTranspose2d(channel_input, channel_hidden, kernel_size, stride, padding)
             self.update_gate_input = nn.ConvTranspose2d(channel_input, channel_hidden, kernel_size, stride, padding)
             self.out_gate_input = nn.ConvTranspose2d(channel_input, channel_hidden, kernel_size, stride, padding)
-            init.orthogonal_(self.reset_gate_input.weight)
-            init.orthogonal_(self.update_gate_input.weight)
-            init.orthogonal_(self.out_gate_input.weight)
+            # init.orthogonal_(self.reset_gate_input.weight)
+            # init.orthogonal_(self.update_gate_input.weight)
+            # init.orthogonal_(self.out_gate_input.weight)
+            init.constant_(self.reset_gate_input.weight, 0.)
+            init.constant_(self.update_gate_input.weight, 0.)
+            init.constant_(self.out_gate_input.weight, 0.)
             init.constant_(self.reset_gate_input.bias, 0.)
             init.constant_(self.update_gate_input.bias, 0.)
             init.constant_(self.out_gate_input.bias, 0.)
 
-        self.reset_gate_warp = warp_CNN(args, channel_input, channel_hidden, link_size, 1, 1, 0)
-        self.update_gate_warp = warp_CNN(args, channel_input, channel_hidden, link_size, 1, 1, 0)
-        self.out_gate_warp = warp_CNN(args, channel_input, channel_hidden, link_size, 1, 1, 0)
+        self.reset_gate_warp = warp_CNN(channel_input, channel_hidden, link_size, 1, 1, 0, device=self.device, value_dtype=self.value_dtype)
+        self.update_gate_warp = warp_CNN(channel_input, channel_hidden, link_size, 1, 1, 0, device=self.device, value_dtype=self.value_dtype)
+        self.out_gate_warp = warp_CNN(channel_input, channel_hidden, link_size, 1, 1, 0, device=self.device, value_dtype=self.value_dtype)
 
     def forward(self, x=None, prev_state=None):
         input_ = x
@@ -170,8 +184,8 @@ class DetrajGRUCell(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, args, channel_input, channel_downsample, channel_rnn, downsample_k, downsample_s, downsample_p,
-                 rnn_link_size, rnn_k, rnn_s, rnn_p, n_layers, batch_norm=False):
+    def __init__(self, channel_input, channel_downsample, channel_rnn, downsample_k, downsample_s, downsample_p,
+                 rnn_link_size, rnn_k, rnn_s, rnn_p, n_layers, batch_norm=False, device=None, value_dtype=None):
         '''
         Argumensts:
             Generates a multi-layer convolutional GRU, which is called encoder.
@@ -191,7 +205,8 @@ class Encoder(nn.Module):
             n_layers: (integer.) number of chained "ConvGRUCell".
         '''
         super().__init__()
-        self.args = args
+        self.device = device
+        self.value_dtype = value_dtype
         self.channel_input = channel_input
 
         # channel size
@@ -269,14 +284,13 @@ class Encoder(nn.Module):
             cells.append(getattr(self, name))
             
             ## gru cell
-            cell = trajGRUCell(args, channel_input=self.channel_downsample[i], channel_hidden=self.channel_rnn[i], link_size=self.rnn_link_size[i],
-                               kernel_size=self.rnn_k[i], stride=self.rnn_s[i], padding=self.rnn_p[i])
+            cell = trajGRUCell(channel_input=self.channel_downsample[i], channel_hidden=self.channel_rnn[i], link_size=self.rnn_link_size[i],
+                               kernel_size=self.rnn_k[i], stride=self.rnn_s[i], padding=self.rnn_p[i], device=self.device, value_dtype=self.value_dtype)
             name = 'trajGRUCell_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
 
         self.cells = cells
-
 
     def forward(self, x, hidden=None):
         if not hidden:
@@ -319,9 +333,9 @@ class Forecaster(nn.Module):
             rnn_p: (integer or list.) the padding size of each rnn layers.
             n_layers: (integer.) number of chained "ConvGRUCell".
         '''
-    def __init__(self, args, channel_input, channel_upsample, channel_rnn, upsample_k, upsample_p, upsample_s,
+    def __init__(self, channel_input, channel_upsample, channel_rnn, upsample_k, upsample_p, upsample_s,
                  rnn_link_size, rnn_k, rnn_s, rnn_p, n_layers, channel_output=1, output_k=1, output_s = 1, 
-                 output_p=0, n_output_layers=1, batch_norm=False):
+                 output_p=0, n_output_layers=1, batch_norm=False, device=None, value_dtype=None):
         '''
         Generates a multi-layer convolutional GRU.
         Preserves spatial dimensions across cells, only altering depth.
@@ -346,7 +360,8 @@ class Forecaster(nn.Module):
         '''
         super().__init__()
         
-        self.args = args
+        self.device = device
+        self.value_dtype = value_dtype
         self.channel_input = channel_input
         # channel size
         if type(channel_upsample) != list:
@@ -438,11 +453,11 @@ class Forecaster(nn.Module):
         for i in range(int(self.n_layers/2)):
             # detraj gru
             if i == 0:
-                cell = DetrajGRUCell(args, channel_input=self.channel_input, channel_hidden=self.channel_rnn[i], link_size=self.rnn_link_size[i],
-                                     kernel_size=self.rnn_k[i], stride=self.rnn_s[i], padding=self.rnn_p[i], batch_norm=args.batch_norm)
+                cell = DetrajGRUCell(channel_input=self.channel_input, channel_hidden=self.channel_rnn[i], link_size=self.rnn_link_size[i],
+                                     kernel_size=self.rnn_k[i], stride=self.rnn_s[i], padding=self.rnn_p[i], device=self.device, value_dtype=self.value_dtype)
             else:
-                cell = DetrajGRUCell(args, channel_input=self.channel_upsample[i-1], channel_hidden=self.channel_rnn[i], link_size=self.rnn_link_size[i],
-                                     kernel_size=self.rnn_k[i], stride=self.rnn_s[i], padding=self.rnn_p[i], batch_norm=args.batch_norm)
+                cell = DetrajGRUCell(channel_input=self.channel_upsample[i-1], channel_hidden=self.channel_rnn[i], link_size=self.rnn_link_size[i],
+                                     kernel_size=self.rnn_k[i], stride=self.rnn_s[i], padding=self.rnn_p[i], device=self.device, value_dtype=self.value_dtype)
 
             name = 'DetrajGRUCelll_' + str(i).zfill(2)
             setattr(self, name, cell)
@@ -459,6 +474,11 @@ class Forecaster(nn.Module):
                 cell = nn.Conv2d(self.channel_upsample[-1], self.channel_output[i], self.output_k[i], self.output_s[i], self.output_p[i])
             else:
                 cell = nn.Conv2d(self.channel_output[i-1], self.channel_output[i], self.output_k[i], self.output_s[i], self.output_p[i])
+        
+        
+        init.constant_(cell.weight, 0.)
+        init.constant_(cell.bias, 0.)
+        
         name = 'OutputLayer_' + str(i).zfill(2)
         setattr(self, name, cell)
         cells.append(getattr(self, name))
@@ -514,7 +534,7 @@ class Model(nn.Module):
         Argumensts:
             This class is used to construt whole trajGRU model based on given parameters.
         '''
-    def __init__(self, args, n_encoders, n_forecasters, rnn_link_size,
+    def __init__(self, n_encoders, n_forecasters, rnn_link_size,
                 encoder_input_channel, encoder_downsample_channels, encoder_rnn_channels,
                 encoder_downsample_k, encoder_downsample_s, encoder_downsample_p,
                 encoder_rnn_k, encoder_rnn_s, encoder_rnn_p, encoder_n_layers,
@@ -522,7 +542,7 @@ class Model(nn.Module):
                 forecaster_upsample_k, forecaster_upsample_s, forecaster_upsample_p,
                 forecaster_rnn_k, forecaster_rnn_s, forecaster_rnn_p, forecaster_n_layers,
                 forecaster_output=1, forecaster_output_k=1, forecaster_output_s=1, forecaster_output_p=0, forecaster_output_layers=1,
-                batch_norm=False):
+                batch_norm=False, device=None, value_dtype=None):
 
         super().__init__()
         self.n_encoders = n_encoders
@@ -530,21 +550,22 @@ class Model(nn.Module):
 
         models = []
         for i in range(self.n_encoders):
-            model = Encoder(args=args, channel_input=encoder_input_channel, channel_downsample=encoder_downsample_channels,
+            model = Encoder(channel_input=encoder_input_channel, channel_downsample=encoder_downsample_channels,
                             channel_rnn=encoder_rnn_channels, downsample_k=encoder_downsample_k, downsample_s=encoder_downsample_s, 
                             downsample_p=encoder_downsample_p, rnn_link_size=rnn_link_size, rnn_k=encoder_rnn_k, rnn_s=encoder_rnn_s, 
-                            rnn_p=encoder_rnn_p, n_layers=encoder_n_layers, batch_norm=batch_norm)
+                            rnn_p=encoder_rnn_p, n_layers=encoder_n_layers, batch_norm=batch_norm, device=device, value_dtype=value_dtype)
             name = 'Encoder_' + str(i+1).zfill(2)
             setattr(self, name, model)
             models.append(getattr(self, name))
 
         for i in range(self.n_forecasters):
-            model = Forecaster(args=args, channel_input=forecaster_input_channel, channel_upsample=forecaster_upsample_channels, 
+            model = Forecaster(channel_input=forecaster_input_channel, channel_upsample=forecaster_upsample_channels, 
                                channel_rnn=forecaster_rnn_channels, upsample_k=forecaster_upsample_k, upsample_s=forecaster_upsample_s, 
                                upsample_p=forecaster_upsample_p, rnn_link_size=rnn_link_size, rnn_k=forecaster_rnn_k, 
                                rnn_s=forecaster_rnn_s, rnn_p=forecaster_rnn_p, n_layers=forecaster_n_layers,
                                channel_output=forecaster_output, output_k=forecaster_output_k, output_s=forecaster_output_s,
-                               output_p=forecaster_output_p, n_output_layers=forecaster_output_layers, batch_norm=batch_norm)
+                               output_p=forecaster_output_p, n_output_layers=forecaster_output_layers, batch_norm=batch_norm, 
+                               device=device, value_dtype=value_dtype)
             name = 'Forecaster_' + str(i+1).zfill(2)
             setattr(self, name, model)
             models.append(getattr(self, name))
@@ -571,5 +592,5 @@ class Model(nn.Module):
             hidden, output = model(hidden=hidden)
             forecast.append(output)
         forecast = torch.cat(forecast, dim=1)
-
+        
         return forecast

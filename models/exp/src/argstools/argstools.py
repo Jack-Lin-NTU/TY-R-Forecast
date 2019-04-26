@@ -5,7 +5,7 @@ import torch
 import pandas as pd
 import argparse
 import torch.optim as optim
-from torch.optim.optimizer import Optimizer
+from torch.optim import Optimizer
 
 # This version of Adam keeps an fp32 copy of the paramargseters and 
 # does all of the parameter updates in fp32, while still doing the
@@ -85,33 +85,32 @@ class loss_rainfall():
 
     def bmse(self, outputs, labels):
         loss = 0
-        outputs_size = outputs.shape[0]
+        outputs_size = outputs.shape[1]
         if args.normalize_target:
-            value_list = [0, 2/args.max['QPE'], 5/200, 10/200, 30/200, 500/200]
+            value_list = [0, 2/args.max_values['QPE'], 5/args.max_values['QPE'], 10/args.max_values['QPE'], 30/args.max_values['QPE'], args.max_values['QPE']/args.max_values['QPE']]
             weights = [1, 2, 5, 10, 30]
         else:
-            value_list = [0, 2, 5, 10, 30, 500]
+            value_list = [0, 2, 5, 10, 30, args.max_values['QPE']]
             weights = [1, 2, 5, 10, 30]
         for i in range(len(value_list)-1):
-            chosen = torch.stack([value_list[i] <= labels, labels < value_list[i+1]]).all(dim=0)
-            loss += torch.sum(weights[i] * (outputs[chosen]-labels[chosen])**2) / outputs_size
+            mask = torch.stack([value_list[i] <= labels, labels < value_list[i+1]]).all(dim=0)
+            loss += torch.sum(weights[i] * (outputs[mask]-labels[mask])**2) / outputs_size
         return loss
 
-    def bmae(outputs, labels):
+    def bmae(self, outputs, labels):
         loss = 0
-        outputs_size = outputs.shape[0]    
+        outputs_size = outputs.shape[1]    
         if args.normalize_target:
-            value_list = [0, 2/200, 5/200, 10/200, 30/200, 500/200]
+            value_list = [0, 2/args.max_values['QPE'], 5/args.max_values['QPE'], 10/args.max_values['QPE'], 30/args.max_values['QPE'], args.max_values['QPE']/args.max_values['QPE']]
             weights = [1, 2, 5, 10, 30]
         else:
-            value_list = [0, 2, 5, 10, 30, 500]
+            value_list = [0, 2, 5, 10, 30, args.max_values['QPE']]
             weights = [1, 2, 5, 10, 30]
         for i in range(len(value_list)-1):
-            chosen = torch.stack([value_list[i] <= labels, labels < value_list[i+1]]).all(dim=0)
-            loss += torch.sum(weights[i] * torch.abs(outputs[chosen]-labels[chosen])**2) / outputs_size
+            mask = torch.stack([value_list[i] <= labels, labels < value_list[i+1]]).all(dim=0)
+            loss += torch.sum(weights[i] * torch.abs(outputs[mask]-labels[mask])) / outputs_size
 
         return loss
-
 
 def createfolder(directory):
     '''
@@ -144,6 +143,7 @@ def remove_file(file):
 def print_dict(d):
     for key, value in d.items():
         print('{}: {}'.format(key, value))
+
 
 parser = argparse.ArgumentParser()
 
@@ -184,10 +184,10 @@ parser.add_argument('--dtype', metavar='', type=str, default='float32', help='Th
 
 # hyperparameters for training
 parser.add_argument('--max-epochs', metavar='', type=int, default=30, help='Max epochs.(default: 30)')
-parser.add_argument('--batch-size', metavar='', type=int, default=8, help='Batch size.(default: 8)')
+parser.add_argument('--batch-size', metavar='', type=int, default=4, help='Batch size.(default: 8)')
 parser.add_argument('--lr', metavar='', type=float, default=1e-4, help='Max epochs.(default: 1e-4)')
 parser.add_argument('--lr-scheduler', action='store_true', help='Set lr-scheduler.')
-parser.add_argument('--weight-decay', metavar='', type=float, default=0.1, help='Wegiht decay.(default: 0.1)')
+parser.add_argument('--weight-decay', metavar='', type=float, default=0, help='Wegiht decay.(default: 0)')
 parser.add_argument('--clip', action='store_true', help='Clip model weightings.')
 parser.add_argument('--clip-max-norm', metavar='', type=int, default=300, help='Max norm value for clip model weightings. (default: 300)')
 parser.add_argument('--batch-norm', action='store_true', help='Do batch normalization.')

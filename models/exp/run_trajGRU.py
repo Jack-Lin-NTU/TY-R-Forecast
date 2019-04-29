@@ -14,9 +14,12 @@ from torch.utils.data import DataLoader
 from torchvision import transforms, utils
 
 # import our model and dataloader
-from src.dataseters.trajGRU import TyDataset, ToTensor, Normalize
 from src.argstools.argstools import args, createfolder, remove_file, loss_rainfall
 from src.models.trajGRU import Model
+if args.load_all_data:
+    from src.dataseters.trajGRU_all_data import TyDataset, ToTensor, Normalize
+else:
+    from src.dataseters.trajGRU import TyDataset, ToTensor, Normalize
 
 def get_dataloader(args):
     '''
@@ -83,8 +86,8 @@ def train(net, trainloader, testloader, loss_function, args):
 
         for i, data in enumerate(trainloader):
 
-            inputs = data['input'].to(args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, xsize, ysize]
-            labels = data['target'].to(args.device, dtype=args.value_dtype)  # labels.shape = [4,18,30,30]
+            inputs = data['inputs'].to(args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, xsize, ysize]
+            labels = data['targets'].to(args.device, dtype=args.value_dtype)  # labels.shape = [4,18,30,30]
 
             breakpoint()
             outputs = net(inputs)                           # outputs.shape = [4, 18, 60, 60]
@@ -183,17 +186,15 @@ if __name__ == '__main__':
     trainloader, testloader = get_dataloader(args)
     # breakpoint()
     # initilize model
-    inputs_channels = 1 + args.input_with_QPE*1 + len(args.weather_list) + args.input_with_grid*2
 
     # set the factor of cnn channels
     c = args.channel_factor
 
     ## construct Traj GRU
     # initialize the parameters of the encoders and forecasters
-
     rnn_link_size = [13, 13, 9]
 
-    encoder_input_channel = inputs_channels
+    encoder_input_channel = args.input_channels
     encoder_downsample_channels = [9*c,32*c,96*c]
     encoder_rnn_channels = [32*c,96*c,96*c]
 

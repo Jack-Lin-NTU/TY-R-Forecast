@@ -178,6 +178,7 @@ parser.add_argument('--params-folder', metavar='', type=str, default=make_path('
 parser.add_argument('--ty-list', metavar='', type=str, default=make_path('ty_list.csv', working_folder),
                    help='The path of ty list file.')
 
+parser.add_argument('--load-all-data', action='store_true', help='Load all data.')
 parser.add_argument('--able-cuda', action='store_true', help='Able cuda.')
 parser.add_argument('--gpu', metavar='', type=int, default=0, help='GPU device.(default: 0)')
 parser.add_argument('--dtype', metavar='', type=str, default='float32', help='The dtype of values.(default: float32)')
@@ -267,7 +268,7 @@ args.QPF_level = [-5, 0, 10, 20, 35, 50, 80, 120, 160, 200]
 args.RAD_cmap = ['#FFFFFF','#FFD8D8','#FFB8B8','#FF9090','#FF6060','#FF2020','#CC0000','#A00000','#600000']
 args.QPE_cmap = ['#FFFFFF','#D2D2FF','#AAAAFF','#8282FF','#6A6AFF','#4242FF','#1A1AFF','#000090','#000050','#000030']
 args.QPF_cmap = ['#FFFFFF','#D2D2FF','#AAAAFF','#8282FF','#6A6AFF','#4242FF','#1A1AFF','#000090','#000050','#000030']
-
+args.input_channels = 1 + args.input_with_QPE*1 + len(args.weather_list) + args.input_with_grid*2
 # # args.xaxis_list = np.around(np.linspace(args.I_x[0], args.I_x[1], args.I_shape[0]), decimals=4)
 # # args.yaxis_list = np.around(np.linspace(args.I_y[1], args.I_y[0], args.I_shape[1]), decimals=4)
 

@@ -75,12 +75,13 @@ class TyDataset(Dataset):
         if args.load_all_data:
             self.rad_all_data = pd.Series([])
             self.qpe_all_data = pd.Series([])
+            # for i in range(len(self.idx_list)):
             for i in range(len(self.idx_list)):
                 year = str(self.idx_list.iloc[i,0].year)
                 for j in range(self.idx_list.iloc[i,-1]-self.idx_list.iloc[i,-2]+1):
                     filename = year + '.' + self.idx_list.index[i] + '.' + dt.datetime.strftime(self.idx_list.iloc[i,0]+dt.timedelta(seconds=600*j),format='%Y%m%d%H%M') + '.pkl'
-                    self.rad_all_data[filename[:-4]] = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', filename),compression=args.compression).loc[self.I_y[1]:self.I_y[0], self.I_x[0]:self.I_x[1]]
-                    self.qpe_all_data[filename[:-4]] = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, 'QPE', filename),compression=args.compression).loc[self.I_y[1]:self.I_y[0], self.I_x[0]:self.I_x[1]]
+                    self.rad_all_data[filename[:-4]] = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', filename),compression=args.compression).loc[self.I_y[0]:self.I_y[1], self.I_x[0]:self.I_x[1]]
+                    self.qpe_all_data[filename[:-4]] = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, 'QPE', filename),compression=args.compression).loc[self.I_y[0]:self.I_y[1], self.I_x[0]:self.I_x[1]]
 
     def __len__(self):
         return self.total_frames
@@ -107,7 +108,7 @@ class TyDataset(Dataset):
                 # set default input_data (input_frames X channels X H X W)
                 input_data = np.zeros((self.input_frames, self.input_channels, self.I_shape[0], self.I_shape[1]))
                 # Input data(a tensor with shape (input_frames X C X H X W))
-                breakpoint()
+                
                 for j in range(self.input_frames):
                     # Radar
                     tmp = 0
@@ -129,7 +130,7 @@ class TyDataset(Dataset):
 
                 for j in range(self.target_frames):
                     file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+self.input_frames+j)), format='%Y%m%d%H%M')
-                    target_data[j,:,:] = self.qpe_all_data[year+'.'+ty_name+'.'+file_time].loc[self.F_y[1]:self.F_y[0], self.F_x[0]:self.F_x[1]].to_numpy()[np.newaxis,:,:]
+                    target_data[j,:,:] = self.qpe_all_data[year+'.'+ty_name+'.'+file_time].loc[self.F_y[0]:self.F_y[1], self.F_x[0]:self.F_x[1]].to_numpy()[np.newaxis,:,:]
 
                 # return the idx of sample
                 self.sample = {'inputs': input_data, 'targets': target_data}
@@ -143,8 +144,7 @@ class ToTensor(object):
     def __call__(self, sample):
         # numpy data: x_tsteps X H X W
         # torch data: x_tsteps X H X W
-        return {'inputs': torch.from_numpy(sample['input']),
-                'targets': torch.from_numpy(sample['target'])}
+        return {'inputs': torch.from_numpy(sample['input']), 'targets': torch.from_numpy(sample['target'])}
 
 class Normalize(object):
     '''
@@ -186,14 +186,4 @@ class Normalize(object):
 
         # numpy data: x_tsteps X H X W
         # torch data: x_tsteps X H X W
-        return {'inputs': input_data,
-                'targets': target_data}
-    
-    
-if __name__ == '__main__':
-    from argstools.argstools import args
-    from torchvision.transforms import Compose
-    transform = Compose([ToTensor(), Normalize(args),])
-    a = TyDataset(args=args, transform=transform)
-    
-    print(a[0]['target'])
+        return {'inputs': input_data, 'targets': target_data}

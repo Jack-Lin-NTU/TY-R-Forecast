@@ -202,15 +202,26 @@ parser.add_argument('--input-with-QPE', action='store_true', help='Input with QP
 parser.add_argument('--target-frames', metavar='', type=int, default=18, help='The size of target frames. (default: 18)')
 parser.add_argument('--channel-factor', metavar='', type=int, default=3, help='Channel factor. (default: 3)')
 
-parser.add_argument('--I-x-l', metavar='', type=float, default=120.9625, help='The lowest longitude of input map. (default: 120.9625)')
-parser.add_argument('--I-x-h', metavar='', type=float, default=122.075, help='The highest longitude of input map. (default: 122.075)')
-parser.add_argument('--I-y-l', metavar='', type=float, default=24.4375, help='The lowest latitude of input map. (default: 24.4375)')
-parser.add_argument('--I-y-h', metavar='', type=float, default=25.55, help='The highest latitude of input map. (default: 25.55)')
+# parser.add_argument('--I-x-l', metavar='', type=float, default=120.9625, help='The lowest longitude of input map. (default: 120.9625)')
+# parser.add_argument('--I-x-h', metavar='', type=float, default=122.075, help='The highest longitude of input map. (default: 122.075)')
+# parser.add_argument('--I-y-l', metavar='', type=float, default=24.4375, help='The lowest latitude of input map. (default: 24.4375)')
+# parser.add_argument('--I-y-h', metavar='', type=float, default=25.55, help='The highest latitude of input map. (default: 25.55)')
 
-parser.add_argument('--F-x-l', metavar='', type=float, default=121.3375, help='The lowest longitude of target map. (default: 121.3375)')
-parser.add_argument('--F-x-h', metavar='', type=float, default=121.7, help='The highest longitude of target map. (default: 121.7)')
-parser.add_argument('--F-y-l', metavar='', type=float, default=24.8125, help='The lowest latitude of target map. (default: 24.8125)')
-parser.add_argument('--F-y-h', metavar='', type=float, default=25.175, help='The highest latitude of target map. (default: 25.175)')
+# parser.add_argument('--F-x-l', metavar='', type=float, default=121.3375, help='The lowest longitude of target map. (default: 121.3375)')
+# parser.add_argument('--F-x-h', metavar='', type=float, default=121.7, help='The highest longitude of target map. (default: 121.7)')
+# parser.add_argument('--F-y-l', metavar='', type=float, default=24.8125, help='The lowest latitude of target map. (default: 24.8125)')
+# parser.add_argument('--F-y-h', metavar='', type=float, default=25.175, help='The highest latitude of target map. (default: 25.175)')
+
+# tw forecast size
+parser.add_argument('--I-x-l', metavar='', type=float, default=118.3, help='The lowest longitude of input map. (default: 118.3)')
+parser.add_argument('--I-x-h', metavar='', type=float, default=123.2875, help='The highest longitude of input map. (default: 123.2875)')
+parser.add_argument('--I-y-l', metavar='', type=float, default=21, help='The lowest latitude of input map. (default: 21)')
+parser.add_argument('--I-y-h', metavar='', type=float, default=25.9875, help='The highest latitude of input map. (default: 25.9875)')
+
+parser.add_argument('--F-x-l', metavar='', type=float, default=118.3, help='The lowest longitude of target map. (default: 118.3)')
+parser.add_argument('--F-x-h', metavar='', type=float, default=123.2875, help='The highest longitude of target map. (default: 123.2875)')
+parser.add_argument('--F-y-l', metavar='', type=float, default=21, help='The lowest latitude of target map. (default: 21)')
+parser.add_argument('--F-y-h', metavar='', type=float, default=25.9875, help='The highest latitude of target map. (default: 25.9875)')
 
 parser.add_argument('--O-x-l', metavar='', type=float, default=118, help='The lowest longitude of original map. (default: 118)')
 parser.add_argument('--O-x-h', metavar='', type=float, default=123.5, help='The highest longitude of original map. (default: 123.5)')
@@ -256,7 +267,6 @@ args.min_values = pd.concat([rad_overall, meteo_overall], axis=1, sort=False).T[
 # # args.I_y_iloc = [int((args.I_y[0]-args.O_y[0])/args.res_degree), int((args.I_y[1]-args.O_y[0])/args.res_degree + 1)]
 # # args.F_x_iloc = [int((args.F_x[0]-args.O_x[0])/args.res_degree), int((args.F_x[1]-args.O_x[0])/args.res_degree + 1)]
 # # args.F_y_iloc = [int((args.F_y[0]-args.O_y[0])/args.res_degree), int((args.F_y[1]-args.O_y[0])/args.res_degree + 1)]
-
 
 args.compression = 'bz2'
 args.figure_dpi = 120

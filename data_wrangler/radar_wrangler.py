@@ -113,7 +113,7 @@ def output_files():
             output_path = os.path.join(output_folder, i+'.'+outputtime)
             
             data.columns = pd.Index(np.linspace(args.O_x[0], args.O_x[1], args.O_shape[0]), name='longitude')
-            data.index = pd.Index(np.linspace(args.O_y[1], args.O_y[0], args.O_shape[1]), name='latitude')
+            data.index = pd.Index(np.linspace(args.O_y[0], args.O_y[1], args.O_shape[1]), name='latitude')
             data.to_pickle(output_path+'.pkl', compression=args.compression)
             
             os.remove(tmp_uncompressed_file)
@@ -152,7 +152,6 @@ def check_data_and_create_miss_data():
     qpe_list_miss = []
     # qpf_list_miss = []
     rad_list_miss = []
-    
     
     file_end = '.pkl'
 
@@ -193,7 +192,6 @@ def check_data_and_create_miss_data():
         data = (forwarddata+backwarddata)/2
         data.to_pickle(os.path.join(args.radar_wrangled_data_folder, missfiles.index[i], missfiles.iloc[i, 0]), compression=args.compression)
         
-            
     return count_qpe, count_qpf, count_rad
 
 def overall_of_data():

@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import init
 
-from .cnn2D import *
+from .cnn2D import CNN2D_cell, DeCNN2D_cell
 
 class warp_CNN(nn.Module):
     '''
@@ -27,9 +27,9 @@ class warp_CNN(nn.Module):
         # 2 cnn layers
         displacement_layers = []
         displacement_layers.append(nn.Conv2d(channel_input+channel_hidden, 32, 5, 1, 2))
-        displacement_layers.append(nn.ReLU())
+        displacement_layers.append(nn.LeakyReLU(negative_slope=0.2))
         displacement_layers.append(nn.Conv2d(32, link_size*2, 5, 1, 2))
-        displacement_layers.append(nn.ReLU())
+        displacement_layers.append(nn.LeakyReLU(negative_slope=0.2))
 
         # initialize the weightings in each layers.
         # nn.init.orthogonal_(displacement_layers[0].weight)

@@ -192,7 +192,7 @@ if __name__ == '__main__':
 
     ## construct Traj GRU
     # initialize the parameters of the encoders and forecasters
-    rnn_link_size = [13, 13, 9]
+    rnn_link_size = [13, 9, 9]
 
     encoder_input_channel = args.input_channels
     encoder_downsample_channels = [9*c,32*c,96*c]
@@ -207,8 +207,8 @@ if __name__ == '__main__':
         encoder_downsample_s = [3,2,2]
         encoder_downsample_p = [1,1,1]
     elif args.I_shape[0] == args.F_shape[0]:
-        encoder_downsample_k = [3,4,3]
-        encoder_downsample_s = [1,2,2]
+        encoder_downsample_k = [7,4,3]
+        encoder_downsample_s = [5,3,2]
         encoder_downsample_p = [1,1,1]
 
     encoder_rnn_k = [3,3,3]
@@ -216,8 +216,9 @@ if __name__ == '__main__':
     encoder_rnn_p = [1,1,1]
     encoder_n_layers = 6
 
-    forecaster_upsample_k = [3,4,3]
-    forecaster_upsample_s = [2,2,1]
+
+    forecaster_upsample_k = [3,4,7]
+    forecaster_upsample_s = [2,3,5]
     forecaster_upsample_p = [1,1,1]
 
     forecaster_rnn_k = [3,3,3]
@@ -244,7 +245,7 @@ if __name__ == '__main__':
                 forecaster_output_k=forecaster_output_k, forecaster_output_s=forecaster_output_s, 
                 forecaster_output_p=forecaster_output_p, forecaster_output_layers=forecaster_output_layers, 
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)
-    # breakpoint()
+    breakpoint()
     # train process
     time_s = time.time()
 

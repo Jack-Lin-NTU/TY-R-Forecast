@@ -118,7 +118,7 @@ def train(net, trainloader, testloader, loss_function, args):
         print('trajGRU|  Epoch [{}/{}], Train Loss: {:8.3f}'.format(epoch+1, args.max_epochs, train_loss))
 
         # Save the test loss per epoch
-        test_loss = test(net, testloader=testloader, args=args)
+        test_loss = test(net, testloader=testloader, loss_function=loss_function, args=args)
         # print out the testing results.
         print('trajGRU|  Epoch [{}/{}], Test Loss: {:8.3f}'.format(epoch+1, args.max_epochs, test_loss))
         # save the testing results.
@@ -154,7 +154,7 @@ def train(net, trainloader, testloader, loss_function, args):
 
     print('Training process has finished!')
     
-def test(net, testloader, args):
+def test(net, testloader, loss_function, args):
     '''
     Arguments: this function is about to test the given model on test data.
     net(nn.Module): trained model
@@ -173,7 +173,7 @@ def test(net, testloader, args):
             outputs = net(inputs)
             outputs = outputs.view(outputs.shape[0], -1)
             labels = labels.view(labels.shape[0], -1)
-            loss += args.loss_function(outputs, labels)
+            loss += loss_function(outputs, labels)
 
         loss = loss/n_batch
     return loss

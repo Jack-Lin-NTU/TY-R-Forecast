@@ -52,7 +52,6 @@ class TyDataset(Dataset):
 
         self.transform = transform
         
-        
         if train:
             if train_num is None:
                 self.events_num = np.arange(0, int(len(self.ty_list)/5*4))

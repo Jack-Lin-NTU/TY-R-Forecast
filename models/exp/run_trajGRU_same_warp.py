@@ -173,8 +173,8 @@ def test(net, testloader, loss_function, args):
         for _, data in enumerate(testloader, 0):
             inputs, labels = data['inputs'].to(args.device, dtype=args.value_dtype), data['targets'].to(args.device, dtype=args.value_dtype)
             outputs = net(inputs)
-            outputs = outputs.view(outputs.shape[0], -1)
-            labels = labels.view(labels.shape[0], -1)
+            if args.normalize_target:
+                outputs = (outputs - args.min_values['QPE']) / (args.max_values['QPE'] - args.min_values['QPE'])
             loss += loss_function(outputs, labels)
 
         loss = loss/n_batch

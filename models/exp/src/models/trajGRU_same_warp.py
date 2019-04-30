@@ -615,6 +615,7 @@ class Model(nn.Module):
             model = self.models[self.n_encoders+i]
             hidden, output = model(warp_net=self.forecaster_warp_net, hidden=hidden)
             forecast.append(output)
+            
         forecast = torch.cat(forecast, dim=1)
         
         return forecast

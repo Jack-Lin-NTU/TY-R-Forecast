@@ -107,23 +107,22 @@ class TyDataset(Dataset):
                 # set default input_data (input_frames X channels X H X W)
                 input_data = np.zeros((self.input_frames, self.input_channels, self.I_shape[0], self.I_shape[1]))
                 # Input data(a tensor with shape (input_frames X C X H X W))
-                breakpoint()
                 for j in range(self.input_frames):
                     # Radar
                     tmp = 0
                     file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
-                    input_data[j,tmp,:,:] = self.rad_all_data[year+'.'+ty_name+'.'+file_time].to_numpy()[np.newaxis,np.newaxis,:,:]
+                    input_data[j,tmp,:,:] = self.rad_all_data[year+'.'+ty_name+'.'+file_time].to_numpy()
                     tmp += 1
                     # QPE
                     if self.input_with_QPE:
-                        input_data[j,tmp,:,:] = self.qpe_all_data[year+'.'+ty_name+'.'+file_time].to_numpy()[np.newaxis,np.newaxis,:,:]
+                        input_data[j,tmp,:,:] = self.qpe_all_data[year+'.'+ty_name+'.'+file_time].to_numpy()
                         tmp += 1
                     
                     if self.input_with_grid:
                         gird_x, gird_y = np.meshgrid(np.arange(0, self.I_shape[0]), np.arange(0, self.I_shape[1]))
-                        input_data[j,tmp,:,:] = gird_x[np.newaxis,np.newaxis,:,:]
+                        input_data[j,tmp,:,:] = gird_x
                         tmp += 1
-                        input_data[j,tmp,:,:] = gird_y[np.newaxis,np.newaxis,:,:]
+                        input_data[j,tmp,:,:] = gird_y
                         tmp += 1 
                 
                 # set default target_data (target_frames X channels X H X W)
@@ -145,7 +144,7 @@ class ToTensor(object):
     def __call__(self, sample):
         # numpy data: x_tsteps X H X W
         # torch data: x_tsteps X H X W
-        return {'inputs': torch.from_numpy(sample['input']), 'targets': torch.from_numpy(sample['target'])}
+        return {'inputs': torch.from_numpy(sample['inputs']), 'targets': torch.from_numpy(sample['targets'])}
 
 class Normalize(object):
     '''

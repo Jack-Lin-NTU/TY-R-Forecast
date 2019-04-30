@@ -18,7 +18,7 @@ class CNN2D_cell(nn.Module):
             layer_sublist.append(nn.BatchNorm2d(channel_hidden))
         layer_sublist.append(nn.ReLU())
 
-        # nn.init.orthogonal_(layer_sublist[0].weight)
+        nn.init.constant_(layer_sublist[0].weight, 0.)
         nn.init.constant_(layer_sublist[0].bias, 0.)
 
         self.layer = nn.Sequential(*layer_sublist)
@@ -42,7 +42,7 @@ class DeCNN2D_cell(nn.Module):
             layer_sublist.append(nn.BatchNorm2d(channel_hidden))
         layer_sublist.append(nn.ReLU())
 
-        nn.init.orthogonal_(layer_sublist[0].weight)
+        nn.init.constant_(layer_sublist[0].weight, 0.)
         nn.init.constant_(layer_sublist[0].bias, 0.)
 
         self.layer = nn.Sequential(*layer_sublist)

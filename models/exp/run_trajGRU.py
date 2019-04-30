@@ -192,22 +192,18 @@ if __name__ == '__main__':
 
     ## construct Traj GRU
     # initialize the parameters of the encoders and forecasters
-    rnn_link_size = [13, 9, 9]
+    rnn_link_size = [13, 13, 9]
 
     encoder_input_channel = args.input_channels
-    encoder_downsample_channels = [9*c,32*c,96*c]
+    encoder_downsample_channels = [4*c,32*c,96*c]
     encoder_rnn_channels = [32*c,96*c,96*c]
-
-    forecaster_input_channel = 0
-    forecaster_upsample_channels = [96*c,96*c,4*c]
-    forecaster_rnn_channels = [96*c,96*c,32*c]
 
     if args.I_shape[0] == args.F_shape[0]*3:
         encoder_downsample_k = [5,4,3]
         encoder_downsample_s = [3,2,2]
         encoder_downsample_p = [1,1,1]
     elif args.I_shape[0] == args.F_shape[0]:
-        encoder_downsample_k = [7,4,3]
+        encoder_downsample_k = [7,5,4]
         encoder_downsample_s = [5,3,2]
         encoder_downsample_p = [1,1,1]
 
@@ -216,17 +212,22 @@ if __name__ == '__main__':
     encoder_rnn_p = [1,1,1]
     encoder_n_layers = 6
 
+    breakpoint()
 
-    forecaster_upsample_k = [3,4,7]
+    forecaster_input_channel = 0
+    forecaster_upsample_channels = [96*c,96*c,4*c]
+    forecaster_rnn_channels = [96*c,96*c,32*c]
+
+    forecaster_upsample_k = [4,5,7]
     forecaster_upsample_s = [2,3,5]
     forecaster_upsample_p = [1,1,1]
 
-    forecaster_rnn_k = [3,3,3]
-    forecaster_rnn_s = [1,1,1]
-    forecaster_rnn_p = [1,1,1]
-    forecaster_n_layers = 6
+    forecaster_rnn_k = encoder_rnn_k
+    forecaster_rnn_s = encoder_rnn_s
+    forecaster_rnn_p = encoder_rnn_p
+    forecaster_n_layers = encoder_n_layers
 
-    forecaster_output = 1
+    forecaster_output_channels = 1
     forecaster_output_k = 3
     forecaster_output_s = 1
     forecaster_output_p = 1
@@ -241,7 +242,7 @@ if __name__ == '__main__':
                 forecaster_upsample_channels=forecaster_upsample_channels, forecaster_rnn_channels=forecaster_rnn_channels,
                 forecaster_upsample_k=forecaster_upsample_k, forecaster_upsample_s=forecaster_upsample_s, 
                 forecaster_upsample_p=forecaster_upsample_p, forecaster_rnn_k=forecaster_rnn_k, forecaster_rnn_s=forecaster_rnn_s,
-                forecaster_rnn_p=forecaster_rnn_p, forecaster_n_layers=forecaster_n_layers, forecaster_output=forecaster_output, 
+                forecaster_rnn_p=forecaster_rnn_p, forecaster_n_layers=forecaster_n_layers, forecaster_output=forecaster_output_channels, 
                 forecaster_output_k=forecaster_output_k, forecaster_output_s=forecaster_output_s, 
                 forecaster_output_p=forecaster_output_p, forecaster_output_layers=forecaster_output_layers, 
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)

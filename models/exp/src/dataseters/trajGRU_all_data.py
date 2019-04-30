@@ -102,22 +102,23 @@ class TyDataset(Dataset):
             else:
                 # determine some indexes
                 idx_tmp = idx - self.idx_list.loc[i, 'The starting idx']
-                # set typhoon's name
                 ty_name = i
                 year = str(self.idx_list.loc[i, 'The starting time'].year)
                 # set default input_data (input_frames X channels X H X W)
                 input_data = np.zeros((self.input_frames, self.input_channels, self.I_shape[0], self.I_shape[1]))
                 # Input data(a tensor with shape (input_frames X C X H X W))
-                
+                breakpoint()
                 for j in range(self.input_frames):
                     # Radar
                     tmp = 0
                     file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
                     input_data[j,tmp,:,:] = self.rad_all_data[year+'.'+ty_name+'.'+file_time].to_numpy()[np.newaxis,np.newaxis,:,:]
                     tmp += 1
+                    # QPE
                     if self.input_with_QPE:
                         input_data[j,tmp,:,:] = self.qpe_all_data[year+'.'+ty_name+'.'+file_time].to_numpy()[np.newaxis,np.newaxis,:,:]
                         tmp += 1
+                    
                     if self.input_with_grid:
                         gird_x, gird_y = np.meshgrid(np.arange(0, self.I_shape[0]), np.arange(0, self.I_shape[1]))
                         input_data[j,tmp,:,:] = gird_x[np.newaxis,np.newaxis,:,:]

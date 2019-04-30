@@ -75,11 +75,12 @@ class TyDataset(Dataset):
         if args.load_all_data:
             self.rad_all_data = pd.Series([])
             self.qpe_all_data = pd.Series([])
+
             # for i in range(len(self.idx_list)):
             for i in range(len(self.idx_list)):
                 year = str(self.idx_list.iloc[i,0].year)
-                for j in range(self.idx_list.iloc[i,-1]-self.idx_list.iloc[i,-2]+1):
-                    filename = year + '.' + self.idx_list.index[i] + '.' + dt.datetime.strftime(self.idx_list.iloc[i,0]+dt.timedelta(seconds=600*j),format='%Y%m%d%H%M') + '.pkl'
+                for j in range(self.idx_list.iloc[i,-1]-self.idx_list.iloc[i,-2]+self.input_frames+self.target_frames):
+                    filename = year + '.' + self.idx_list.index[i] + '.' + dt.datetime.strftime(self.idx_list.iloc[i,0]+dt.timedelta(minutes=10*j),format='%Y%m%d%H%M') + '.pkl'
                     self.rad_all_data[filename[:-4]] = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', filename),compression=args.compression).loc[self.I_y[0]:self.I_y[1], self.I_x[0]:self.I_x[1]]
                     self.qpe_all_data[filename[:-4]] = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, 'QPE', filename),compression=args.compression).loc[self.I_y[0]:self.I_y[1], self.I_x[0]:self.I_x[1]]
 
@@ -105,7 +106,7 @@ class TyDataset(Dataset):
                 ty_name = i
                 year = str(self.idx_list.loc[i, 'The starting time'].year)
                 # set default input_data (input_frames X channels X H X W)
-                input_data = np.zeros((self.input_frames, self.input_channels, self.I_shape[0], self.I_shape[1]))
+                input_data = np.zeros((self.input_frames, self.input_channels, self.I_shape[1], self.I_shape[0]))
                 # Input data(a tensor with shape (input_frames X C X H X W))
                 for j in range(self.input_frames):
                     # Radar
@@ -126,11 +127,11 @@ class TyDataset(Dataset):
                         tmp += 1 
                 
                 # set default target_data (target_frames X channels X H X W)
-                target_data = np.zeros((self.target_frames, self.F_shape[0], self.F_shape[1]))
-
+                target_data = np.zeros((self.target_frames, self.F_shape[1], self.F_shape[0]))
+                idx_tmp += self.input_frames
                 for j in range(self.target_frames):
-                    file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+self.input_frames+j)), format='%Y%m%d%H%M')
-                    target_data[j,:,:] = self.qpe_all_data[year+'.'+ty_name+'.'+file_time].loc[self.F_y[0]:self.F_y[1], self.F_x[0]:self.F_x[1]].to_numpy()[np.newaxis,:,:]
+                    file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
+                    target_data[j,:,:] = self.qpe_all_data[year+'.'+ty_name+'.'+file_time].loc[self.F_y[0]:self.F_y[1], self.F_x[0]:self.F_x[1]].to_numpy()
 
                 # return the idx of sample
                 self.sample = {'inputs': input_data, 'targets': target_data}

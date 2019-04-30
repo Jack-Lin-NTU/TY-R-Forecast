@@ -94,7 +94,7 @@ class loss_rainfall():
             weights = [1, 2, 5, 10, 30]
         for i in range(len(value_list)-1):
             mask = torch.stack([value_list[i] <= labels, labels < value_list[i+1]]).all(dim=0)
-            loss += torch.sum(weights[i] * (outputs[mask]-labels[mask])**2) / outputs_size
+            loss += torch.sum(weights[i] * ((outputs[mask]-labels[mask])/outputs_size)**2)
         return loss
 
     def bmae(self, outputs, labels):
@@ -108,7 +108,7 @@ class loss_rainfall():
             weights = [1, 2, 5, 10, 30]
         for i in range(len(value_list)-1):
             mask = torch.stack([value_list[i] <= labels, labels < value_list[i+1]]).all(dim=0)
-            loss += torch.sum(weights[i] * torch.abs(outputs[mask]-labels[mask])) / outputs_size
+            loss += torch.sum(weights[i] * torch.abs((outputs[mask]-labels[mask])/outputs_size))
 
         return loss
 

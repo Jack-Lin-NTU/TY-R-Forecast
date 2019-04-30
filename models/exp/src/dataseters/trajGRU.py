@@ -135,9 +135,9 @@ class TyDataset(Dataset):
 
                 # QPE data(a tensor with shape (target_frames X H X W))
                 target_data = np.zeros((self.target_frames, self.F_shape[1], self.F_shape[0]))
-
+                idx_tmp += self.input_frames
                 for j in range(self.target_frames):
-                    file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+self.input_frames+j)), format='%Y%m%d%H%M')
+                    file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
                     data_path = os.path.join(self.radar_wrangled_data_folder, 'QPE', year+'.'+ty_name+'.'+file_time+'.pkl')
                     target_data[j,:,:] = pd.read_pickle(data_path, compression=self.compression).loc[self.F_y[0]:self.F_y[0], self.F_x[0]:self.F_x[1]].to_numpy()
 

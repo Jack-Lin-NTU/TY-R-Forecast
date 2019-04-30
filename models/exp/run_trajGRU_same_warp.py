@@ -12,6 +12,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import transforms, utils
+torch.random.manual_seed(0)
 
 # import our model and dataloader
 from src.argstools.argstools import args, createfolder, remove_file, loss_rainfall
@@ -85,7 +86,6 @@ def train(net, trainloader, testloader, loss_function, args):
         train_loss = 0
 
         for i, data in enumerate(trainloader):
-
             inputs = data['inputs'].to(args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, xsize, ysize]
             labels = data['targets'].to(args.device, dtype=args.value_dtype)  # labels.shape = [4,18,30,30]
             
@@ -229,7 +229,7 @@ if __name__ == '__main__':
     forecaster_output_s = 1
     forecaster_output_p = 1
     forecaster_output_layers = 1
-    
+
     Net = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, rnn_link_size=rnn_link_size,
                 encoder_input_channel=encoder_input_channel, encoder_downsample_channels=encoder_downsample_channels,
                 encoder_rnn_channels=encoder_rnn_channels, encoder_downsample_k=encoder_downsample_k,
@@ -243,7 +243,6 @@ if __name__ == '__main__':
                 forecaster_output_k=forecaster_output_k, forecaster_output_s=forecaster_output_s, 
                 forecaster_output_p=forecaster_output_p, forecaster_output_layers=forecaster_output_layers, 
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)
-
 
     # train process
     time_s = time.time()

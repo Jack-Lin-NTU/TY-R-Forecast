@@ -114,12 +114,12 @@ class TyDataset(Dataset):
                     tmp = 0
                     file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
                     data_path = os.path.join(self.radar_wrangled_data_folder, 'RAD', year+'.'+ty_name+'.'+file_time+'.pkl')
-                    input_data[j,tmp,:,:] = pd.read_pickle(data_path, compression=self.compression).loc[self.I_y[0]:self.I_y[1],self.I_x[0]:self.I_x[1]].to_numpy()[np.newaxis,np.newaxis,:,:]
+                    input_data[j,tmp,:,:] = pd.read_pickle(data_path, compression=self.compression).loc[self.I_y[0]:self.I_y[1], self.I_x[0]:self.I_x[1]].to_numpy()
                     tmp += 1
                     
                     if self.input_with_QPE:
                         data_path = os.path.join(self.radar_wrangled_data_folder, 'QPE', year+'.'+ty_name+'.'+file_time+'.pkl')
-                        input_data[j,tmp,:,:] = pd.read_pickle(data_path, compression=self.compression).loc[self.I_y[0]:self.I_y[1],self.I_x[0]:self.I_x[1]].to_numpy()[np.newaxis,np.newaxis,:,:]
+                        input_data[j,tmp,:,:] = pd.read_pickle(data_path, compression=self.compression).loc[self.I_y[0]:self.I_y[1], self.I_x[0]:self.I_x[1]].to_numpy()
                         tmp += 1
 
                     # for k in self.weather_list:
@@ -129,9 +129,9 @@ class TyDataset(Dataset):
 
                     if self.input_with_grid:
                         gird_x, gird_y = np.meshgrid(np.arange(0, self.I_shape[0]), np.arange(0, self.I_shape[1]))
-                        input_data[j,tmp,:,:] = gird_x[np.newaxis,np.newaxis,:,:]
+                        input_data[j,tmp,:,:] = gird_x
                         tmp += 1
-                        input_data[j,tmp,:,:] = gird_y[np.newaxis,np.newaxis,:,:]
+                        input_data[j,tmp,:,:] = gird_y
                         tmp += 1 
 
                 # QPE data(a tensor with shape (target_frames X H X W))
@@ -140,7 +140,7 @@ class TyDataset(Dataset):
                 for j in range(self.target_frames):
                     file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+self.input_frames+j)), format='%Y%m%d%H%M')
                     data_path = os.path.join(self.radar_wrangled_data_folder, 'QPE', year+'.'+ty_name+'.'+file_time+'.pkl')
-                    target_data[j,:,:] = pd.read_pickle(data_path, compression=self.compression).loc[self.F_y[0]:self.F_y[0], self.F_x[0]:self.F_x[1]].to_numpy()[np.newaxis,:,:]
+                    target_data[j,:,:] = pd.read_pickle(data_path, compression=self.compression).loc[self.F_y[0]:self.F_y[0], self.F_x[0]:self.F_x[1]].to_numpy()
 
                 # return the idx of sample
                 self.sample = {'inputs': input_data, 'targets': target_data}

@@ -15,7 +15,7 @@ from torchvision import transforms, utils
 
 # import our model and dataloader
 from src.argstools.argstools import args, createfolder, remove_file, loss_rainfall
-from src.models.trajGRU import Model
+from src.models.trajGRU_same_warp import Model
 if args.load_all_data:
     from src.dataseters.trajGRU_all_data import TyDataset, ToTensor, Normalize
 else:
@@ -88,7 +88,6 @@ def train(net, trainloader, testloader, loss_function, args):
 
             inputs = data['inputs'].to(args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, xsize, ysize]
             labels = data['targets'].to(args.device, dtype=args.value_dtype)  # labels.shape = [4,18,30,30]
-
             breakpoint()
             outputs = net(inputs)                           # outputs.shape = [4, 18, 60, 60]
             
@@ -212,8 +211,6 @@ if __name__ == '__main__':
     encoder_rnn_p = [1,1,1]
     encoder_n_layers = 6
 
-    breakpoint()
-
     forecaster_input_channel = 0
     forecaster_upsample_channels = [96*c,96*c,4*c]
     forecaster_rnn_channels = [96*c,96*c,32*c]
@@ -246,6 +243,7 @@ if __name__ == '__main__':
                 forecaster_output_k=forecaster_output_k, forecaster_output_s=forecaster_output_s, 
                 forecaster_output_p=forecaster_output_p, forecaster_output_layers=forecaster_output_layers, 
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)
+
 
     # train process
     time_s = time.time()

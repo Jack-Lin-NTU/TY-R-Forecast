@@ -119,11 +119,11 @@ class trajGRUCell(nn.Module):
 
         M = warp_net(x=input_, prev_state=prev_state)
         stack_inputs = torch.cat([input_, M], dim=1)
-
+        
         # data size is [batch, channel, height, width]
-        reset = torch.sigmoid(self.reset_gate(stack_inputs))
+        reset = torch.sigmoid(self.reset_gate(stack_inputs)).unsqueeze(1).expand(-1,self.link_size,-1,-1,-1).reshape(batch_size,self.link_size*self.channel_hidden,H,W)
         update = torch.sigmoid(self.update_gate(stack_inputs))
-        out_inputs = F.leaky_relu(self.out_gate(torch.cat([input_, M*(reset.repeat(1,self.link_size,1,1))], dim=1)), negative_slope=0.2)
+        out_inputs = F.leaky_relu(self.out_gate(torch.cat([input_, M*reset], dim=1)), negative_slope=0.2)
         new_state = prev_state*update + out_inputs*(1-update)
 
         return new_state
@@ -171,14 +171,14 @@ class DetrajGRUCell(nn.Module):
         M = warp_net(x=input_, prev_state=prev_state)
 
         if self.channel_input == 0:
-            reset = torch.sigmoid(self.reset_gate(M))
+            reset = torch.sigmoid(self.reset_gate(M)).unsqueeze(1).expand(-1,self.link_size,-1,-1,-1).reshape(batch_size,self.link_size*self.channel_hidden,H,W)
             update = torch.sigmoid(self.update_gate(M))
-            out_inputs = F.leaky_relu(self.out_gate(M*(reset.repeat(1,self.link_size,1,1))), negative_slope=0.2)
+            out_inputs = F.leaky_relu(self.out_gate(M*reset), negative_slope=0.2)
         else:
             stack_inputs = torch.cat([input_, M], dim=1)
-            reset = torch.sigmoid(self.reset_gate(stack_inputs))
+            reset = torch.sigmoid(self.reset_gate(stack_inputs)).unsqueeze(1).expand(-1,self.link_size,-1,-1,-1).reshape(batch_size,self.link_size*self.channel_hidden,H,W)
             update = torch.sigmoid(self.update_gate(stack_inputs))
-            out_inputs = F.leaky_relu(self.out_gate(torch.cat([input_, M*(reset.repeat(1,self.link_size,1,1))], dim=1)), negative_slope=0.2)
+            out_inputs = F.leaky_relu(self.out_gate(torch.cat([input_, M*reset], dim=1)), negative_slope=0.2)
         
         new_state = prev_state*(1-update) + out_inputs*update
         return new_state

@@ -88,7 +88,7 @@ def train(net, trainloader, testloader, loss_function, args):
 
             inputs = data['inputs'].to(args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, xsize, ysize]
             labels = data['targets'].to(args.device, dtype=args.value_dtype)  # labels.shape = [4,18,30,30]
-            breakpoint()
+            
             outputs = net(inputs)                           # outputs.shape = [4, 18, 60, 60]
             
             # outputs = outputs.view(outputs.shape[0], -1)    # outputs.shape = [4, 64800]
@@ -229,7 +229,7 @@ if __name__ == '__main__':
     forecaster_output_s = 1
     forecaster_output_p = 1
     forecaster_output_layers = 1
-
+    
     Net = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, rnn_link_size=rnn_link_size,
                 encoder_input_channel=encoder_input_channel, encoder_downsample_channels=encoder_downsample_channels,
                 encoder_rnn_channels=encoder_rnn_channels, encoder_downsample_k=encoder_downsample_k,

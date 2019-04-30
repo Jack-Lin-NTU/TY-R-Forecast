@@ -18,7 +18,7 @@ def extract_original_data():
     ty_list.loc[:, 'Time of issuing'] = pd.to_datetime(ty_list.loc[:, 'Time of issuing'])
     ty_list.loc[:, 'Time of canceling'] = pd.to_datetime(ty_list.loc[:, 'Time of canceling'])
     
-    radar_original_data_folder = args.radar_original_data_folder
+    radar_original_data_folder = args.radar_raw_data_folder
     radar_compressed_data_folder = args.radar_compressed_data_folder
 
     for i in range(len(ty_list)):

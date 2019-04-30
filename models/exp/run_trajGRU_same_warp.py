@@ -171,7 +171,7 @@ def test(net, testloader, loss_function, args):
 
     with torch.no_grad():
         for _, data in enumerate(testloader, 0):
-            inputs, labels = data['input'].to(args.device, dtype=args.value_dtype), data['target'].to(args.device, dtype=args.value_dtype)
+            inputs, labels = data['inputs'].to(args.device, dtype=args.value_dtype), data['targets'].to(args.device, dtype=args.value_dtype)
             outputs = net(inputs)
             outputs = outputs.view(outputs.shape[0], -1)
             labels = labels.view(labels.shape[0], -1)

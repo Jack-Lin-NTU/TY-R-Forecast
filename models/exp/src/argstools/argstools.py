@@ -80,8 +80,9 @@ class Adam16(Optimizer):
         return loss
 
 class loss_rainfall():
-    def __init__(self, args):
-        self.args = args
+    def __init__(self, max_values, min_values):
+        self.max_values = max_values
+        self.min_values = min_values
 
     def bmse(self, outputs, labels):
         loss = 0
@@ -109,7 +110,6 @@ class loss_rainfall():
         for i in range(len(value_list)-1):
             mask = torch.stack([value_list[i] <= labels, labels < value_list[i+1]]).all(dim=0)
             loss += torch.sum(weights[i] * torch.abs((outputs[mask]-labels[mask])/outputs_size))
-
         return loss
 
 def createfolder(directory):

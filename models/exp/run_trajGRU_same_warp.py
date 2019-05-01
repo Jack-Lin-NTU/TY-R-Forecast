@@ -269,9 +269,9 @@ if __name__ == '__main__':
         args.params_folder += '_Adam'
 
     if args.loss_function == 'BMSE':
-        loss_function = loss_rainfall(args).bmse
+        loss_function = loss_rainfall(max_values=args.max_values, min_values=args.min_values).bmse
     elif args.loss_function == 'BMAE':
-        loss_function = loss_rainfall(args).bmae
+        loss_function = loss_rainfall(max_values=args.max_values, min_values=args.min_values).bmae
 
     train(net=Net, trainloader=trainloader, testloader=testloader, loss_function=loss_function, args=args)
 

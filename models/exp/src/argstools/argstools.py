@@ -240,10 +240,10 @@ else:
 
 if args.dtype == 'float16':
     args.value_dtype = torch.float16
-    args.optimizer = optim.SGD
+    args.optimizer = optim.Adam
 elif args.dtype == 'float32':
     args.value_dtype = torch.float32
-    args.optimizer = optim.SGD
+    args.optimizer = optim.Adam
 
 args.res_degree = 0.0125
 args.I_x = [args.I_x_l, args.I_x_h]

@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms, utils
 
 # import our model and dataloader
-from src.argstools.argstools import args, createfolder, remove_file, loss_rainfall
+from src.argstools.argstools import args, createfolder, remove_file, loss_rainfall, Adam16
 from src.models.trajGRU_same_warp import Model
 if args.load_all_data:
     from src.dataseters.trajGRU_all_data import TyDataset, ToTensor, Normalize
@@ -37,7 +37,7 @@ def get_dataloader(args):
     traindataset = TyDataset(args=args, train = True, transform=transform)
     testdataset = TyDataset(args=args, train = False, transform=transform)
     # datloader
-    kwargs = {'num_workers': 8, 'pin_memory': True} if args.able_cuda else {}
+    kwargs = {'num_workers': 4, 'pin_memory': True} if args.able_cuda else {}
     trainloader = DataLoader(dataset=traindataset, batch_size=args.batch_size, shuffle=True, **kwargs)
     testloader = DataLoader(dataset=testdataset, batch_size=args.batch_size, shuffle=False, **kwargs)
     
@@ -65,6 +65,8 @@ def train(net, trainloader, testloader, loss_function, args):
     # set the optimizer (learning rate is from args)
     if args.optimizer is optim.Adam:
         optimizer = args.optimizer(net.parameters(), lr=args.lr, eps=1e-07, weight_decay=args.weight_decay)
+    elif args.optimizer is Adam16:
+        optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay, device=args.device)
     else:
         optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     # Set scheduler

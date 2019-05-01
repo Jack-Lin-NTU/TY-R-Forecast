@@ -17,15 +17,13 @@ from torch.optim import Optimizer
 # do multi-GPU you may need to deal with this.
 
 class Adam16(Optimizer):
-    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0, args=None):
+    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0, device=None):
         defaults = dict(lr=lr, betas=betas, eps=eps,
                         weight_decay=weight_decay)
         params = list(params)
         super(Adam16, self).__init__(params, defaults)
-        # for group in self.param_groups:
-            # for p in group['params']:
 
-        self.fp32_param_groups = [p.data.to(device=args.device, dtype=torch.float32) for p in params]
+        self.fp32_param_groups = [p.data.to(device=device, dtype=torch.float32) for p in params]
         if not isinstance(self.fp32_param_groups[0], dict):
             self.fp32_param_groups = [{'params': self.fp32_param_groups}]
 
@@ -239,7 +237,10 @@ else:
     args.device = torch.device('cpu')
 
 args.value_dtype = getattr(torch, args.value_dtype)
-args.optimizer = getattr(optim, args.optimizer)
+if args.optimizer == 'Adam16':
+    args.optimizer = Adam16
+else:
+    args.optimizer = getattr(optim, args.optimizer)
 
 args.res_degree = 0.0125
 args.I_x = [args.I_x_l, args.I_x_h]

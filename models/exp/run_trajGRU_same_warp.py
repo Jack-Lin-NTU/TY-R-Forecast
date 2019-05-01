@@ -12,7 +12,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import transforms, utils
-torch.random.manual_seed(0)
 
 # import our model and dataloader
 from src.argstools.argstools import args, createfolder, remove_file, loss_rainfall
@@ -21,6 +20,12 @@ if args.load_all_data:
     from src.dataseters.trajGRU_all_data import TyDataset, ToTensor, Normalize
 else:
     from src.dataseters.trajGRU import TyDataset, ToTensor, Normalize
+
+# set seed 
+SEED = 0
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed(SEED)
 
 def get_dataloader(args):
     '''
@@ -31,10 +36,11 @@ def get_dataloader(args):
     
     traindataset = TyDataset(args=args, train = True, transform=transform)
     testdataset = TyDataset(args=args, train = False, transform=transform)
-
     # datloader
-    trainloader = DataLoader(dataset=traindataset, batch_size=args.batch_size, shuffle=True)
-    testloader = DataLoader(dataset=testdataset, batch_size=args.batch_size, shuffle=False)
+    kwargs = {'num_workers': 8, 'pin_memory': True} if args.able_cuda else {}
+    trainloader = DataLoader(dataset=traindataset, batch_size=args.batch_size, shuffle=True, **kwargs)
+    testloader = DataLoader(dataset=testdataset, batch_size=args.batch_size, shuffle=False, **kwargs)
+    
     return trainloader, testloader
 
 def train(net, trainloader, testloader, loss_function, args):
@@ -55,6 +61,7 @@ def train(net, trainloader, testloader, loss_function, args):
     remove_file(params_file)
     remove_file(params_pt)
     
+
     # set the optimizer (learning rate is from args)
     if args.optimizer is optim.Adam:
         optimizer = args.optimizer(net.parameters(), lr=args.lr, eps=1e-07, weight_decay=args.weight_decay)
@@ -75,6 +82,7 @@ def train(net, trainloader, testloader, loss_function, args):
         f_log = open(log_file, 'a')
         # set training process
         net.train()
+        
         # update the learning rate
         if args.lr_scheduler and args.optimizer is not optim.Adam:
             scheduler.step()
@@ -86,16 +94,15 @@ def train(net, trainloader, testloader, loss_function, args):
         # training process
         train_loss = 0
 
-        for i, data in enumerate(trainloader):
-            inputs = data['inputs'].to(args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, xsize, ysize]
-            labels = data['targets'].to(args.device, dtype=args.value_dtype)  # labels.shape = [4,18,30,30]
+        for i, data in enumerate(trainloader, 0):
+            inputs = data['inputs'].to(args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
+            labels = data['targets'].to(args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
             
-            outputs = net(inputs)                           # outputs.shape = [4, 18, 60, 60]
+            outputs = net(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
             
-            # outputs = outputs.view(outputs.shape[0], -1)    # outputs.shape = [4, 64800]
             if args.normalize_target:
                 outputs = (outputs - args.min_values['QPE']) / (args.max_values['QPE'] - args.min_values['QPE'])
-            # labels = labels.view(labels.shape[0], -1)       # labels.shape = [4, 64800]
+            
 
             # calculate loss function=
             loss = loss_function(outputs, labels)

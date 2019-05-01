@@ -24,7 +24,7 @@ class Adam16(Optimizer):
         super(Adam16, self).__init__(params, defaults)
         # for group in self.param_groups:
             # for p in group['params']:
-        
+
         self.fp32_param_groups = [p.data.to(device=args.device, dtype=torch.float32) for p in params]
         if not isinstance(self.fp32_param_groups[0], dict):
             self.fp32_param_groups = [{'params': self.fp32_param_groups}]
@@ -43,7 +43,7 @@ class Adam16(Optimizer):
             for p, fp32_p in zip(group['params'], fp32_group['params']):
                 if p.grad is None:
                     continue
-                    
+
                 grad = p.grad.data.float()
                 state = self.state[p]
 

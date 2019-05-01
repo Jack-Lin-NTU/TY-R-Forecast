@@ -467,7 +467,7 @@ class Forecaster(nn.Module):
             setattr(self, name, cell)
             cells.append(getattr(self, name))
             # decon  
-            cell = DeCNN2D_cell(self.channel_rnn[i], self.channel_upsample[i], self.upsample_k[i], self.upsample_s[i], 4self.upsample_p[i], batch_norm=batch_norm)
+            cell = DeCNN2D_cell(self.channel_rnn[i], self.channel_upsample[i], self.upsample_k[i], self.upsample_s[i], self.upsample_p[i], batch_norm=batch_norm)
             name = 'Upsample_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))

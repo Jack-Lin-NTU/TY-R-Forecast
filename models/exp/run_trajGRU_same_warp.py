@@ -76,7 +76,7 @@ def train(net, trainloader, testloader, loss_function, args):
         # set training process
         net.train()
         # update the learning rate
-        if args.lr_scheduler:
+        if args.lr_scheduler and args.optimizer is not optim.Adam:
             scheduler.step()
         # show the current learning rate (optimizer.param_groups returns a list which stores several params)
         print('lr: {:.1e}'.format(optimizer.param_groups[0]['lr']))
@@ -260,9 +260,13 @@ if __name__ == '__main__':
     args.result_folder = os.path.join(args.result_folder, 'wd{:.5f}_lr{:f}'.format(args.weight_decay, args.lr))
     args.params_folder = os.path.join(args.params_folder, 'wd{:.5f}_lr{:f}'.format(args.weight_decay, args.lr))
 
-    if args.lr_scheduler:
+    if args.lr_scheduler and args.optimizer is not optim.Adam:
         args.result_folder += '_scheduler'
         args.params_folder += '_scheduler'
+    
+    if args.optimizer is optim.Adam:
+        args.result_folder += '_Adam'
+        args.params_folder += '_Adam'
 
     if args.loss_function == 'BMSE':
         loss_function = loss_rainfall(args).bmse

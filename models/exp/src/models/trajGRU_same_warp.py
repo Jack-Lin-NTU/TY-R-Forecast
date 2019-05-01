@@ -467,7 +467,7 @@ class Forecaster(nn.Module):
             setattr(self, name, cell)
             cells.append(getattr(self, name))
             # decon  
-            cell = DeCNN2D_cell(self.channel_rnn[i], self.channel_upsample[i], self.upsample_k[i], self.upsample_s[i], self.upsample_p[i], batch_norm=batch_norm)
+            cell = DeCNN2D_cell(self.channel_rnn[i], self.channel_upsample[i], self.upsample_k[i], self.upsample_s[i], 4self.upsample_p[i], batch_norm=batch_norm)
             name = 'Upsample_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
@@ -477,13 +477,13 @@ class Forecaster(nn.Module):
                 cell = nn.Conv2d(self.channel_upsample[-1], self.channel_output[i], self.output_k[i], self.output_s[i], self.output_p[i])
             else:
                 cell = nn.Conv2d(self.channel_output[i-1], self.channel_output[i], self.output_k[i], self.output_s[i], self.output_p[i])
+            init.constant_(cell.weight, 0.)
+            init.constant_(cell.bias, 0.)
         
-        init.constant_(cell.weight, 0.)
-        init.constant_(cell.bias, 0.)
+            name = 'OutputLayer_' + str(i).zfill(2)
+            setattr(self, name, cell)
+            cells.append(getattr(self, name))
         
-        name = 'OutputLayer_' + str(i).zfill(2)
-        setattr(self, name, cell)
-        cells.append(getattr(self, name))
         self.cells = cells
 
     def forward(self, warp_net=None, hidden=None):

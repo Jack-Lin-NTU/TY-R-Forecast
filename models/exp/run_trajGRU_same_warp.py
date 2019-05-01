@@ -64,7 +64,7 @@ def train(net, trainloader, testloader, loss_function, args):
 
     # set the optimizer (learning rate is from args)
     if args.optimizer is optim.Adam:
-        optimizer = args.optimizer(net.parameters(), lr=args.lr, eps=1e-07, weight_decay=args.weight_decay)
+        optimizer = args.optimizer(net.parameters(), lr=args.lr, eps=5*1e-07, weight_decay=args.weight_decay)
     elif args.optimizer is Adam16:
         optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay, device=args.device)
     else:

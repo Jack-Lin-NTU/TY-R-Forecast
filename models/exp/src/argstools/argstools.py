@@ -181,7 +181,7 @@ parser.add_argument('--ty-list', metavar='', type=str, default=make_path('ty_lis
 parser.add_argument('--load-all-data', action='store_true', help='Load all data.')
 parser.add_argument('--able-cuda', action='store_true', help='Able cuda.')
 parser.add_argument('--gpu', metavar='', type=int, default=0, help='GPU device.(default: 0)')
-parser.add_argument('--dtype', metavar='', type=str, default='float32', help='The dtype of values.(default: float32)')
+parser.add_argument('--value-dtype', metavar='', type=str, default='float32', help='The dtype of values.(default: float32)')
 
 # hyperparameters for training
 parser.add_argument('--max-epochs', metavar='', type=int, default=30, help='Max epochs.(default: 30)')
@@ -192,9 +192,9 @@ parser.add_argument('--weight-decay', metavar='', type=float, default=0, help='W
 parser.add_argument('--clip', action='store_true', help='Clip model weightings.')
 parser.add_argument('--clip-max-norm', metavar='', type=int, default=300, help='Max norm value for clip model weightings. (default: 300)')
 parser.add_argument('--batch-norm', action='store_true', help='Do batch normalization.')
-
 parser.add_argument('--normalize-target', action='store_true', help='Normalize target maps.')
 
+parser.add_argument('--optimizer', metavar='', type=str, default='Adam', help='The optimizer.(default: Adam)')
 parser.add_argument('--loss-function', metavar='', type=str, default='BMSE', help='The loss function.(default: BMSE)')
 parser.add_argument('--input-frames', metavar='', type=int, default=6, help='The size of input frames. (default: 6)')
 parser.add_argument('--input-with-grid', action='store_true', help='Input with grid data.')
@@ -238,12 +238,8 @@ if args.able_cuda and torch.cuda.is_available():
 else:
     args.device = torch.device('cpu')
 
-if args.dtype == 'float16':
-    args.value_dtype = torch.float16
-    args.optimizer = optim.Adam
-elif args.dtype == 'float32':
-    args.value_dtype = torch.float32
-    args.optimizer = optim.Adam
+args.value_dtype = getattr(torch, args.value_dtype)
+args.optimizer = getattr(optim, args.optimizer)
 
 args.res_degree = 0.0125
 args.I_x = [args.I_x_l, args.I_x_h]

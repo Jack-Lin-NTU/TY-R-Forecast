@@ -56,11 +56,12 @@ def train(net, trainloader, testloader, loss_function, args):
     remove_file(params_pt)
     
     # set the optimizer (learning rate is from args)
-    optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    if args.optimizer is optim.Adam:
+        optimizer = args.optimizer(net.parameters(), lr=args.lr, eps=1e-07, weight_decay=args.weight_decay)
+    else:
+        optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     # Set scheduler
-    if args.lr_scheduler:
-        # milestone = [int(((x+1)/10)*50) for x in range(9)]
-        # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=3)
+    if args.lr_scheduler and args.optimizer is not optim.Adam:
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[x for x in range(1, args.max_epochs) if x % 5 == 0], gamma=0.7)
     
     total_batches = len(trainloader)

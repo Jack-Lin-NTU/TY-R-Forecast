@@ -1,6 +1,7 @@
 from .convGRU_cell import *
 from .cnn2D_model import *
 
+
 class Encoder(nn.Module):
     def __init__(self, channel_input, channel_downsample, channel_crnn,
                 downsample_k, downsample_s,downsample_p,

@@ -15,11 +15,8 @@ from torchvision import transforms, utils
 
 # import our model and dataloader
 from src.argstools.argstools import args, createfolder, remove_file, loss_rainfall, Adam16
-from src.models.trajGRU_same_warp import Model
-if args.load_all_data:
-    from src.dataseters.trajGRU_all_data import TyDataset, ToTensor, Normalize
-else:
-    from src.dataseters.trajGRU import TyDataset, ToTensor, Normalize
+from src.models.convGRU import Model
+from src.dataseters.dataseterGRU import TyDataset, ToTensor, Normalize
 
 # set seed 
 SEED = 0
@@ -201,7 +198,6 @@ if __name__ == '__main__':
 
     ## construct Traj GRU
     # initialize the parameters of the encoders and forecasters
-    rnn_link_size = [13, 13, 9]
 
     encoder_input_channel = args.input_channels
     encoder_downsample_channels = [4*c,32*c,96*c]
@@ -239,8 +235,7 @@ if __name__ == '__main__':
     forecaster_output_s = 1
     forecaster_output_p = 1
     forecaster_output_layers = 1
-
-    Net = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, rnn_link_size=rnn_link_size,
+    Net = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, 
                 encoder_input_channel=encoder_input_channel, encoder_downsample_channels=encoder_downsample_channels,
                 encoder_rnn_channels=encoder_rnn_channels, encoder_downsample_k=encoder_downsample_k,
                 encoder_downsample_s=encoder_downsample_s, encoder_downsample_p=encoder_downsample_p, 
@@ -252,11 +247,12 @@ if __name__ == '__main__':
                 forecaster_rnn_p=forecaster_rnn_p, forecaster_n_layers=forecaster_n_layers, forecaster_output=forecaster_output_channels, 
                 forecaster_output_k=forecaster_output_k, forecaster_output_s=forecaster_output_s, 
                 forecaster_output_p=forecaster_output_p, forecaster_output_layers=forecaster_output_layers, 
-                batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)
+                batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(device=args.device, dtype=args.value_dtype)
 
     # train process
     time_s = time.time()
-
+    args.result_folder += '_convGRU'
+    args.params_folder += '_convGRU'
     size = '{}X{}'.format(args.I_shape[0], args.I_shape[1])
 
     if args.weather_list == []:

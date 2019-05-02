@@ -14,15 +14,9 @@ from torch.utils.data import DataLoader
 from torchvision import transforms, utils
 
 # import our model and dataloader
-from src.argstools.argstools import args, createfolder, remove_file, loss_rainfall, Adam16
-from src.models.trajGRU import Model
-from src.dataseters.dataseterGRU import TyDataset, ToTensor, Normalize
-
-# set seed 
-SEED = 0
-np.random.seed(SEED)
-torch.manual_seed(SEED)
-torch.cuda.manual_seed(SEED)
+from src.argstools.argstools import args, createfolder, remove_file, loss_rainfall
+from src.models.trajGRU_dif_warp import Model
+from src.dataseters.trajGRU import TyDataset, ToTensor, Normalize
 
 def get_dataloader(args):
     '''
@@ -31,13 +25,12 @@ def get_dataloader(args):
     # transform
     transform = transforms.Compose([ToTensor(), Normalize(args)])
     
-    traindataset = TyDataset(args=args, train = True, train_num=8, transform=transform)
-    testdataset = TyDataset(args=args, train = False, train_num=8, transform=transform)
+    traindataset = TyDataset(args=args, train = True, transform=transform)
+    testdataset = TyDataset(args=args, train = False, transform=transform)
+
     # datloader
-    kwargs = {'num_workers': 4, 'pin_memory': True} if args.able_cuda else {}
-    trainloader = DataLoader(dataset=traindataset, batch_size=args.batch_size, shuffle=True, **kwargs)
-    testloader = DataLoader(dataset=testdataset, batch_size=args.batch_size, shuffle=False, **kwargs)
-    
+    trainloader = DataLoader(dataset=traindataset, batch_size=args.batch_size, shuffle=True)
+    testloader = DataLoader(dataset=testdataset, batch_size=args.batch_size, shuffle=False)
     return trainloader, testloader
 
 def train(net, trainloader, testloader, loss_function, args):
@@ -58,16 +51,12 @@ def train(net, trainloader, testloader, loss_function, args):
     remove_file(params_file)
     remove_file(params_pt)
     
-
     # set the optimizer (learning rate is from args)
-    if args.optimizer is optim.Adam:
-        optimizer = args.optimizer(net.parameters(), lr=args.lr, eps=5*1e-07, weight_decay=args.weight_decay)
-    elif args.optimizer is Adam16:
-        optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay, device=args.device)
-    else:
-        optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     # Set scheduler
-    if args.lr_scheduler and args.optimizer is not optim.Adam:
+    if args.lr_scheduler:
+        # milestone = [int(((x+1)/10)*50) for x in range(9)]
+        # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=3)
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[x for x in range(1, args.max_epochs) if x % 5 == 0], gamma=0.7)
     
     total_batches = len(trainloader)
@@ -81,9 +70,8 @@ def train(net, trainloader, testloader, loss_function, args):
         f_log = open(log_file, 'a')
         # set training process
         net.train()
-        
         # update the learning rate
-        if args.lr_scheduler and args.optimizer is not optim.Adam:
+        if args.lr_scheduler:
             scheduler.step()
         # show the current learning rate (optimizer.param_groups returns a list which stores several params)
         print('lr: {:.1e}'.format(optimizer.param_groups[0]['lr']))
@@ -93,15 +81,18 @@ def train(net, trainloader, testloader, loss_function, args):
         # training process
         train_loss = 0
 
-        for i, data in enumerate(trainloader, 0):
-            inputs = data['inputs'].to(args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
-            labels = data['targets'].to(args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
+        for i, data in enumerate(trainloader):
+
+            inputs = data['inputs'].to(args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, xsize, ysize]
+            labels = data['targets'].to(args.device, dtype=args.value_dtype)  # labels.shape = [4,18,30,30]
+
+            breakpoint()
+            outputs = net(inputs)                           # outputs.shape = [4, 18, 60, 60]
             
-            outputs = net(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
-            
+            # outputs = outputs.view(outputs.shape[0], -1)    # outputs.shape = [4, 64800]
             if args.normalize_target:
                 outputs = (outputs - args.min_values['QPE']) / (args.max_values['QPE'] - args.min_values['QPE'])
-            
+            # labels = labels.view(labels.shape[0], -1)       # labels.shape = [4, 64800]
 
             # calculate loss function=
             loss = loss_function(outputs, labels)
@@ -178,10 +169,10 @@ def test(net, testloader, loss_function, args):
 
     with torch.no_grad():
         for _, data in enumerate(testloader, 0):
-            inputs, labels = data['inputs'].to(args.device, dtype=args.value_dtype), data['targets'].to(args.device, dtype=args.value_dtype)
+            inputs, labels = data['input'].to(args.device, dtype=args.value_dtype), data['target'].to(args.device, dtype=args.value_dtype)
             outputs = net(inputs)
-            if args.normalize_target:
-                outputs = (outputs - args.min_values['QPE']) / (args.max_values['QPE'] - args.min_values['QPE'])
+            outputs = outputs.view(outputs.shape[0], -1)
+            labels = labels.view(labels.shape[0], -1)
             loss += loss_function(outputs, labels)
 
         loss = loss/n_batch
@@ -217,6 +208,8 @@ if __name__ == '__main__':
     encoder_rnn_s = [1,1,1]
     encoder_rnn_p = [1,1,1]
     encoder_n_layers = 6
+
+    breakpoint()
 
     forecaster_input_channel = 0
     forecaster_upsample_channels = [96*c,96*c,4*c]
@@ -254,9 +247,6 @@ if __name__ == '__main__':
     # train process
     time_s = time.time()
 
-    args.result_folder += '_trajGRU'
-    args.params_folder += '_trajGRU'
-
     size = '{}X{}'.format(args.I_shape[0], args.I_shape[1])
 
     if args.weather_list == []:
@@ -269,18 +259,14 @@ if __name__ == '__main__':
     args.result_folder = os.path.join(args.result_folder, 'wd{:.5f}_lr{:f}'.format(args.weight_decay, args.lr))
     args.params_folder = os.path.join(args.params_folder, 'wd{:.5f}_lr{:f}'.format(args.weight_decay, args.lr))
 
-    if args.lr_scheduler and args.optimizer is not optim.Adam:
+    if args.lr_scheduler:
         args.result_folder += '_scheduler'
         args.params_folder += '_scheduler'
-    
-    if args.optimizer is optim.Adam:
-        args.result_folder += '_Adam'
-        args.params_folder += '_Adam'
 
     if args.loss_function == 'BMSE':
-        loss_function = loss_rainfall(max_values=args.max_values, min_values=args.min_values).bmse
+        loss_function = loss_rainfall(args).bmse
     elif args.loss_function == 'BMAE':
-        loss_function = loss_rainfall(max_values=args.max_values, min_values=args.min_values).bmae
+        loss_function = loss_rainfall(args).bmae
 
     train(net=Net, trainloader=trainloader, testloader=testloader, loss_function=loss_function, args=args)
 

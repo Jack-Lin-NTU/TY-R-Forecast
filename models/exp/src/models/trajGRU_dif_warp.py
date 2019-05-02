@@ -7,12 +7,17 @@ from torch.nn import init
 
 from .cnn2D import CNN2D_cell, DeCNN2D_cell
 
-class warp_net(nn.Module):
+class warp_CNN(nn.Module):
     '''
     Arguments:
-        The subcnn model and the M warp function 
+        This class is a simple cnn model which can capture the dispalcement of each hidden state pixels and calculate 
+        the value of warp function for each gates in gru model.
+        
+        Channel parameters for input and hidden data are needed for this model construction.
+        The link size of each pixels are needed as well.
+        The outputs of this model is two component of displacement of each pixels.
     '''
-    def __init__(self, channel_input, channel_hidden, link_size, kernel_size=1, stride=1, padding=0, device=None, value_dtype=None, batch_norm=False):
+    def __init__(self, channel_input, channel_hidden, link_size, kernel_size=1, stride=1, padding=0, device=None, value_dtype=None):
         super().__init__()
         self.device = device
         self.value_dtype = value_dtype
@@ -25,9 +30,6 @@ class warp_net(nn.Module):
         displacement_layers.append(nn.LeakyReLU(negative_slope=0.2))
         displacement_layers.append(nn.Conv2d(32, link_size*2, 5, 1, 2))
         displacement_layers.append(nn.LeakyReLU(negative_slope=0.2))
-        if batch_norm:
-            displacement_layers.append(nn.BatchNorm2d(link_size*2))
-        displacement_layers.append(nn.ReLU())
 
         # initialize the weightings in each layers.
         # nn.init.orthogonal_(displacement_layers[0].weight)
@@ -38,9 +40,9 @@ class warp_net(nn.Module):
         
         # make seqwence
         self.displacement_layers = nn.Sequential(*displacement_layers)
-        # self.warplayer = nn.Conv2d(channel_hidden*link_size, channel_hidden, kernel_size, stride, padding)
-        # init.constant_(self.warplayer.weight, 0.)
-        # init.constant_(self.warplayer.bias, 0.)
+        self.warplayer = nn.Conv2d(channel_hidden*link_size, channel_hidden, kernel_size, stride, padding)
+        init.constant_(self.warplayer.weight, 0.)
+        init.constant_(self.warplayer.bias, 0.)
 
     def grid_sample(self, x, grids_x, grids_y):
         '''
@@ -60,7 +62,7 @@ class warp_net(nn.Module):
 
     def forward(self, x=None, prev_state=None):
         # get batch and spatial sizes
-        # print('Prev:', prev_state.shape)
+#         print('Prev:', prev_state.shape)
         input_ = x
     
         if input_ is None:
@@ -73,7 +75,8 @@ class warp_net(nn.Module):
 
         B, C, L, H, W = output.shape
         output = output.view(B, C*L, H, W)
-        return output
+        return self.warplayer(output)
+
 
 class trajGRUCell(nn.Module):
     """
@@ -88,23 +91,27 @@ class trajGRUCell(nn.Module):
         self.channel_hidden = channel_hidden
         self.link_size = link_size
 
-        self.reset_gate= nn.Conv2d(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding)
-        self.update_gate = nn.Conv2d(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding)
-        self.out_gate = nn.Conv2d(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding)
+        self.reset_gate_input = nn.Conv2d(channel_input, channel_hidden, kernel_size, stride, padding)
+        self.update_gate_input = nn.Conv2d(channel_input, channel_hidden, kernel_size, stride, padding)
+        self.out_gate_input = nn.Conv2d(channel_input, channel_hidden, kernel_size, stride, padding)
+
+        self.reset_gate_warp = warp_CNN(channel_input, channel_hidden, link_size, 1, 1, 0, device, value_dtype)
+        self.update_gate_warp = warp_CNN(channel_input, channel_hidden, link_size, 1, 1, 0, device, value_dtype)
+        self.out_gate_warp = warp_CNN(channel_input, channel_hidden, link_size, 1, 1, 0, device, value_dtype)
 
         # init.orthogonal_(self.reset_gate_input.weight)
         # init.orthogonal_(self.update_gate_input.weight)
         # init.orthogonal_(self.out_gate_input.weight)
-        init.constant_(self.reset_gate.weight, 0.)
-        init.constant_(self.update_gate.weight, 0.)
-        init.constant_(self.out_gate.weight, 0.)
-        init.constant_(self.reset_gate.bias, 0.)
-        init.constant_(self.update_gate.bias, 0.)
-        init.constant_(self.out_gate.bias, 0.)
+        init.constant_(self.reset_gate_input.weight, 0.)
+        init.constant_(self.update_gate_input.weight, 0.)
+        init.constant_(self.out_gate_input.weight, 0.)
 
-    def forward(self, x=None, warp_net=None, prev_state=None):
+        init.constant_(self.reset_gate_input.bias, 0.)
+        init.constant_(self.update_gate_input.bias, 0.)
+        init.constant_(self.out_gate_input.bias, 0.)
+
+    def forward(self, x, prev_state=None):
         input_ = x
-
         # get batch and spatial sizes
         batch_size = input_.data.shape[0]
         H, W = input_.data.shape[2:]
@@ -117,13 +124,10 @@ class trajGRUCell(nn.Module):
             else:
                 prev_state = torch.zeros(state_size)
 
-        M = warp_net(x=input_, prev_state=prev_state)
-        stack_inputs = torch.cat([input_, M], dim=1)
-        
         # data size is [batch, channel, height, width]
-        reset = torch.sigmoid(self.reset_gate(stack_inputs)).unsqueeze(1).expand(-1,self.link_size,-1,-1,-1).reshape(batch_size,self.link_size*self.channel_hidden,H,W)
-        update = torch.sigmoid(self.update_gate(stack_inputs))
-        out_inputs = F.leaky_relu(self.out_gate(torch.cat([input_, M*reset], dim=1)), negative_slope=0.2)
+        update = torch.sigmoid(self.update_gate_input(input_)+self.update_gate_warp(input_, prev_state))
+        reset = torch.sigmoid(self.reset_gate_input(input_)+self.reset_gate_warp(input_, prev_state))
+        out_inputs = F.leaky_relu((self.out_gate_input(input_)+reset*self.out_gate_warp(input_, prev_state)), negative_slope=0.2)
         new_state = prev_state*update + out_inputs*(1-update)
 
         return new_state
@@ -139,49 +143,44 @@ class DetrajGRUCell(nn.Module):
         self.value_dtype = value_dtype
         self.channel_input = channel_input
         self.channel_hidden = channel_hidden
-        self.link_size = link_size
         
-        self.reset_gate = nn.ConvTranspose2d(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding)
-        self.update_gate = nn.ConvTranspose2d(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding)
-        self.out_gate = nn.ConvTranspose2d(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding)
-        # init.orthogonal_(self.reset_gate_input.weight)
-        # init.orthogonal_(self.update_gate_input.weight)
-        # init.orthogonal_(self.out_gate_input.weight)
-        init.constant_(self.reset_gate.weight, 0.)
-        init.constant_(self.update_gate.weight, 0.)
-        init.constant_(self.out_gate.weight, 0.)
-        init.constant_(self.reset_gate.bias, 0.)
-        init.constant_(self.update_gate.bias, 0.)
-        init.constant_(self.out_gate.bias, 0.)
+        if channel_input != 0:
+            self.reset_gate_input = nn.ConvTranspose2d(channel_input, channel_hidden, kernel_size, stride, padding)
+            self.update_gate_input = nn.ConvTranspose2d(channel_input, channel_hidden, kernel_size, stride, padding)
+            self.out_gate_input = nn.ConvTranspose2d(channel_input, channel_hidden, kernel_size, stride, padding)
+            # init.orthogonal_(self.reset_gate_input.weight)
+            # init.orthogonal_(self.update_gate_input.weight)
+            # init.orthogonal_(self.out_gate_input.weight)
+            init.constant_(self.reset_gate_input.weight, 0.)
+            init.constant_(self.update_gate_input.weight, 0.)
+            init.constant_(self.out_gate_input.weight, 0.)
+            init.constant_(self.reset_gate_input.bias, 0.)
+            init.constant_(self.update_gate_input.bias, 0.)
+            init.constant_(self.out_gate_input.bias, 0.)
 
-    def forward(self, x=None, warp_net=None, prev_state=None):
+        self.reset_gate_warp = warp_CNN(channel_input, channel_hidden, link_size, 1, 1, 0, device=self.device, value_dtype=self.value_dtype)
+        self.update_gate_warp = warp_CNN(channel_input, channel_hidden, link_size, 1, 1, 0, device=self.device, value_dtype=self.value_dtype)
+        self.out_gate_warp = warp_CNN(channel_input, channel_hidden, link_size, 1, 1, 0, device=self.device, value_dtype=self.value_dtype)
+
+    def forward(self, x=None, prev_state=None):
         input_ = x
         # get batch and spatial sizes
         batch_size = prev_state.data.shape[0]
         H, W = prev_state.data.shape[2:]
 
-        # generate empty prev_state, if None is provided
-        if prev_state is None:
-            state_size = (batch_size, self.channel_hidden, H, W)
-            if torch.cuda.is_available():
-                prev_state = torch.zeros(state_size).to(device=self.device, dtype=self.value_dtype)
-            else:
-                prev_state = torch.zeros(state_size)
-
-        M = warp_net(x=input_, prev_state=prev_state)
-
         if self.channel_input == 0:
-            reset = torch.sigmoid(self.reset_gate(M)).unsqueeze(1).expand(-1,self.link_size,-1,-1,-1).reshape(batch_size,self.link_size*self.channel_hidden,H,W)
-            update = torch.sigmoid(self.update_gate(M))
-            out_inputs = F.leaky_relu(self.out_gate(M*reset), negative_slope=0.2)
+            update = torch.sigmoid(self.update_gate_warp(prev_state=prev_state))
+            reset = torch.sigmoid(self.reset_gate_warp(prev_state=prev_state))
+            out_inputs = F.leaky_relu(reset*self.out_gate_warp(prev_state=prev_state), negative_slope=0.2)
+            new_state = prev_state*(1-update) + out_inputs*update
         else:
-            stack_inputs = torch.cat([input_, M], dim=1)
-            reset = torch.sigmoid(self.reset_gate(stack_inputs)).unsqueeze(1).expand(-1,self.link_size,-1,-1,-1).reshape(batch_size,self.link_size*self.channel_hidden,H,W)
-            update = torch.sigmoid(self.update_gate(stack_inputs))
-            out_inputs = F.leaky_relu(self.out_gate(torch.cat([input_, M*reset], dim=1)), negative_slope=0.2)
-        
-        new_state = prev_state*(1-update) + out_inputs*update
+            update = torch.sigmoid(self.update_gate_input(input_)+self.update_gate_warp(input_, prev_state))
+            reset = torch.sigmoid(self.reset_gate_input(input_)+self.reset_gate_warp(input_, prev_state))
+            out_inputs = F.leaky_relu((self.out_gate_input(input_)+reset*self.out_gate_warp(input_, prev_state)), negative_slope=0.2)
+            new_state = prev_state*(1-update) + out_inputs*update
+
         return new_state
+
 
 class Encoder(nn.Module):
     def __init__(self, channel_input, channel_downsample, channel_rnn, downsample_k, downsample_s, downsample_p,
@@ -209,7 +208,6 @@ class Encoder(nn.Module):
         self.value_dtype = value_dtype
         self.channel_input = channel_input
 
-    ## set self variables  
         # channel size
         if type(channel_downsample) != list:
             self.channel_downsample = [channel_downsample]*int(n_layers/2)
@@ -270,12 +268,11 @@ class Encoder(nn.Module):
 
         self.n_layers = n_layers
 
-    ## set encoder
         cells = []
         for i in range(int(self.n_layers/2)):
             ## convolution cell
             if i == 0:
-                cell=CNN2D_cell(channel_input=self.channel_input, channel_hidden=self.channel_downsample[i], kernel_size=self.downsample_k[i], 
+                cell=CNN2D_cell(channel_input=self.channel_input, channel_hidden=self.channel_downsample[i],kernel_size=self.downsample_k[i], 
                                 stride=self.downsample_s[i], padding=self.downsample_p[i], batch_norm=batch_norm)
             else:
                 cell=CNN2D_cell(channel_input=self.channel_rnn[i-1], channel_hidden=self.channel_downsample[i], kernel_size=self.downsample_k[i], 
@@ -293,27 +290,28 @@ class Encoder(nn.Module):
             cells.append(getattr(self, name))
 
         self.cells = cells
-    
-    def forward(self, x=None, warp_net=None, hidden=None):
-        if hidden is None:
+
+    def forward(self, x, hidden=None):
+        if not hidden:
             hidden = [None]*int(self.n_layers/2)
 
         input_ = x
         upd_hidden = []
+
         for i in range(int(self.n_layers/2)):
-            ## Convolution cell
+            ## Convolution
             cell = self.cells[2*i]
             input_ = cell(input_)
             ## GRU cell
             cell = self.cells[2*i+1]
             cell_hidden = hidden[i]
-            # trajGRUcell(x=None, warp_net=None, prev_state=None)
-            upd_cell_hidden = cell(x=input_, warp_net=warp_net[i], prev_state=cell_hidden)
+            upd_cell_hidden = cell(input_, cell_hidden)
             upd_hidden.append(upd_cell_hidden)
             # Pass input_ to the next
             input_ = upd_cell_hidden
         # retain tensors in list to allow different hidden sizes
         return upd_hidden
+
 
 class Forecaster(nn.Module):
     '''
@@ -360,12 +358,10 @@ class Forecaster(nn.Module):
         n_output_layers=1
         '''
         super().__init__()
-
-    ## set self variables  
+        
         self.device = device
         self.value_dtype = value_dtype
         self.channel_input = channel_input
-    
         # channel size
         if type(channel_upsample) != list:
             self.channel_upsample = [channel_upsample]*int(n_layers/2)
@@ -452,7 +448,6 @@ class Forecaster(nn.Module):
         self.n_output_layers = n_output_layers
         self.n_layers = n_layers
 
-    ## set forecaster
         cells = []
         for i in range(int(self.n_layers/2)):
             # detraj gru
@@ -467,7 +462,8 @@ class Forecaster(nn.Module):
             setattr(self, name, cell)
             cells.append(getattr(self, name))
             # decon  
-            cell = DeCNN2D_cell(self.channel_rnn[i], self.channel_upsample[i], self.upsample_k[i], self.upsample_s[i], self.upsample_p[i], batch_norm=batch_norm)
+            cell = DeCNN2D_cell(self.channel_rnn[i], self.channel_upsample[i], self.upsample_k[i], self.upsample_s[i],
+                                self.upsample_p[i], batch_norm=batch_norm)
             name = 'Upsample_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
@@ -477,16 +473,17 @@ class Forecaster(nn.Module):
                 cell = nn.Conv2d(self.channel_upsample[-1], self.channel_output[i], self.output_k[i], self.output_s[i], self.output_p[i])
             else:
                 cell = nn.Conv2d(self.channel_output[i-1], self.channel_output[i], self.output_k[i], self.output_s[i], self.output_p[i])
-            init.constant_(cell.weight, 0.)
-            init.constant_(cell.bias, 0.)
         
-            name = 'OutputLayer_' + str(i).zfill(2)
-            setattr(self, name, cell)
-            cells.append(getattr(self, name))
         
+        init.constant_(cell.weight, 0.)
+        init.constant_(cell.bias, 0.)
+        
+        name = 'OutputLayer_' + str(i).zfill(2)
+        setattr(self, name, cell)
+        cells.append(getattr(self, name))
         self.cells = cells
 
-    def forward(self, warp_net=None, hidden=None):
+    def forward(self, hidden):
         '''
         Parameters
         ----------
@@ -506,14 +503,14 @@ class Forecaster(nn.Module):
                 cell = self.cells[2*i]
                 cell_hidden = hidden[i]
                 # pass through layer
-                upd_cell_hidden = cell(warp_net=warp_net[i], prev_state=cell_hidden)
+                upd_cell_hidden = cell(prev_state=cell_hidden)
                 upd_hidden.append(upd_cell_hidden)
             else:
                 ## other gru cells in forecaster, need the inputs
                 cell = self.cells[2*i]
                 cell_hidden = hidden[i]
                 # pass through layer
-                upd_cell_hidden = cell(x=input_, warp_net=warp_net[i], prev_state=cell_hidden)
+                upd_cell_hidden = cell(x=input_, prev_state=cell_hidden)
                 upd_hidden.append(upd_cell_hidden)
             
             # update input_ to the last updated hidden layer for next pass
@@ -529,6 +526,7 @@ class Forecaster(nn.Module):
         output = ((10**(output/10))/200)**(5/8)
         # retain tensors in list to allow different hidden sizes
         return upd_hidden, output
+
 
 class Model(nn.Module):
     '''
@@ -550,17 +548,15 @@ class Model(nn.Module):
         self.n_forecasters = n_forecasters
 
         models = []
-        # encoders
         for i in range(self.n_encoders):
             model = Encoder(channel_input=encoder_input_channel, channel_downsample=encoder_downsample_channels,
                             channel_rnn=encoder_rnn_channels, downsample_k=encoder_downsample_k, downsample_s=encoder_downsample_s, 
                             downsample_p=encoder_downsample_p, rnn_link_size=rnn_link_size, rnn_k=encoder_rnn_k, rnn_s=encoder_rnn_s, 
                             rnn_p=encoder_rnn_p, n_layers=encoder_n_layers, batch_norm=batch_norm, device=device, value_dtype=value_dtype)
-            name = 'Encoder_' + str(i).zfill(2)
+            name = 'Encoder_' + str(i+1).zfill(2)
             setattr(self, name, model)
             models.append(getattr(self, name))
 
-        # forecasters
         for i in range(self.n_forecasters):
             model = Forecaster(channel_input=forecaster_input_channel, channel_upsample=forecaster_upsample_channels, 
                                channel_rnn=forecaster_rnn_channels, upsample_k=forecaster_upsample_k, upsample_s=forecaster_upsample_s, 
@@ -569,32 +565,11 @@ class Model(nn.Module):
                                channel_output=forecaster_output, output_k=forecaster_output_k, output_s=forecaster_output_s,
                                output_p=forecaster_output_p, n_output_layers=forecaster_output_layers, batch_norm=batch_norm, 
                                device=device, value_dtype=value_dtype)
-            name = 'Forecaster_' + str(i).zfill(2)
+            name = 'Forecaster_' + str(i+1).zfill(2)
             setattr(self, name, model)
             models.append(getattr(self, name))
 
         self.models = models
-
-        # set warp_net
-        encoder_warp_net = []
-        forecaster_warp_net = []
-        for i in range(int(encoder_n_layers/2)):
-            model = warp_net(encoder_downsample_channels[i], encoder_rnn_channels[i], rnn_link_size[i], 1, 1, 0, device, value_dtype)
-            name = 'Encoder_warp_net_' + str(i).zfill(2)
-            setattr(self, name, model)
-            encoder_warp_net.append(getattr(self, name))
-
-        for i in range(int(forecaster_n_layers/2)):
-            if i == 0:
-                model = warp_net(forecaster_input_channel, forecaster_rnn_channels[i], rnn_link_size[i], 1, 1, 0, device, value_dtype)
-            else:
-                model = warp_net(forecaster_upsample_channels[i-1], forecaster_rnn_channels[i], rnn_link_size[i], 1, 1, 0, device, value_dtype)
-            name = 'Forecaster_warp_net_' + str(i).zfill(2)
-            setattr(self, name, model)
-            forecaster_warp_net.append(getattr(self, name))
-
-        self.encoder_warp_net = encoder_warp_net
-        self.forecaster_warp_net = forecaster_warp_net
 
     def forward(self, x):
         input_ = x
@@ -607,15 +582,14 @@ class Model(nn.Module):
             if i == 0:
                 hidden=None
             model = self.models[i]
-            hidden = model(x = input_[:,i,:,:,:], warp_net=self.encoder_warp_net, hidden=hidden)
+            hidden = model(x = input_[:,i,:,:,:], hidden=hidden)
 
         hidden = hidden[::-1]
 
-        for i in range(self.n_forecasters):
-            model = self.models[self.n_encoders+i]
-            hidden, output = model(warp_net=self.forecaster_warp_net, hidden=hidden)
+        for i in range(self.n_encoders, self.n_encoders+self.n_forecasters):
+            model = self.models[i]
+            hidden, output = model(hidden=hidden)
             forecast.append(output)
-            
         forecast = torch.cat(forecast, dim=1)
         
         return forecast

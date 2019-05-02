@@ -34,8 +34,8 @@ def get_dataloader(args):
     # transform
     transform = transforms.Compose([ToTensor(), Normalize(args)])
     
-    traindataset = TyDataset(args=args, train = True, transform=transform)
-    testdataset = TyDataset(args=args, train = False, transform=transform)
+    traindataset = TyDataset(args=args, train = True, train_num=8, transform=transform)
+    testdataset = TyDataset(args=args, train = False, train_num=8, transform=transform)
     # datloader
     kwargs = {'num_workers': 4, 'pin_memory': True} if args.able_cuda else {}
     trainloader = DataLoader(dataset=traindataset, batch_size=args.batch_size, shuffle=True, **kwargs)

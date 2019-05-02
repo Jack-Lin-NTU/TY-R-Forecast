@@ -51,20 +51,20 @@ class TyDataset(Dataset):
             self.compression = args.compression
 
         self.transform = transform
-        
+        rand_tys = np.random.choice(len(ty_list), len(ty_list), replace=False)
         if train:
             if train_num is None:
-                self.events_num = np.arange(0, int(len(self.ty_list)/5*4))
+                self.events_num = rand_tys[0:int(len(self.ty_list)/4*3)]
             else:
                 assert train_num <= len(self.ty_list), 'The train_num shoud be less than total number of ty events.'
-                self.events_num = np.arange(0, train_num)
+                self.events_num = rand_tys[0:train_num]
             self.events_list = self.ty_list.index[self.events_num]
         else:
             if train_num is None:
-                self.events_num = np.arange(int(len(self.ty_list)/5*4), len(self.ty_list))
+                self.events_num = rand_tys[int(len(self.ty_list)/4*3):]
             else:
                 assert train_num <= len(self.ty_list), 'The train_num shoud be less than total number of ty events.'
-                self.events_num = np.arange(train_num, len(self.ty_list))
+                self.events_num = rand_tys[train_num:]
             self.events_list = self.ty_list.index[self.events_num]
 
         tmp = 0

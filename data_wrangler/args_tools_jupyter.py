@@ -54,7 +54,7 @@ args = easydict.EasyDict({
     'fortran_code_folder': make_path('08_fortran_codes', working_folder),
     # To set the path of radar folders
     'radar_folder': radar_folder,
-    'radar_raw_data_folder': make_path('raw_radar_data_2012_2018', working_folder),
+    'radar_raw_data_folder': make_path(os.path.join('00_raw_data', 'raw_radar_data_2012_2018'), working_folder),
     'radar_compressed_data_folder': make_path('01_compressed_files', radar_folder),
     'radar_wrangled_data_folder': make_path('02_wrangled_files', radar_folder),
     'radar_figures_folder': make_path('03_figures', radar_folder),

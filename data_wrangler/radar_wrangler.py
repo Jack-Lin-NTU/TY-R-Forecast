@@ -27,7 +27,7 @@ def extract_original_data():
         time_start = ty_list.loc[i, 'Time of issuing'] - dt.timedelta(hours=8)
         time_end =ty_list.loc[i, 'Time of canceling'] - dt.timedelta(hours=8)
         ty_name = ty_list.loc[i, 'En name']
-        info = '|{:8s}| start time: {} | end time: {} |'.format(ty_name, time_start, time_end)
+        info = '|{:8s}| start time: {} | end time: {} |'.format(ty_name, time_start+dt.timedelta(hours=8), time_end+dt.timedelta(hours=8))
         print(info)
 
         tmp_path1 = os.path.join(radar_original_data_folder, str(year))
@@ -70,6 +70,7 @@ def output_files():
     count_qpf = {}
     count_rad = {}
     # uncompress the file and output the readable file
+    
     for i in sorted(os.listdir(radar_compressed_data_folder)):
         print('-' * 40)
         print(i)

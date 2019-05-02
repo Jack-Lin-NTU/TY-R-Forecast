@@ -342,7 +342,7 @@ class Model(nn.Module):
         super().__init__()
         self.n_encoders = n_encoders
         self.n_forecasters = n_forecasters
-        
+        self.name = 'ConvGRU'
 
         models = []
         for i in range(self.n_encoders):

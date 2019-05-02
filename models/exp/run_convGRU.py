@@ -58,7 +58,6 @@ def train(net, trainloader, testloader, loss_function, args):
     remove_file(params_file)
     remove_file(params_pt)
     
-
     # set the optimizer (learning rate is from args)
     if args.optimizer is optim.Adam:
         optimizer = args.optimizer(net.parameters(), lr=args.lr, eps=5*1e-07, weight_decay=args.weight_decay)
@@ -96,7 +95,7 @@ def train(net, trainloader, testloader, loss_function, args):
         for i, data in enumerate(trainloader, 0):
             inputs = data['inputs'].to(args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
-            
+
             outputs = net(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
             
             if args.normalize_target:

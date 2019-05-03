@@ -60,7 +60,6 @@ class warp_net(nn.Module):
         # get batch and spatial sizes
         # print('Prev:', prev_state.shape)
         input_ = x
-        breakpoint()
         if input_ is None:
             stacked_inputs = prev_state
         else:
@@ -97,7 +96,6 @@ class TrajGRUCell(nn.Module):
         # get batch and spatial sizes
         batch_size = input_.data.shape[0]
         H, W = input_.data.shape[2:]
-        breakpoint()
         # generate empty prev_state, if None is provided
         if prev_state is None:
             state_size = (batch_size, self.channel_hidden, H, W)

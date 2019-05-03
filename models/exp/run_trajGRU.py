@@ -15,7 +15,7 @@ from torchvision import transforms, utils
 
 # import our model and dataloader
 from src.argstools.argstools import args, createfolder, remove_file, Adam16
-from src.models.trajGRU_simple import Model
+from src.models.trajGRU import Model
 from src.dataseters.dataseterGRU import TyDataset, ToTensor, Normalize
 
 # set seed 
@@ -60,7 +60,7 @@ def train(net, trainloader, testloader, loss_function, args):
 
     # set the optimizer (learning rate is from args)
     if args.optimizer is optim.Adam:
-        optimizer = args.optimizer(net.parameters(), lr=args.lr, eps=5e-07, weight_decay=args.weight_decay)
+        optimizer = args.optimizer(net.parameters(), lr=args.lr, eps=1e-06, weight_decay=args.weight_decay)
     elif args.optimizer is Adam16:
         optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay, device=args.device)
     elif args.optimizer is optim.SGD:
@@ -76,12 +76,12 @@ def train(net, trainloader, testloader, loss_function, args):
     # To declare a pd.DataFrame to store training, testing loss, and learning rate.
     result = pd.DataFrame([], index=pd.Index(range(1, args.max_epochs+1), name='epoch'), columns=['training_loss', 'testing_loss', 'lr'])
 
+    net.train()
+
     for epoch in range(args.max_epochs):
         time_a = time.time()
 
         f_log = open(log_file, 'a')
-        # set training process
-        net.train()
         
         # update the learning rate
         if args.lr_scheduler and args.optimizer is not optim.Adam:
@@ -110,6 +110,7 @@ def train(net, trainloader, testloader, loss_function, args):
             
             # calculate loss function
             loss = loss_function(outputs, labels)
+            breakpoint()
             train_loss += loss.item()/len(trainloader)
             running_loss += loss.item()/40
             # optimize model

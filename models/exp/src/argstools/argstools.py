@@ -6,6 +6,8 @@ import pandas as pd
 import argparse
 import torch.optim as optim
 from torch.optim import Optimizer
+import torch.nn.functional as F
+import torch.nn as nn
 
 # This version of Adam keeps an fp32 copy of the paramargseters and 
 # does all of the parameter updates in fp32, while still doing the
@@ -77,37 +79,43 @@ class Adam16(Optimizer):
 
         return loss
 
-class loss_rainfall():
-    def __init__(self, max_values, min_values):
-        self.max_values = max_values
-        self.min_values = min_values
 
-    def bmse(self, outputs, labels):
-        loss = 0
-        outputs_size = outputs.shape[1]
-        if args.normalize_target:
-            value_list = [0, 2/args.max_values['QPE'], 5/args.max_values['QPE'], 10/args.max_values['QPE'], 30/args.max_values['QPE'], args.max_values['QPE']/args.max_values['QPE']]
-            weights = [1, 2, 5, 10, 30]
+class BMSE(nn.Module):
+    def __init__(self, normalize_target):
+        super(BMSE, self).__init__()
+        self.weights = [1, 2, 5, 10, 30]
+        if normalize_target:
+            self.value_list = [0, 2/args.max_values['QPE'], 5/args.max_values['QPE'], 10/args.max_values['QPE'], 30/args.max_values['QPE'], 1]
         else:
-            value_list = [0, 2, 5, 10, 30, args.max_values['QPE']]
-            weights = [1, 2, 5, 10, 30]
-        for i in range(len(value_list)-1):
-            mask = torch.stack([value_list[i] <= labels, labels < value_list[i+1]]).all(dim=0)
-            loss += torch.sum(weights[i] * ((outputs[mask]-labels[mask])/outputs_size)**2)
+            self.value_list = [0, 2, 5, 10, 30, 200]
+        
+    def forward(self, outputs, targets):
+        loss = 0
+        a = 0
+        for i in range(len(self.value_list)-1):
+            mask = torch.stack([self.value_list[i]<=targets, targets<self.value_list[i+1]], dim=1).all(dim=1)
+            tmp = self.weights[i] * F.mse_loss(outputs[mask], targets[mask], reduction='sum')
+            if torch.isnan(tmp):
+                continue
+            else:
+                loss += tmp
+        
         return loss
 
-    def bmae(self, outputs, labels):
-        loss = 0
-        outputs_size = outputs.shape[1]    
-        if args.normalize_target:
-            value_list = [0, 2/args.max_values['QPE'], 5/args.max_values['QPE'], 10/args.max_values['QPE'], 30/args.max_values['QPE'], args.max_values['QPE']/args.max_values['QPE']]
-            weights = [1, 2, 5, 10, 30]
+class BMAE(nn.Module):
+    def __init__(self, normalize_target):
+        super(BMSE, self).__init__()
+        self.weights = [1, 2, 5, 10, 30]
+        if normalize_target:
+            self.value_list = [0, 2/args.max_values['QPE'], 5/args.max_values['QPE'], 10/args.max_values['QPE'], 30/args.max_values['QPE'], 1]
         else:
-            value_list = [0, 2, 5, 10, 30, args.max_values['QPE']]
-            weights = [1, 2, 5, 10, 30]
-        for i in range(len(value_list)-1):
-            mask = torch.stack([value_list[i] <= labels, labels < value_list[i+1]]).all(dim=0)
-            loss += torch.sum(weights[i] * torch.abs((outputs[mask]-labels[mask])/outputs_size))
+            self.value_list = [0, 2, 5, 10, 30, args.max_values['QPE']]
+        
+    def forward(self, outputs, targets):
+        loss = 0
+        for i in range(len(self.value_list)-1):
+            mask = torch.stack([self.value_list[i]<=targets, targets<self.value_list[i+1]],dim=1).all(dim=1)
+            loss += self.weights[i] * F.l1_loss(outputs[mask], targets[mask])
         return loss
 
 def createfolder(directory):
@@ -182,6 +190,7 @@ parser.add_argument('--gpu', metavar='', type=int, default=0, help='GPU device.(
 parser.add_argument('--value-dtype', metavar='', type=str, default='float32', help='The dtype of values.(default: float32)')
 
 # hyperparameters for training
+parser.add_argument('--train-num', metavar='', type=int, default=10, help='Max epochs.(default: 10)')
 parser.add_argument('--max-epochs', metavar='', type=int, default=30, help='Max epochs.(default: 30)')
 parser.add_argument('--batch-size', metavar='', type=int, default=4, help='Batch size.(default: 8)')
 parser.add_argument('--lr', metavar='', type=float, default=1e-4, help='Max epochs.(default: 1e-4)')

@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms, utils
 
 # import our model and dataloader
-from src.argstools.argstools import args, createfolder, remove_file, loss_rainfall, Adam16
+from src.argstools.argstools import args, createfolder, remove_file, BMSE, BMAE, Adam16
 from src.models.trajGRU_simple import Model
 from src.dataseters.dataseterGRU import TyDataset, ToTensor, Normalize
 
@@ -31,8 +31,8 @@ def get_dataloader(args):
     # transform
     transform = transforms.Compose([ToTensor(), Normalize(args)])
     
-    traindataset = TyDataset(args=args, train = True, train_num=8, transform=transform)
-    testdataset = TyDataset(args=args, train = False, train_num=8, transform=transform)
+    traindataset = TyDataset(args=args, train = True, train_num=args.train_num, transform=transform)
+    testdataset = TyDataset(args=args, train = False, train_num=args.train_num, transform=transform)
     # datloader
     kwargs = {'num_workers': 4, 'pin_memory': True} if args.able_cuda else {}
     trainloader = DataLoader(dataset=traindataset, batch_size=args.batch_size, shuffle=True, **kwargs)
@@ -61,9 +61,11 @@ def train(net, trainloader, testloader, loss_function, args):
 
     # set the optimizer (learning rate is from args)
     if args.optimizer is optim.Adam:
-        optimizer = args.optimizer(net.parameters(), lr=args.lr, eps=5*1e-07, weight_decay=args.weight_decay)
+        optimizer = args.optimizer(net.parameters(), lr=args.lr, eps=1e-07, weight_decay=args.weight_decay)
     elif args.optimizer is Adam16:
         optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay, device=args.device)
+    elif args.optimizer is optim.SGD:
+        optimizer = args.optimizer(net.parameters(), lr=args.lr, momentum=0.6, weight_decay=args.weight_decay)
     else:
         optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     # Set scheduler
@@ -94,16 +96,18 @@ def train(net, trainloader, testloader, loss_function, args):
         train_loss = 0
 
         for i, data in enumerate(trainloader, 0):
-            inputs = data['inputs'].to(args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
-            labels = data['targets'].to(args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
+            inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
+            labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
             
             outputs = net(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
-            
+
+            outputs = outputs.view(-1, outputs.shape[1]*outputs.shape[2]*outputs.shape[3])
+            labels = labels.view(-1, labels.shape[1]*labels.shape[2]*labels.shape[3])
+
             if args.normalize_target:
                 outputs = (outputs - args.min_values['QPE']) / (args.max_values['QPE'] - args.min_values['QPE'])
             
-
-            # calculate loss function=
+            # calculate loss function
             loss = loss_function(outputs, labels)
             train_loss += loss.item()/len(trainloader)
             # optimize model
@@ -182,9 +186,8 @@ def test(net, testloader, loss_function, args):
             outputs = net(inputs)
             if args.normalize_target:
                 outputs = (outputs - args.min_values['QPE']) / (args.max_values['QPE'] - args.min_values['QPE'])
-            loss += loss_function(outputs, labels)
+            loss += loss_function(outputs, labels)/n_batch
 
-        loss = loss/n_batch
     return loss
 
 if __name__ == '__main__':
@@ -278,9 +281,9 @@ if __name__ == '__main__':
         args.params_folder += '_Adam'
 
     if args.loss_function == 'BMSE':
-        loss_function = loss_rainfall(max_values=args.max_values, min_values=args.min_values).bmse
+        loss_function = BMSE(args)
     elif args.loss_function == 'BMAE':
-        loss_function = loss_rainfall(max_values=args.max_values, min_values=args.min_values).bmae
+        loss_function = BMAE(args)
 
     train(net=Net, trainloader=trainloader, testloader=testloader, loss_function=loss_function, args=args)
 

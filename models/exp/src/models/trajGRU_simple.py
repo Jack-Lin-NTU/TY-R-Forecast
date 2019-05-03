@@ -39,15 +39,14 @@ class warp_net(nn.Module):
         '''
         input_ = x
         b, c, h, w = input_.shape
-        l = grids_x.shape[1]
-        input_ = input_[:,:,None,:,:].expand((b,c,l,h,w))
-        grids_x = grids_x.unsqueeze(4)
-        grids_y = grids_y.unsqueeze(4)
-        grids_l = torch.arange(1,l+1).unsqueeze(1).unsqueeze(2).unsqueeze(3).expand((b,l,h,w,1)).to(device=self.device, dtype=self.value_dtype)
-        grids = torch.cat([grids_x/(w-1), grids_y/(h-1), grids_l/(l-1)], 4)
-        grids = grids*2-1
-
-        return F.grid_sample(input_, grids)
+        samples = []
+        for i in range(self.link_size):
+            x = grids_x[:,i,:,:].unsqueeze(3)
+            y = grids_y[:,i,:,:].unsqueeze(3)
+            grids = torch.cat([x/w, y/h], 3)*2-1
+            samples.append(F.grid_sample(input_, grids))
+        
+        return torch.cat(samples, dim=1)
 
     def forward(self, x=None, prev_state=None):
         # get batch and spatial sizes
@@ -60,11 +59,8 @@ class warp_net(nn.Module):
             stacked_inputs = torch.cat([input_, prev_state], dim=1)
 
         output = self.displacement_layers(stacked_inputs)
-
         output = self.grid_sample(prev_state, output[:,0:self.link_size,:,:], output[:,self.link_size:,:,:])
 
-        B, C, L, H, W = output.shape
-        output = output.view(B, C*L, H, W)
         return output
 
 class TrajGRUCell(nn.Module):

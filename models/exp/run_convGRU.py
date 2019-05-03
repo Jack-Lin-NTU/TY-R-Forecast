@@ -15,7 +15,7 @@ from torchvision import transforms, utils
 
 # import our model and dataloader
 from src.argstools.argstools import args, createfolder, remove_file, Adam16
-from src.models.convGRU import Model
+from src.models.convGRU_simple import Model
 from src.dataseters.dataseterGRU import TyDataset, ToTensor, Normalize
 
 # set seed 
@@ -90,22 +90,27 @@ def train(net, trainloader, testloader, loss_function, args):
         result.iloc[epoch,2] = optimizer.param_groups[0]['lr']
         f_log.writelines('lr: {:.1e}\n'.format(optimizer.param_groups[0]['lr']))  
         # training process
-        train_loss = 0
-
+        train_loss = 0.
+        running_loss = 0.
         for i, data in enumerate(trainloader, 0):
             inputs = data['inputs'].to(args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
+            # zero the parameter gradients
+            optimizer.zero_grad()
 
             outputs = net(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
             
+            outputs = outputs.view(-1, outputs.shape[1]*outputs.shape[2]*outputs.shape[3])
+            labels = labels.view(-1, labels.shape[1]*labels.shape[2]*labels.shape[3])
+           
             if args.normalize_target:
                 outputs = (outputs - args.min_values['QPE']) / (args.max_values['QPE'] - args.min_values['QPE'])
             
             # calculate loss function=
             loss = loss_function(outputs, labels)
             train_loss += loss.item()/len(trainloader)
+            running_loss += loss.item()/40
             # optimize model
-            optimizer.zero_grad()
             loss.backward()
             # 'clip_grad_norm' helps prevent the exploding gradient problem in RNNs or LSTMs.
             if args.clip:
@@ -114,11 +119,12 @@ def train(net, trainloader, testloader, loss_function, args):
             optimizer.step()
 
             # print training loss per 40 batches.
-            if (i+1) % 10 == 0:
+            if (i+1) % 40 == 0:
                 # print out the training results.
-                print('trajGRU|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}'.format(epoch+1, args.max_epochs, i+1, total_batches, loss.item()))
+                print('trajGRU|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}'.format(epoch+1, args.max_epochs, i+1, total_batches, running_loss))
                 # print the trainging results to the log file.
-                f_log.writelines('trajGRU|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}\n'.format(epoch+1, args.max_epochs, i+1, total_batches, loss.item()))
+                f_log.writelines('trajGRU|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}\n'.format(epoch+1, args.max_epochs, i+1, total_batches, running_loss))
+                running_loss = 0.
         
         # save the training results.
         result.iloc[epoch,0] = train_loss

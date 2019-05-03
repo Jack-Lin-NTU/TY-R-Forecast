@@ -57,11 +57,10 @@ def train(net, trainloader, testloader, loss_function, args):
     remove_file(result_file)
     remove_file(params_file)
     remove_file(params_pt)
-    
 
     # set the optimizer (learning rate is from args)
     if args.optimizer is optim.Adam:
-        optimizer = args.optimizer(net.parameters(), lr=args.lr, eps=1e-07, weight_decay=args.weight_decay)
+        optimizer = args.optimizer(net.parameters(), lr=args.lr, eps=5e-07, weight_decay=args.weight_decay)
     elif args.optimizer is Adam16:
         optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay, device=args.device)
     elif args.optimizer is optim.SGD:
@@ -93,12 +92,14 @@ def train(net, trainloader, testloader, loss_function, args):
         result.iloc[epoch,2] = optimizer.param_groups[0]['lr']
         f_log.writelines('lr: {:.1e}\n'.format(optimizer.param_groups[0]['lr']))  
         # training process
-        train_loss = 0
-
+        train_loss = 0.
+        running_loss = 0.
         for i, data in enumerate(trainloader, 0):
             inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
             
+            optimizer.zero_grad()
+
             outputs = net(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
 
             outputs = outputs.view(-1, outputs.shape[1]*outputs.shape[2]*outputs.shape[3])
@@ -110,8 +111,8 @@ def train(net, trainloader, testloader, loss_function, args):
             # calculate loss function
             loss = loss_function(outputs, labels)
             train_loss += loss.item()/len(trainloader)
+            running_loss += loss.item()/40
             # optimize model
-            optimizer.zero_grad()
             loss.backward()
             # 'clip_grad_norm' helps prevent the exploding gradient problem in RNNs or LSTMs.
             if args.clip:
@@ -120,11 +121,12 @@ def train(net, trainloader, testloader, loss_function, args):
             optimizer.step()
 
             # print training loss per 40 batches.
-            if (i+1) % 10 == 0:
+            if (i+1) % 40 == 0:
                 # print out the training results.
-                print('trajGRU|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}'.format(epoch+1, args.max_epochs, i+1, total_batches, loss.item()))
+                print('trajGRU|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}'.format(epoch+1, args.max_epochs, i+1, total_batches, running_loss))
                 # print the trainging results to the log file.
-                f_log.writelines('trajGRU|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}\n'.format(epoch+1, args.max_epochs, i+1, total_batches, loss.item()))
+                f_log.writelines('trajGRU|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}\n'.format(epoch+1, args.max_epochs, i+1, total_batches, running_loss))
+                running_loss = 0.
         
         # save the training results.
         result.iloc[epoch,0] = train_loss
@@ -281,7 +283,7 @@ if __name__ == '__main__':
         args.params_folder += '_Adam'
 
 
-    train(net=Net, trainloader=trainloader, testloader=testloader, loss_function=loss_function, args=args)
+    train(net=Net, trainloader=trainloader, testloader=testloader, loss_function=args.loss_function, args=args)
 
     time_e = time.time()
     t = time_e-time_s

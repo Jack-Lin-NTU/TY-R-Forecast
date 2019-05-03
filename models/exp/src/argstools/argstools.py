@@ -91,20 +91,18 @@ class BMSE(nn.Module):
         
     def forward(self, outputs, targets):
         loss = 0
-        a = 0
         for i in range(len(self.value_list)-1):
-            mask = torch.stack([self.value_list[i]<=targets, targets<self.value_list[i+1]], dim=1).all(dim=1)
-            tmp = self.weights[i] * F.mse_loss(outputs[mask], targets[mask], reduction='sum')
+            mask = torch.stack([(self.value_list[i]<=targets).unsqueeze(2), (targets<self.value_list[i+1]).unsqueeze(2)], dim=2).all(dim=2).squeeze(2)
+            tmp = self.weights[i] * F.mse_loss(outputs[mask], targets[mask])
             if torch.isnan(tmp):
                 continue
             else:
                 loss += tmp
-        
         return loss
 
 class BMAE(nn.Module):
     def __init__(self, max_values, min_values, normalize_target=False):
-        super(BMSE, self).__init__()
+        super(BMAE, self).__init__()
         self.weights = [1, 2, 5, 10, 30]
         if normalize_target:
             self.value_list = [0, 2/max_values['QPE'], 5/max_values['QPE'], 10/max_values['QPE'], 30/max_values['QPE'], 1]
@@ -114,8 +112,8 @@ class BMAE(nn.Module):
     def forward(self, outputs, targets):
         loss = 0
         for i in range(len(self.value_list)-1):
-            mask = torch.stack([self.value_list[i]<=targets, targets<self.value_list[i+1]],dim=1).all(dim=1)
-            tmp = self.weights[i] * F.l1_loss(outputs[mask], targets[mask], reduction='sum')
+            mask = torch.stack([(self.value_list[i]<=targets).unsqueeze(2), (targets<self.value_list[i+1]).unsqueeze(2)], dim=2).all(dim=2)
+            tmp = self.weights[i] * F.l1_loss(outputs[mask], targets[mask])
             if torch.isnan(tmp):
                 continue
             else:

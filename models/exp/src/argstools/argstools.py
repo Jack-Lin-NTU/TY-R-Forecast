@@ -268,7 +268,10 @@ args.O_shape = (round((args.O_x_h-args.O_x_l)/args.res_degree)+1, round((args.O_
 
 # overall info for normalization
 rad_overall = pd.read_csv(os.path.join(args.radar_folder, 'overall.csv'), index_col='Measures').loc['max':'min',:]
-meteo_overall = pd.read_csv(os.path.join(args.weather_folder, 'overall.csv'), index_col='Measures')
+if len(args.weather_list) == 0:
+    meteo_overall = None
+else:
+    meteo_overall = pd.read_csv(os.path.join(args.weather_folder, 'overall.csv'), index_col='Measures')
 args.max_values = pd.concat([rad_overall, meteo_overall], axis=1, sort=False).T['max']
 args.min_values = pd.concat([rad_overall, meteo_overall], axis=1, sort=False).T['min']
 

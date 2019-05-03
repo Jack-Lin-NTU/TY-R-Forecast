@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms, utils
 
 # import our model and dataloader
-from src.argstools.argstools import args, createfolder, remove_file, BMSE, BMAE, Adam16
+from src.argstools.argstools import args, createfolder, remove_file, Adam16
 from src.models.trajGRU_simple import Model
 from src.dataseters.dataseterGRU import TyDataset, ToTensor, Normalize
 
@@ -280,10 +280,6 @@ if __name__ == '__main__':
         args.result_folder += '_Adam'
         args.params_folder += '_Adam'
 
-    if args.loss_function == 'BMSE':
-        loss_function = BMSE(args)
-    elif args.loss_function == 'BMAE':
-        loss_function = BMAE(args)
 
     train(net=Net, trainloader=trainloader, testloader=testloader, loss_function=loss_function, args=args)
 

@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms, utils
 
 # import our model and dataloader
-from src.argstools.argstools import args, createfolder, remove_file, loss_rainfall, Adam16
+from src.argstools.argstools import args, createfolder, remove_file, Adam16
 from src.models.convGRU import Model
 from src.dataseters.dataseterGRU import TyDataset, ToTensor, Normalize
 
@@ -101,7 +101,6 @@ def train(net, trainloader, testloader, loss_function, args):
             if args.normalize_target:
                 outputs = (outputs - args.min_values['QPE']) / (args.max_values['QPE'] - args.min_values['QPE'])
             
-
             # calculate loss function=
             loss = loss_function(outputs, labels)
             train_loss += loss.item()/len(trainloader)
@@ -272,12 +271,7 @@ if __name__ == '__main__':
         args.result_folder += '_Adam'
         args.params_folder += '_Adam'
 
-    if args.loss_function == 'BMSE':
-        loss_function = loss_rainfall(max_values=args.max_values, min_values=args.min_values).bmse
-    elif args.loss_function == 'BMAE':
-        loss_function = loss_rainfall(max_values=args.max_values, min_values=args.min_values).bmae
-
-    train(net=Net, trainloader=trainloader, testloader=testloader, loss_function=loss_function, args=args)
+    train(net=Net, trainloader=trainloader, testloader=testloader, loss_function=args.loss_function, args=args)
 
     time_e = time.time()
     t = time_e-time_s

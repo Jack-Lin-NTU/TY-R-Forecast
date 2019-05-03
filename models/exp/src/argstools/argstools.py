@@ -81,13 +81,13 @@ class Adam16(Optimizer):
 
 
 class BMSE(nn.Module):
-    def __init__(self, normalize_target):
+    def __init__(self, max_values, min_values, normalize_target=False):
         super(BMSE, self).__init__()
         self.weights = [1, 2, 5, 10, 30]
         if normalize_target:
-            self.value_list = [0, 2/args.max_values['QPE'], 5/args.max_values['QPE'], 10/args.max_values['QPE'], 30/args.max_values['QPE'], 1]
+            self.value_list = [0, 2/max_values['QPE'], 5/max_values['QPE'], 10/max_values['QPE'], 30/max_values['QPE'], 1]
         else:
-            self.value_list = [0, 2, 5, 10, 30, 200]
+            self.value_list = [0, 2, 5, 10, 30, 500]
         
     def forward(self, outputs, targets):
         loss = 0
@@ -103,19 +103,23 @@ class BMSE(nn.Module):
         return loss
 
 class BMAE(nn.Module):
-    def __init__(self, normalize_target):
+    def __init__(self, max_values, min_values, normalize_target=False):
         super(BMSE, self).__init__()
         self.weights = [1, 2, 5, 10, 30]
         if normalize_target:
-            self.value_list = [0, 2/args.max_values['QPE'], 5/args.max_values['QPE'], 10/args.max_values['QPE'], 30/args.max_values['QPE'], 1]
+            self.value_list = [0, 2/max_values['QPE'], 5/max_values['QPE'], 10/max_values['QPE'], 30/max_values['QPE'], 1]
         else:
-            self.value_list = [0, 2, 5, 10, 30, args.max_values['QPE']]
+            self.value_list = [0, 2, 5, 10, 30, 500]
         
     def forward(self, outputs, targets):
         loss = 0
         for i in range(len(self.value_list)-1):
             mask = torch.stack([self.value_list[i]<=targets, targets<self.value_list[i+1]],dim=1).all(dim=1)
-            loss += self.weights[i] * F.l1_loss(outputs[mask], targets[mask])
+            tmp = self.weights[i] * F.l1_loss(outputs[mask], targets[mask], reduction='sum')
+            if torch.isnan(tmp):
+                continue
+            else:
+                loss += tmp
         return loss
 
 def createfolder(directory):
@@ -251,6 +255,7 @@ if args.optimizer == 'Adam16':
 else:
     args.optimizer = getattr(optim, args.optimizer)
 
+
 args.res_degree = 0.0125
 args.I_x = [args.I_x_l, args.I_x_h]
 args.I_y = [args.I_y_l, args.I_y_h]
@@ -268,6 +273,11 @@ rad_overall = pd.read_csv(os.path.join(args.radar_folder, 'overall.csv'), index_
 meteo_overall = pd.read_csv(os.path.join(args.weather_folder, 'overall.csv'), index_col='Measures')
 args.max_values = pd.concat([rad_overall, meteo_overall], axis=1, sort=False).T['max']
 args.min_values = pd.concat([rad_overall, meteo_overall], axis=1, sort=False).T['min']
+
+if args.loss_function == 'BMSE':
+    args.loss_function = BMSE(max_values=args.max_values, min_values=args.min_values, normalize_target=args.normalize_target)
+elif args.loss_function == 'BMAE':
+    args.loss_function = BMAE(max_values=args.max_values, min_values=args.min_values, normalize_target=args.normalize_target)
 
 # # args.I_x_iloc = [int((args.I_x[0]-args.O_x[0])/args.res_degree), int((args.I_x[1]-args.O_x[0])/args.res_degree + 1)]
 # # args.I_y_iloc = [int((args.I_y[0]-args.O_y[0])/args.res_degree), int((args.I_y[1]-args.O_y[0])/args.res_degree + 1)]

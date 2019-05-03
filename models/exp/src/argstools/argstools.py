@@ -222,15 +222,15 @@ parser.add_argument('--channel-factor', metavar='', type=int, default=2, help='C
 # parser.add_argument('--F-y-h', metavar='', type=float, default=25.175, help='The highest latitude of target map. (default: 25.175)')
 
 # tw forecast size
-parser.add_argument('--I-x-l', metavar='', type=float, default=118.8, help='The lowest longitude of input map. (default: 118.3)')
-parser.add_argument('--I-x-h', metavar='', type=float, default=122.5375, help='The highest longitude of input map. (default: 123.2875)')
-parser.add_argument('--I-y-l', metavar='', type=float, default=21.75, help='The lowest latitude of input map. (default: 21)')
-parser.add_argument('--I-y-h', metavar='', type=float, default=25.4875, help='The highest latitude of input map. (default: 25.9875)')
+parser.add_argument('--I-x-l', metavar='', type=float, default=118.3, help='The lowest longitude of input map. (default: 118.3)')
+parser.add_argument('--I-x-h', metavar='', type=float, default=123.2875, help='The highest longitude of input map. (default: 123.2875)')
+parser.add_argument('--I-y-l', metavar='', type=float, default=21, help='The lowest latitude of input map. (default: 21)')
+parser.add_argument('--I-y-h', metavar='', type=float, default=25.9875, help='The highest latitude of input map. (default: 25.9875)')
 
-parser.add_argument('--F-x-l', metavar='', type=float, default=118.8, help='The lowest longitude of target map. (default: 118.3)')
-parser.add_argument('--F-x-h', metavar='', type=float, default=122.5375, help='The highest longitude of target map. (default: 123.2875)')
-parser.add_argument('--F-y-l', metavar='', type=float, default=21.75, help='The lowest latitude of target map. (default: 21)')
-parser.add_argument('--F-y-h', metavar='', type=float, default=25.4875, help='The highest latitude of target map. (default: 25.9875)')
+parser.add_argument('--F-x-l', metavar='', type=float, default=118.3, help='The lowest longitude of target map. (default: 118.3)')
+parser.add_argument('--F-x-h', metavar='', type=float, default=123.2875, help='The highest longitude of target map. (default: 123.2875)')
+parser.add_argument('--F-y-l', metavar='', type=float, default=21, help='The lowest latitude of target map. (default: 21)')
+parser.add_argument('--F-y-h', metavar='', type=float, default=25.9875, help='The highest latitude of target map. (default: 25.9875)')
 
 parser.add_argument('--O-x-l', metavar='', type=float, default=118, help='The lowest longitude of original map. (default: 118)')
 parser.add_argument('--O-x-h', metavar='', type=float, default=123.5, help='The highest longitude of original map. (default: 123.5)')

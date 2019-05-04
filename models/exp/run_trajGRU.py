@@ -110,7 +110,6 @@ def train(net, trainloader, testloader, loss_function, args):
             
             # calculate loss function
             loss = loss_function(outputs, labels)
-            print(loss)
             # breakpoint()
             train_loss += loss.item()/len(trainloader)
             running_loss += loss.item()/40

@@ -100,6 +100,7 @@ class BMSE(nn.Module):
                 continue
             else:
                 loss += tmp
+        print(loss)
         return loss
 
 class BMAE(nn.Module):

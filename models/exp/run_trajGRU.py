@@ -15,7 +15,7 @@ from torchvision import transforms, utils
 
 # import our model and dataloader
 from src.argstools.argstools import args, createfolder, remove_file, Adam16
-from src.models.trajGRU import Model
+from src.models.trajGRU_simple import Model
 from src.dataseters.dataseterGRU import TyDataset, ToTensor, Normalize
 
 # set seed 

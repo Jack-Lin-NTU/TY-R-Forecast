@@ -27,10 +27,10 @@ class warp_net(nn.Module):
         # initialize the weightings in each layers.
         # nn.nn.init.orthogonal_(displacement_layers[0].weight)
 
-        nn.init.constant_(displacement_layers[0].weight, 0.)
-        nn.init.constant_(displacement_layers[0].bias, 0.)
-        nn.init.constant_(displacement_layers[2].weight, 0.)
-        nn.init.constant_(displacement_layers[2].bias, 0.)
+        nn.init.zeros_(displacement_layers[0].weight)
+        nn.init.zeros_(displacement_layers[2].weight)
+        nn.init.zeros_(displacement_layers[0].bias)
+        nn.init.zeros_(displacement_layers[2].bias)
         self.displacement_layers = nn.Sequential(*displacement_layers)
 
     def grid_sample(self, x, grids_x, grids_y):

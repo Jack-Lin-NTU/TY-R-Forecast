@@ -28,7 +28,7 @@ class warp_net(nn.Module):
         # nn.nn.init.orthogonal_(displacement_layers[0].weight)
 
         nn.init.kaiming_normal_(displacement_layers[0].weight, a=0, mode='fan_out', nonlinearity='leaky_relu')
-         nn.init.kaiming_normal_(displacement_layers[0].weight, a=0, mode='fan_out', nonlinearity='leaky_relu')
+        nn.init.kaiming_normal_(displacement_layers[0].weight, a=0, mode='fan_out', nonlinearity='leaky_relu')
         nn.init.zeros_(displacement_layers[0].bias)
         nn.init.zeros_(displacement_layers[2].bias)
         self.displacement_layers = nn.Sequential(*displacement_layers)

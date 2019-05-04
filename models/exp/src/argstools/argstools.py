@@ -91,6 +91,8 @@ class BMSE(nn.Module):
         
     def forward(self, outputs, targets):
         loss = 0
+        outputs = outputs.to(dtype=torch.float32)
+        targets = targets.to(dtype=torch.float32)
         for i in range(len(self.value_list)-1):
             mask = torch.cat([(targets>=self.value_list[i]).unsqueeze(2), (targets<self.value_list[i+1]).unsqueeze(2)], dim=2).all(dim=2)
             tmp = self.weights[i] * F.mse_loss(outputs[mask], targets[mask])

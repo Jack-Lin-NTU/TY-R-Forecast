@@ -45,7 +45,6 @@ class warp_net(nn.Module):
             y = grids_y[:,i,:,:].unsqueeze(3)
             grids = torch.cat([x/w, y/h], 3)*2-1
             samples.append(F.grid_sample(input_, grids))
-        8-
         return torch.cat(samples, dim=1)
 
     def forward(self, x=None, prev_state=None):

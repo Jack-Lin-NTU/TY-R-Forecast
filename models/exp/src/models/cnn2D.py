@@ -13,8 +13,8 @@ class CNN2D_cell(nn.Module):
             layer_sublist.append(nn.BatchNorm2d(channel_hidden))
         layer_sublist.append(nn.ReLU())
 
-        nn.init.kaiming_normal_(layer_sublist[0].weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
-        nn.init.kaiming_normal_(layer_sublist[0].bias, a=0, mode='fan_in', nonlinearity='leaky_relu')
+        nn.init.kaiming_normal_(layer_sublist[0].weight, a=0, mode='fan_out', nonlinearity='leaky_relu')
+        nn.init.kaiming_normal_(layer_sublist[0].bias, a=0, mode='fan_out', nonlinearity='leaky_relu')
 
     def forward(self, x):
         out = self.layer(x)
@@ -30,8 +30,8 @@ class DeCNN2D_cell(nn.Module):
             layer_sublist.append(nn.BatchNorm2d(channel_hidden))
         layer_sublist.append(nn.ReLU())
 
-        nn.init.kaiming_normal_(layer_sublist[0].weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
-        nn.init.kaiming_normal_(layer_sublist[0].bias, a=0, mode='fan_in', nonlinearity='leaky_relu')
+        nn.init.kaiming_normal_(layer_sublist[0].weight, a=0, mode='fan_out', nonlinearity='leaky_relu')
+        nn.init.kaiming_normal_(layer_sublist[0].bias, a=0, mode='fan_out', nonlinearity='leaky_relu')
 
         self.layer = nn.Sequential(*layer_sublist)
 

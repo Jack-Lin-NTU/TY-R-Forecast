@@ -27,8 +27,10 @@ class warp_net(nn.Module):
         # initialize the weightings in each layers.
         # nn.nn.init.orthogonal_(displacement_layers[0].weight)
 
-        nn.init.kaiming_normal_(displacement_layers[0].weight, a=0, mode='fan_out', nonlinearity='leaky_relu')
-        nn.init.kaiming_normal_(displacement_layers[0].weight, a=0, mode='fan_out', nonlinearity='leaky_relu')
+        # nn.init.kaiming_normal_(displacement_layers[0].weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
+        # nn.init.kaiming_normal_(displacement_layers[2].weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
+        nn.init.zeros_(displacement_layers[0].weight)
+        nn.init.zeros_(displacement_layers[2].weight)
         nn.init.zeros_(displacement_layers[0].bias)
         nn.init.zeros_(displacement_layers[2].bias)
         self.displacement_layers = nn.Sequential(*displacement_layers)
@@ -78,6 +80,7 @@ class TrajGRUCell(nn.Module):
         self.reset_gate= CNN2D_cell(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding, batch_norm=batch_norm)
         self.update_gate = CNN2D_cell(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding, batch_norm=batch_norm)
         self.out_gate = CNN2D_cell(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding, batch_norm=batch_norm)
+
         self.warp_net = warp_net(channel_input, channel_hidden, link_size, 1, 1, 0, batch_norm, device, value_dtype)
 
     def forward(self, x=None, prev_state=None):

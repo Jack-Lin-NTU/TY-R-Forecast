@@ -99,8 +99,10 @@ def train(net, trainloader, testloader, loss_function, args):
             labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
             
             optimizer.zero_grad()
-
+            
             outputs = net(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
+
+            # print(torch.max(outputs))
 
             outputs = outputs.view(-1, outputs.shape[1]*outputs.shape[2]*outputs.shape[3])
             labels = labels.view(-1, labels.shape[1]*labels.shape[2]*labels.shape[3])

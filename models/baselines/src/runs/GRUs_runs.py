@@ -92,7 +92,8 @@ def train(net, trainloader, testloader, loss_function, args):
         running_loss = 0.
 
         if epoch == 10:
-            net = net.to(device=args.device, dtype=torch.float16)
+            args.value_dtype = torch.float16
+            net = net.to(device=args.device, dtype=args.value_dtype)
             if args.model.upper() == 'TRAJGRU':
                 args.batch_size = 4
             elif args.model.upper() == 'CONVGRU':
@@ -102,7 +103,7 @@ def train(net, trainloader, testloader, loss_function, args):
         for i, data in enumerate(trainloader, 0):
             inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
-            
+
             optimizer.zero_grad()
             
             outputs = net(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]

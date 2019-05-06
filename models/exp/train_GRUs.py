@@ -72,11 +72,7 @@ if __name__ == '__main__':
     if args.model.upper() == 'TRAJGRU':
         from src.models.trajGRU_simple import Model
         print('Model: TRAJGRU')
-    elif args.model.upper() == 'CONVGRU':
-        from src.models.convGRU_simple import Model
-        print('Model: CONVGRU')
-
-    Net = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, rnn_link_size=rnn_link_size,
+        Net = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, rnn_link_size=rnn_link_size,
                 encoder_input_channel=encoder_input_channel, encoder_downsample_channels=encoder_downsample_channels,
                 encoder_rnn_channels=encoder_rnn_channels, encoder_downsample_k=encoder_downsample_k,
                 encoder_downsample_s=encoder_downsample_s, encoder_downsample_p=encoder_downsample_p, 
@@ -89,6 +85,24 @@ if __name__ == '__main__':
                 forecaster_output_k=forecaster_output_k, forecaster_output_s=forecaster_output_s, 
                 forecaster_output_p=forecaster_output_p, forecaster_output_layers=forecaster_output_layers, 
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)
+    elif args.model.upper() == 'CONVGRU':
+        from src.models.convGRU_simple import Model
+        print('Model: CONVGRU')
+        Net = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames,
+                encoder_input_channel=encoder_input_channel, encoder_downsample_channels=encoder_downsample_channels,
+                encoder_rnn_channels=encoder_rnn_channels, encoder_downsample_k=encoder_downsample_k,
+                encoder_downsample_s=encoder_downsample_s, encoder_downsample_p=encoder_downsample_p, 
+                encoder_rnn_k=encoder_rnn_k,encoder_rnn_s=encoder_rnn_s, encoder_rnn_p=encoder_rnn_p, 
+                encoder_n_layers=encoder_n_layers, forecaster_input_channel=forecaster_input_channel, 
+                forecaster_upsample_channels=forecaster_upsample_channels, forecaster_rnn_channels=forecaster_rnn_channels,
+                forecaster_upsample_k=forecaster_upsample_k, forecaster_upsample_s=forecaster_upsample_s, 
+                forecaster_upsample_p=forecaster_upsample_p, forecaster_rnn_k=forecaster_rnn_k, forecaster_rnn_s=forecaster_rnn_s,
+                forecaster_rnn_p=forecaster_rnn_p, forecaster_n_layers=forecaster_n_layers, forecaster_output=forecaster_output_channels, 
+                forecaster_output_k=forecaster_output_k, forecaster_output_s=forecaster_output_s, 
+                forecaster_output_p=forecaster_output_p, forecaster_output_layers=forecaster_output_layers, 
+                batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)
+
+    
 
     # train process
     time_s = time.time()

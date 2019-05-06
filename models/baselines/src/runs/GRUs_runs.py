@@ -56,16 +56,16 @@ def train(net, trainloader, testloader, loss_function, args):
     remove_file(params_pt)
 
     # set the optimizer (learning rate is from args)
-    if args.optimizer is optim.Adam:
+    if args.optimizer.__name__ == 'Adam':
         optimizer = args.optimizer(net.parameters(), lr=args.lr, eps=1e-06, weight_decay=args.weight_decay)
-    elif args.optimizer is Adam16:
+    elif args.optimizer.__name__ == 'Adam16':
         optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay, device=args.device)
-    elif args.optimizer is optim.SGD:
+    elif args.optimizer.__name__ == 'SGD':
         optimizer = args.optimizer(net.parameters(), lr=args.lr, momentum=0.6, weight_decay=args.weight_decay)
     else:
         optimizer = args.optimizer(net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     # Set scheduler
-    if args.lr_scheduler and args.optimizer is not optim.Adam:
+    if args.lr_scheduler and args.optimizer.__name__ != 'Adam':
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[x for x in range(1, args.max_epochs) if x % 5 == 0], gamma=0.7)
     
     total_batches = len(trainloader)
@@ -80,7 +80,7 @@ def train(net, trainloader, testloader, loss_function, args):
         f_log = open(log_file, 'a')
         
         # update the learning rate
-        if args.lr_scheduler and args.optimizer is not optim.Adam:
+        if args.lr_scheduler and args.optimizer.__name__ != 'Adam':
             scheduler.step()
         # show the current learning rate (optimizer.param_groups returns a list which stores several params)
         print('lr: {:.1e}'.format(optimizer.param_groups[0]['lr']))
@@ -90,8 +90,16 @@ def train(net, trainloader, testloader, loss_function, args):
         # training process
         train_loss = 0.
         running_loss = 0.
-        for i, data in enumerate(trainloader, 0):
 
+        if epoch == 10:
+            net = net.to(device=args.device, dtype=torch.float16)
+            if args.model.upper() == 'TRAJGRU':
+                args.batch_size = 4
+            elif args.model.upper() == 'CONVGRU':
+                args.batch_size = 8
+            trainloader, testloader = get_dataloader(args)
+
+        for i, data in enumerate(trainloader, 0):
             inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
             

@@ -127,8 +127,8 @@ if __name__ == '__main__':
         args.params_folder += '_scheduler'
     
     if args.optimizer is optim.Adam:
-        args.result_folder += '_Adam'
-        args.params_folder += '_Adam'
+        args.result_folder += '_'+args.optimizer.__name__
+        args.params_folder += '_'+args.optimizer.__name__
 
 
     train(net=Net, trainloader=trainloader, testloader=testloader, loss_function=args.loss_function, args=args)

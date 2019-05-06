@@ -76,9 +76,8 @@ def train(net, trainloader, testloader, loss_function, args):
     # To declare a pd.DataFrame to store training, testing loss, and learning rate.
     result = pd.DataFrame([], index=pd.Index(range(1, args.max_epochs+1), name='epoch'), columns=['training_loss', 'testing_loss', 'lr'])
 
-    net.train()
-
     for epoch in range(args.max_epochs):
+        net.train(True)
         time_a = time.time()
 
         f_log = open(log_file, 'a')
@@ -95,14 +94,13 @@ def train(net, trainloader, testloader, loss_function, args):
         train_loss = 0.
         running_loss = 0.
         for i, data in enumerate(trainloader, 0):
+
             inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
             
             optimizer.zero_grad()
             
             outputs = net(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
-
-            # print(torch.max(outputs))
 
             outputs = outputs.view(-1, outputs.shape[1]*outputs.shape[2]*outputs.shape[3])
             labels = labels.view(-1, labels.shape[1]*labels.shape[2]*labels.shape[3])
@@ -116,11 +114,13 @@ def train(net, trainloader, testloader, loss_function, args):
             train_loss += loss.item()/len(trainloader)
             running_loss += loss.item()/40
             # optimize model
+            
+            # print('MAx outputs: {:.6f}, Loss: {:.6f}'.format(torch.max(outputs).item(), loss.item()))
+
             loss.backward()
             # 'clip_grad_norm' helps prevent the exploding gradient problem in RNNs or LSTMs.
             if args.clip:
                 nn.utils.clip_grad_norm_(net.parameters(), max_norm=args.clip_max_norm)
-
             optimizer.step()
 
             # print training loss per 40 batches.

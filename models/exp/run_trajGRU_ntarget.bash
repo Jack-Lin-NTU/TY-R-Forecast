@@ -1,18 +1,10 @@
 clear
-# python run_trajGRU.py --able-cuda --lr-scheduler --clip --input-with-grid --input-with-QPE --normalize-target \
-# --gpu 0 --lr 0.5 --weight-decay 0 --max-epochs 10 --batch-size 4 --train-num 10 --optimizer Adam --value-dtype float16 \
-
-# python run_trajGRU.py --able-cuda --lr-scheduler --clip --input-with-grid --input-with-QPE --normalize-target \
-# --gpu 0 --lr 0.1 --weight-decay 0 --max-epochs 10 --batch-size 4 --train-num 10 --optimizer Adam --value-dtype float16 \
-
-# python run_trajGRU.py --able-cuda --lr-scheduler --clip --input-with-grid --input-with-QPE --normalize-target \
-# --gpu 0 --lr 0.05 --weight-decay 0 --max-epochs 10 --batch-size 4 --train-num 10 --optimizer Adam --value-dtype float16 \
-
-# python run_trajGRU.py --able-cuda --lr-scheduler --clip --input-with-grid --input-with-QPE --normalize-target \
-# --gpu 0 --lr 0.01 --weight-decay 0 --max-epochs 10 --batch-size 4 --train-num 10 --optimizer Adam --value-dtype float16 \
-
-# python run_trajGRU.py --able-cuda --lr-scheduler --clip --input-with-grid --input-with-QPE --normalize-target \
-# --gpu 0 --lr 0.005 --weight-decay 0 --max-epochs 10 --batch-size 4 --train-num 10 --optimizer Adam --value-dtype float16 \
-
-python run_trajGRU.py --able-cuda --lr-scheduler --clip --clip-max-norm 5 --input-with-grid --input-with-QPE --normalize-target \
+python run_trajGRU.py --able-cuda --lr-scheduler --clip --clip-max-norm 0.005 --input-with-grid --input-with-QPE --normalize-target \
 --gpu 0 --lr 0.0001 --weight-decay 0 --max-epochs 30 --batch-size 4 --train-num 10 --optimizer Adam --value-dtype float16 \
+
+python run_trajGRU.py --able-cuda --lr-scheduler --clip --clip-max-norm 0.005 --input-with-grid --input-with-QPE --normalize-target \
+--gpu 0 --lr 0.00005 --weight-decay 0 --max-epochs 30 --batch-size 4 --train-num 10 --optimizer Adam --value-dtype float16 \
+
+clear
+python run_trajGRU.py --able-cuda --lr-scheduler --clip --clip-max-norm 0.005 --input-with-grid --input-with-QPE --normalize-target \
+--gpu 0 --lr 0.000025 --weight-decay 0 --max-epochs 30 --batch-size 4 --train-num 10 --optimizer Adam --value-dtype float16 \

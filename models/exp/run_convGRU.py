@@ -76,10 +76,9 @@ def train(net, trainloader, testloader, loss_function, args):
 
     for epoch in range(args.max_epochs):
         time_a = time.time()
-
         f_log = open(log_file, 'a')
         # set training process
-        net.train()
+        net.train(True)
         
         # update the learning rate
         if args.lr_scheduler and args.optimizer is not optim.Adam:
@@ -92,9 +91,16 @@ def train(net, trainloader, testloader, loss_function, args):
         # training process
         train_loss = 0.
         running_loss = 0.
+
+        if epoch == 10:
+            args.value_dtype = torch.float16
+            args.batch_size = 4
+            trainloader, testloader = get_dataloader(args)
+            net = net.to(device=args.gpu, dtype=args.value_dtype)
+
         for i, data in enumerate(trainloader, 0):
-            inputs = data['inputs'].to(args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
-            labels = data['targets'].to(args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
+            inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
+            labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
             # zero the parameter gradients
             optimizer.zero_grad()
 

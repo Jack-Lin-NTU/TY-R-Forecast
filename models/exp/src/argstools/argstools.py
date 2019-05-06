@@ -199,7 +199,7 @@ parser.add_argument('--lr', metavar='', type=float, default=1e-4, help='Max epoc
 parser.add_argument('--lr-scheduler', action='store_true', help='Set lr-scheduler.')
 parser.add_argument('--weight-decay', metavar='', type=float, default=0, help='Wegiht decay.(default: 0)')
 parser.add_argument('--clip', action='store_true', help='Clip model weightings.')
-parser.add_argument('--clip-max-norm', metavar='', type=int, default=300, help='Max norm value for clip model weightings. (default: 300)')
+parser.add_argument('--clip-max-norm', metavar='', type=float, default=10, help='Max norm value for clip model weightings. (default: 10)')
 parser.add_argument('--batch-norm', action='store_true', help='Do batch normalization.')
 parser.add_argument('--normalize-target', action='store_true', help='Normalize target maps.')
 

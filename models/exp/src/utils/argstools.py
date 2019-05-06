@@ -79,7 +79,6 @@ class Adam16(Optimizer):
 
         return loss
 
-
 class BMSE(nn.Module):
     def __init__(self, max_values, min_values, normalize_target=False):
         super(BMSE, self).__init__()
@@ -186,12 +185,14 @@ parser.add_argument('--params-folder', metavar='', type=str, default=make_path('
 parser.add_argument('--ty-list', metavar='', type=str, default=make_path('ty_list.csv', working_folder),
                    help='The path of ty list file.')
 
+parser.add_argument('--model', metavar='', type=str, default='trajGRU', help='The model. (default: trajGRU)')
 parser.add_argument('--load-all-data', action='store_true', help='Load all data.')
 parser.add_argument('--able-cuda', action='store_true', help='Able cuda.')
 parser.add_argument('--gpu', metavar='', type=int, default=0, help='GPU device.(default: 0)')
 parser.add_argument('--value-dtype', metavar='', type=str, default='float32', help='The dtype of values.(default: float32)')
 
 # hyperparameters for training
+parser.add_argument('--seed', metavar='', type=int, default=1, help='Random seed.(default: 1)')
 parser.add_argument('--train-num', metavar='', type=int, default=10, help='Max epochs.(default: 10)')
 parser.add_argument('--max-epochs', metavar='', type=int, default=30, help='Max epochs.(default: 30)')
 parser.add_argument('--batch-size', metavar='', type=int, default=4, help='Batch size.(default: 8)')

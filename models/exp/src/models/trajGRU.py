@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 from .cnn2D import CNN2D_cell, DeCNN2D_cell
 
-class warp_net(nn.Module):
+class flow_warp(nn.Module):
     '''
     Arguments:
         The subcnn model and the M warp function 
@@ -35,17 +35,20 @@ class warp_net(nn.Module):
         nn.init.zeros_(displacement_layers[2].bias)
         self.displacement_layers = nn.Sequential(*displacement_layers)
 
-    def grid_sample(self, x, grids_x, grids_y):
+    def grid_sample(self, x, flow):
         '''
         Function for sampling pixels based on given grid data.
         '''
         input_ = x
-        b, c, h, w = input_.shape
+        b, _, h, w = input_.shape
+        u, v = flow[:,0:self.link_size,:,:], flow[:,self.link_size:,:,:]
         samples = []
         for i in range(self.link_size):
-            x = grids_x[:,i,:,:].unsqueeze(3)
-            y = grids_y[:,i,:,:].unsqueeze(3)
-            grids = torch.cat([x/w, y/h], 3)*2-1
+            y_, x_ = torch.meshgrid(torch.arange(h), torch.arange(w))
+            y_, x_ = y_.expand(b,-1,-1).to(self.device, dtype=self.value_dtype), x_.expand(b,-1,-1).to(self.device, dtype=self.value_dtype)
+            x_ = (x_*2/w)-1 + u[:,i,:,:]
+            y_ = (y_*2/w)-1 + v[:,i,:,:]
+            grids = torch.stack([x_, y_], 3)
             samples.append(F.grid_sample(input_, grids))
         return torch.cat(samples, dim=1)
 
@@ -60,7 +63,7 @@ class warp_net(nn.Module):
             stacked_inputs = torch.cat([input_, prev_state], dim=1)
 
         output = self.displacement_layers(stacked_inputs)
-        output = self.grid_sample(prev_state, output[:,0:self.link_size,:,:], output[:,self.link_size:,:,:])
+        output = self.grid_sample(x=prev_state, flow=output)
 
         return output
 
@@ -81,7 +84,7 @@ class TrajGRUCell(nn.Module):
         self.update_gate = CNN2D_cell(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding, batch_norm=batch_norm)
         self.out_gate = CNN2D_cell(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding, batch_norm=batch_norm, negative_slope=0.2)
 
-        self.warp_net = warp_net(channel_input, channel_hidden, link_size, 1, 1, 0, batch_norm, device, value_dtype)
+        self.flow_warp = flow_warp(channel_input, channel_hidden, link_size, 1, 1, 0, batch_norm, device, value_dtype)
 
     def forward(self, x=None, prev_state=None):
         input_ = x
@@ -98,7 +101,7 @@ class TrajGRUCell(nn.Module):
             else:
                 prev_state = torch.zeros(state_size)
 
-        M = self.warp_net(x=input_, prev_state=prev_state)
+        M = self.flow_warp(x=input_, prev_state=prev_state)
         stack_inputs = torch.cat([input_, M], dim=1)
         
         # data size is [batch, channel, height, width]
@@ -125,7 +128,7 @@ class DeTrajGRUCell(nn.Module):
         self.reset_gate = DeCNN2D_cell(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding, batch_norm)
         self.update_gate = DeCNN2D_cell(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding, batch_norm)
         self.out_gate = DeCNN2D_cell(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding, batch_norm, negative_slope=0.2)
-        self.warp_net = warp_net(channel_input, channel_hidden, link_size, 1, 1, 0, batch_norm, device, value_dtype)
+        self.flow_warp = flow_warp(channel_input, channel_hidden, link_size, 1, 1, 0, batch_norm, device, value_dtype)
 
     def forward(self, x=None, prev_state=None):
         input_ = x
@@ -141,7 +144,7 @@ class DeTrajGRUCell(nn.Module):
             else:
                 prev_state = torch.zeros(state_size)
 
-        M = self.warp_net(x=input_, prev_state=prev_state)
+        M = self.flow_warp(x=input_, prev_state=prev_state)
 
         if self.channel_input == 0:
             reset = torch.sigmoid(self.reset_gate(M)).unsqueeze(1).expand(-1,self.link_size,-1,-1,-1).reshape(batch_size,self.link_size*self.channel_hidden,H,W)
@@ -548,26 +551,26 @@ class Model(nn.Module):
 
         self.models = models
 
-        # set warp_net
-        encoder_warp_net = []
-        forecaster_warp_net = []
+        # set flow_warp
+        encoder_flow_warp = []
+        forecaster_flow_warp = []
         for i in range(int(encoder_n_layers/2)):
-            model = warp_net(encoder_downsample_channels[i], encoder_rnn_channels[i], rnn_link_size[i], 1, 1, 0, device, value_dtype)
-            name = 'Encoder_warp_net_' + str(i).zfill(2)
+            model = flow_warp(encoder_downsample_channels[i], encoder_rnn_channels[i], rnn_link_size[i], 1, 1, 0, device, value_dtype)
+            name = 'Encoder_flow_warp_' + str(i).zfill(2)
             setattr(self, name, model)
-            encoder_warp_net.append(getattr(self, name))
+            encoder_flow_warp.append(getattr(self, name))
 
         for i in range(int(forecaster_n_layers/2)):
             if i == 0:
-                model = warp_net(forecaster_input_channel, forecaster_rnn_channels[i], rnn_link_size[i], 1, 1, 0, device, value_dtype)
+                model = flow_warp(forecaster_input_channel, forecaster_rnn_channels[i], rnn_link_size[i], 1, 1, 0, device, value_dtype)
             else:
-                model = warp_net(forecaster_upsample_channels[i-1], forecaster_rnn_channels[i], rnn_link_size[i], 1, 1, 0, device, value_dtype)
-            name = 'Forecaster_warp_net_' + str(i).zfill(2)
+                model = flow_warp(forecaster_upsample_channels[i-1], forecaster_rnn_channels[i], rnn_link_size[i], 1, 1, 0, device, value_dtype)
+            name = 'Forecaster_flow_warp_' + str(i).zfill(2)
             setattr(self, name, model)
-            forecaster_warp_net.append(getattr(self, name))
+            forecaster_flow_warp.append(getattr(self, name))
 
-        self.encoder_warp_net = encoder_warp_net
-        self.forecaster_warp_net = forecaster_warp_net
+        self.encoder_flow_warp = encoder_flow_warp
+        self.forecaster_flow_warp = forecaster_flow_warp
 
     def forward(self, x):
         input_ = x
@@ -580,13 +583,13 @@ class Model(nn.Module):
             if i == 0:
                 hidden=None
             model = self.models[i]
-            hidden = model(x = input_[:,i,:,:,:], warp_net=self.encoder_warp_net, hidden=hidden)
+            hidden = model(x = input_[:,i,:,:,:], flow_warp=self.encoder_flow_warp, hidden=hidden)
 
         hidden = hidden[::-1]
 
         for i in range(self.n_forecasters):
             model = self.models[self.n_encoders+i]
-            hidden, output = model(warp_net=self.forecaster_warp_net, hidden=hidden)
+            hidden, output = model(flow_warp=self.forecaster_flow_warp, hidden=hidden)
             forecast.append(output)
             
         forecast = torch.cat(forecast, dim=1)

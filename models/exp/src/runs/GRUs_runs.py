@@ -123,19 +123,19 @@ def train(net, trainloader, testloader, loss_function, args):
             # print training loss per 40 batches.
             if (i+1) % 40 == 0:
                 # print out the training results.
-                print('trajGRU|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}'.format(epoch+1, args.max_epochs, i+1, total_batches, running_loss))
+                print('{}|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}'.format(args.model, epoch+1, args.max_epochs, i+1, total_batches, running_loss))
                 # print the trainging results to the log file.
-                f_log.writelines('trajGRU|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}\n'.format(epoch+1, args.max_epochs, i+1, total_batches, running_loss))
+                f_log.writelines('{}|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}\n'.format(args.model, epoch+1, args.max_epochs, i+1, total_batches, running_loss))
                 running_loss = 0.
         
         # save the training results.
         result.iloc[epoch,0] = train_loss
-        print('trajGRU|  Epoch [{}/{}], Train Loss: {:8.3f}'.format(epoch+1, args.max_epochs, train_loss))
+        print('{}|  Epoch [{}/{}], Train Loss: {:8.3f}'.format(args.model, epoch+1, args.max_epochs, train_loss))
 
         # Save the test loss per epoch
         test_loss = test(net, testloader=testloader, loss_function=loss_function, args=args)
         # print out the testing results.
-        print('trajGRU|  Epoch [{}/{}], Test Loss: {:8.3f}'.format(epoch+1, args.max_epochs, test_loss))
+        print('{}|  Epoch [{}/{}], Test Loss: {:8.3f}'.format(args.model, epoch+1, args.max_epochs, test_loss))
         # save the testing results.
         result.iloc[epoch,1] = test_loss.item()
 
@@ -161,7 +161,7 @@ def train(net, trainloader, testloader, loss_function, args):
         if (epoch+1) == args.max_epochs:
             # counts the number of model weightings.
             total_params = sum(p.numel() for p in net.parameters())
-            print('\trajGRU|  Total_params: {:.2e}'.format(total_params))
+            print('\{}|  Total_params: {:.2e}'.format(total_params))
             # save the number of model weightings.
             f_params = open(params_file, 'a')
             f_params.writelines('Total_params: {:.2e}\n'.format(total_params))

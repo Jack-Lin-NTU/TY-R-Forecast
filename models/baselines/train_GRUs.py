@@ -70,7 +70,7 @@ if __name__ == '__main__':
     forecaster_output_layers = 1
 
     if args.model.upper() == 'TRAJGRU':
-        from src.models.trajGRU_simple import Model
+        from src.operators.trajGRU_simple import Model
         print('Model: TRAJGRU')
         Net = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, rnn_link_size=rnn_link_size,
                 encoder_input_channel=encoder_input_channel, encoder_downsample_channels=encoder_downsample_channels,
@@ -86,7 +86,7 @@ if __name__ == '__main__':
                 forecaster_output_p=forecaster_output_p, forecaster_output_layers=forecaster_output_layers, 
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)
     elif args.model.upper() == 'CONVGRU':
-        from src.models.convGRU_simple import Model
+        from src.operators.convGRU_simple import Model
         print('Model: CONVGRU')
         Net = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames,
                 encoder_input_channel=encoder_input_channel, encoder_downsample_channels=encoder_downsample_channels,

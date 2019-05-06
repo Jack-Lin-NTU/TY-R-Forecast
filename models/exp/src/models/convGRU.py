@@ -16,7 +16,7 @@ class ConvGRUCell(nn.Module):
         self.channel_hidden = channel_hidden
         self.reset_gate = CNN2D_cell(channel_input+channel_hidden, channel_hidden, kernel_size, stride=stride, padding=padding, batch_norm=batch_norm)
         self.update_gate = CNN2D_cell(channel_input+channel_hidden, channel_hidden, kernel_size, stride=stride, padding=padding, batch_norm=batch_norm)
-        self.out_gate = CNN2D_cell(channel_input+channel_hidden, channel_hidden, kernel_size, stride=stride, padding=padding, batch_norm=batch_norm)
+        self.out_gate = CNN2D_cell(channel_input+channel_hidden, channel_hidden, kernel_size, stride=stride, padding=padding, batch_norm=batch_norm, negative_slope=0.2)
     
     def forward(self, x, prev_state=None):
         input_ = x
@@ -50,7 +50,7 @@ class DeconvGRUCell(nn.Module):
         self.value_dtype = value_dtype
         self.reset_gate = DeCNN2D_cell(channel_input+channel_hidden, channel_hidden, kernel_size, stride=stride, padding=padding, batch_norm=batch_norm)
         self.update_gate = DeCNN2D_cell(channel_input+channel_hidden, channel_hidden, kernel_size, stride=stride, padding=padding, batch_norm=batch_norm)
-        self.out_gate = DeCNN2D_cell(channel_input+channel_hidden, channel_hidden, kernel_size, stride=stride, padding=padding, batch_norm=batch_norm)
+        self.out_gate = DeCNN2D_cell(channel_input+channel_hidden, channel_hidden, kernel_size, stride=stride, padding=padding, batch_norm=batch_norm, negative_slope=0.2)
     
     def forward(self, x=None, prev_state=None):
         input_ = x

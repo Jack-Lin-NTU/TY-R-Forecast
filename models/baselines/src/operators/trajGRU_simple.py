@@ -63,3 +63,17 @@ class Model(nn.Module):
         forecast = torch.cat(forecast, dim=1)
         
         return forecast
+
+    def modify_value_dtype_(self, value_dtype=None):
+        self.encoder.TrajGRUCell_00.value_dtype = value_dtype
+        self.encoder.TrajGRUCell_01.value_dtype = value_dtype
+        self.encoder.TrajGRUCell_02.value_dtype = value_dtype
+        self.forecaster.DeTrajGRUCell_00.value_dtype = value_dtype
+        self.forecaster.DeTrajGRUCell_01.value_dtype = value_dtype
+        self.forecaster.DeTrajGRUCell_02.value_dtype = value_dtype
+        self.encoder.TrajGRUCell_00.flow_warp.value_dtype = value_dtype
+        self.encoder.TrajGRUCell_01.flow_warp.value_dtype = value_dtype
+        self.encoder.TrajGRUCell_02.flow_warp.value_dtype = value_dtype
+        self.forecaster.DeTrajGRUCell_00.flow_warp.value_dtype = value_dtype
+        self.forecaster.DeTrajGRUCell_01.flow_warp.value_dtype = value_dtype
+        self.forecaster.DeTrajGRUCell_02.flow_warp.value_dtype = value_dtype

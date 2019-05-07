@@ -440,7 +440,7 @@ class Forecaster(nn.Module):
                 cell = DeTrajGRUCell(channel_input=self.channel_upsample[i-1], channel_hidden=self.channel_rnn[i], link_size=self.rnn_link_size[i],
                                      kernel_size=self.rnn_k[i], stride=self.rnn_s[i], padding=self.rnn_p[i], device=self.device, value_dtype=self.value_dtype)
 
-            name = 'DeTrajGRUCelll_' + str(i).zfill(2)
+            name = 'DeTrajGRUCell_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
             # decon  

@@ -40,7 +40,7 @@ class ConvGRUCell(nn.Module):
 
         return new_state
 
-class DeconvGRUCell(nn.Module):
+class DeConvGRUCell(nn.Module):
     '''
     Generate a convolutional GRU cell
     '''
@@ -202,7 +202,7 @@ class Forecaster(nn.Module):
         rnn_k: (integer or list.) the kernel size of rnn layers.
         rnn_s: (integer or list.) the stride size of rnn layers.
         rnn_p: (integer or list.) the padding size of rnn layers.
-        n_layers: (integer.) number of chained "DeconvGRUCell".
+        n_layers: (integer.) number of chained "DeConvGRUCell".
         ## output layer params
         channel_output: (integer or list.) depth dimensions of output.
         output_k: (integer or list.) the kernel size of output layers.
@@ -271,11 +271,11 @@ class Forecaster(nn.Module):
         cells = []
         for i in range(int(n_layers/2)):
             if i == 0:
-                cell = DeconvGRUCell(channel_input, channel_rnn[i], rnn_k[i], rnn_s[i], rnn_p[i], batch_norm, device, value_dtype)
+                cell = DeConvGRUCell(channel_input, channel_rnn[i], rnn_k[i], rnn_s[i], rnn_p[i], batch_norm, device, value_dtype)
             else:
-                cell = DeconvGRUCell(channel_upsample[i-1], channel_rnn[i], rnn_k[i], rnn_s[i], rnn_p[i], batch_norm, device, value_dtype)
+                cell = DeConvGRUCell(channel_upsample[i-1], channel_rnn[i], rnn_k[i], rnn_s[i], rnn_p[i], batch_norm, device, value_dtype)
 
-            name = 'DeconvGRUCell_' + str(i).zfill(2)
+            name = 'DeConvGRUCell_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
 

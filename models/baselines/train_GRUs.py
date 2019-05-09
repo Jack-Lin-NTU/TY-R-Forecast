@@ -31,28 +31,6 @@ def main():
     # train process
     time1 = time.time()
 
-    args.result_folder += '_'+args.model.upper()
-    args.params_folder += '_'+args.model.upper()
-
-    size = '{}X{}'.format(args.I_shape[0], args.I_shape[1])
-
-    if args.weather_list == []:
-        args.result_folder = os.path.join(args.result_folder, size, 'RAD_no_weather')
-        args.params_folder = os.path.join(args.params_folder, size, 'RAD_no_weather')
-    else:
-        args.result_folder = os.path.join(args.result_folder, size, 'RAD_weather')
-        args.params_folder = os.path.join(args.params_folder, size, 'RAD_weather')
-
-    args.result_folder = os.path.join(args.result_folder, 'wd{:.5f}_lr{:f}'.format(args.weight_decay, args.lr))
-    args.params_folder = os.path.join(args.params_folder, 'wd{:.5f}_lr{:f}'.format(args.weight_decay, args.lr))
-
-    if args.lr_scheduler and args.optimizer != 'Adam':
-        args.result_folder += '_scheduler'
-        args.params_folder += '_scheduler'
-    
-    args.result_folder += '_'+args.optimizer
-    args.params_folder += '_'+args.optimizer
-
     # train model
     train(model=model, trainloader=trainloader, testloader=testloader, args=args)
 

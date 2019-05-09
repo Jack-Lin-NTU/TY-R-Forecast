@@ -87,12 +87,10 @@ def train(model, trainloader, testloader, args):
     log_file = os.path.join(args.result_folder, 'log.txt')
     result_file = os.path.join(args.result_folder, 'result_df.csv')
     params_file = os.path.join(args.result_folder, 'params_counts.csv')
-    params_pt = os.path.join(args.params_folder, 'params.pt')
-
     remove_file(log_file)
     remove_file(result_file)
     remove_file(params_file)
-    remove_file(params_pt)
+    
 
     # set optimizer
     if args.optimizer == 'Adam16':
@@ -107,8 +105,8 @@ def train(model, trainloader, testloader, args):
             optimizer = optimizer(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     # Set scheduler
-    if args.lr_scheduler and args.optimizer != 'Adam':
-        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[x for x in range(1, args.max_epochs) if x % 5 == 0], gamma=0.7)
+    if args.lr_scheduler:
+        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[x for x in range(1, args.max_epochs) if x % 7 == 0], gamma=0.7)
     
     total_batches = len(trainloader)
     
@@ -126,7 +124,7 @@ def train(model, trainloader, testloader, args):
         f_log = open(log_file, 'a')
         
         # update the learning rate
-        if args.lr_scheduler and args.optimizer != 'Adam':
+        if args.lr_scheduler:
             scheduler.step()
 
         # show the current learning rate (optimizer.param_groups returns a list which stores several hyper-params)
@@ -222,6 +220,8 @@ def train(model, trainloader, testloader, args):
         f_log.close()
 
         if (epoch+1) % 10 == 0 or (epoch+1) == args.max_epochs:
+            params_pt = os.path.join(args.params_folder, 'params_{}.pt'.format(epoch+1))
+            remove_file(params_pt)
             # save the params per 10 epochs.
             torch.save({'epoch': epoch,
                         'model_state_dict': model.state_dict(),

@@ -9,6 +9,7 @@ class MSE(nn.Module):
             self.weights = [1, 2, 5, 10, 30]
         else:
             self.weights = [1]*5
+            
         if normalize_target:
             self.value_list = [0, 2/max_values, 5/max_values, 10/max_values, 30/max_values, 1]
         else:

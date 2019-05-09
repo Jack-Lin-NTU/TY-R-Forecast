@@ -140,7 +140,7 @@ def train(model, trainloader, testloader, args):
         running_loss = 0.
         
         ## change the value dtype after training 10 epochs
-        if epoch == 10:
+        if args.change_value_dtype and epoch == 10:
             args.value_dtype = torch.float16
             model = model.to(device=args.device, dtype=args.value_dtype)
             model.modify_value_dtype_(value_dtype=args.value_dtype)
@@ -172,7 +172,7 @@ def train(model, trainloader, testloader, args):
             outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
 
             outputs = outputs.view(-1, outputs.shape[1]*outputs.shape[2]*outputs.shape[3])
-            labels = labels.view(-1, labels.shape[1]*outputs.shape[2]*outputs.shape[3])
+            labels = labels.view(-1, labels.shape[1]*labels.shape[2]*labels.shape[3])
 
             if args.normalize_target:
                 outputs = (outputs - args.min_values['QPE']) / (args.max_values['QPE'] - args.min_values['QPE'])

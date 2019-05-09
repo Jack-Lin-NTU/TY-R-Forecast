@@ -47,6 +47,7 @@ def get_args():
     parser.add_argument('--able-cuda', action='store_true', help='Able cuda. (default: disable cuda)')
     parser.add_argument('--gpu', metavar='', type=int, default=0, help='GPU device. (default: 0)')
     parser.add_argument('--value-dtype', metavar='', type=str, default='float32', help='The data type of computation. (default: float32)')
+    parser.add_argument('--change-value-dtype', action='store_true', help='Change the data type of computation or not.')
 
     # hyperparameters for training
     parser.add_argument('--seed', metavar='', type=int, default=1, help='The setting of random seed. (default: 1)')
@@ -131,9 +132,9 @@ def get_args():
     args.min_values = pd.concat([rad_overall, meteo_overall], axis=1, sort=False).T['min']
 
     if args.loss_function == 'BMSE':
-        args.loss_function = MSE(max_values=args.max_values, min_values=args.min_values, balance=True, normalize_target=args.normalize_target)
+        args.loss_function = MSE(max_values=args.max_values['QPE'], min_values=args.min_values['QPE'], balance=True, normalize_target=args.normalize_target)
     elif args.loss_function == 'BMAE':
-        args.loss_function = MAE(max_values=args.max_values, min_values=args.min_values, balance=True, normalize_target=args.normalize_target)
+        args.loss_function = MAE(max_values=args.max_values['QPE'], min_values=args.min_values['QPE'], balance=True, normalize_target=args.normalize_target)
 
     args.I_x_iloc = [int((args.I_x[0]-args.O_x[0])/args.res_degree), int((args.I_x[1]-args.O_x[0])/args.res_degree + 1)]
     args.I_y_iloc = [int((args.I_y[0]-args.O_y[0])/args.res_degree), int((args.I_y[1]-args.O_y[0])/args.res_degree + 1)]

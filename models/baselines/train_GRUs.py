@@ -54,7 +54,7 @@ def main():
     args.params_folder += '_'+args.optimizer
 
     # train model
-    train(net=model, trainloader=trainloader, testloader=testloader, loss_function=args.loss_function, args=args)
+    train(model=model, trainloader=trainloader, testloader=testloader, args=args)
 
     time2 = time.time()
     t = time2-time1

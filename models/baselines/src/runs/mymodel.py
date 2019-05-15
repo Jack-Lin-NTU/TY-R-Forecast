@@ -14,8 +14,7 @@ from torchvision import transforms, utils
 
 # import our model and dataloader
 from src.utils.utils import createfolder, remove_file, Adam16
-from src.utils.GRUs_hyperparams import TRAJGRU_HYPERPARAMs, CONVGRU_HYPERPARAMs
-from src.dataseters.GRUs import TyDataset, ToTensor, Normalize
+from src.dataseters.mymodel import TyDataset, ToTensor, Normalize
 
 def get_dataloader(args, train_num=None):
     '''
@@ -36,45 +35,15 @@ def get_dataloader(args, train_num=None):
     
     return trainloader, testloader
 
-
 def get_model(from_scratch=True, args=None):
-    if args.model.upper() == 'TRAJGRU':
-        from src.operators.trajGRU import Single_unit_Model
-        print('Model: TRAJGRU')
-        TRAJGRU = TRAJGRU_HYPERPARAMs(args=args)
-        model = Single_unit_Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, rnn_link_size=TRAJGRU.rnn_link_size,
-                encoder_input_channel=TRAJGRU.encoder_input_channel, encoder_downsample_channels=TRAJGRU.encoder_downsample_channels,
-                encoder_rnn_channels=TRAJGRU.encoder_rnn_channels, encoder_downsample_k=TRAJGRU.encoder_downsample_k,
-                encoder_downsample_s=TRAJGRU.encoder_downsample_s, encoder_downsample_p=TRAJGRU.encoder_downsample_p, 
-                encoder_rnn_k=TRAJGRU.encoder_rnn_k, encoder_rnn_s=TRAJGRU.encoder_rnn_s, encoder_rnn_p=TRAJGRU.encoder_rnn_p, 
-                encoder_n_layers=TRAJGRU.encoder_n_layers, forecaster_input_channel=TRAJGRU.forecaster_input_channel, 
-                forecaster_upsample_channels=TRAJGRU.forecaster_upsample_channels, forecaster_rnn_channels=TRAJGRU.forecaster_rnn_channels,
-                forecaster_upsample_k=TRAJGRU.forecaster_upsample_k, forecaster_upsample_s=TRAJGRU.forecaster_upsample_s, 
-                forecaster_upsample_p=TRAJGRU.forecaster_upsample_p, forecaster_rnn_k=TRAJGRU.forecaster_rnn_k, forecaster_rnn_s=TRAJGRU.forecaster_rnn_s,
-                forecaster_rnn_p=TRAJGRU.forecaster_rnn_p, forecaster_n_layers=TRAJGRU.forecaster_n_layers, forecaster_output=TRAJGRU.forecaster_output_channels, 
-                forecaster_output_k=TRAJGRU.forecaster_output_k, forecaster_output_s=TRAJGRU.forecaster_output_s, 
-                forecaster_output_p=TRAJGRU.forecaster_output_p, forecaster_output_layers=TRAJGRU.forecaster_output_layers, 
-                batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)
+    from src.operators.mymodel import myGRU
+    from src.utils.mymodel_hyperparams import MYMODEL_HYPERPARAMs
+    MYMODEL = MYMODEL_HYPERPARAMs(args)
+    model = myGRU(MYMODEL.input_frames, MYMODEL.target_frames, MYMODEL.TyCatcher_channel_input, MYMODEL.TyCatcher_channel_hidden, MYMODEL.TyCatcher_channel_n_layers, 
+                    MYMODEL.gru_channel_input, MYMODEL.gru_channel_hidden, MYMODEL.gru_kernel, MYMODEL.gru_stride, MYMODEL.gru_padding, batch_norm=args.batch_norm, 
+                    device=args.device, value_dtype=args.value_dtype).to(device=args.device, dtype=args.value_dtype)
 
-    elif args.model.upper() == 'CONVGRU':
-        from src.operators.convGRU import Single_unit_Model
-        print('Model: CONVGRU')
-        CONVGRU = CONVGRU_HYPERPARAMs(args=args)
-        model = Single_unit_Model(n_encoders=args.input_frames, n_forecasters=args.target_frames,
-                encoder_input_channel=CONVGRU.encoder_input_channel, encoder_downsample_channels=CONVGRU.encoder_downsample_channels,
-                encoder_rnn_channels=CONVGRU.encoder_rnn_channels, encoder_downsample_k=CONVGRU.encoder_downsample_k,
-                encoder_downsample_s=CONVGRU.encoder_downsample_s, encoder_downsample_p=CONVGRU.encoder_downsample_p, 
-                encoder_rnn_k=CONVGRU.encoder_rnn_k,encoder_rnn_s=CONVGRU.encoder_rnn_s, encoder_rnn_p=CONVGRU.encoder_rnn_p, 
-                encoder_n_layers=CONVGRU.encoder_n_layers, forecaster_input_channel=CONVGRU.forecaster_input_channel, 
-                forecaster_upsample_channels=CONVGRU.forecaster_upsample_channels, forecaster_rnn_channels=CONVGRU.forecaster_rnn_channels,
-                forecaster_upsample_k=CONVGRU.forecaster_upsample_k, forecaster_upsample_s=CONVGRU.forecaster_upsample_s, 
-                forecaster_upsample_p=CONVGRU.forecaster_upsample_p, forecaster_rnn_k=CONVGRU.forecaster_rnn_k, forecaster_rnn_s=CONVGRU.forecaster_rnn_s,
-                forecaster_rnn_p=CONVGRU.forecaster_rnn_p, forecaster_n_layers=CONVGRU.forecaster_n_layers, forecaster_output=CONVGRU.forecaster_output_channels, 
-                forecaster_output_k=CONVGRU.forecaster_output_k, forecaster_output_s=CONVGRU.forecaster_output_s, 
-                forecaster_output_p=CONVGRU.forecaster_output_p, forecaster_output_layers=CONVGRU.forecaster_output_layers, 
-                batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)
     return model
-
 
 def train(model, trainloader, testloader, args):
     '''
@@ -105,7 +74,7 @@ def train(model, trainloader, testloader, args):
 
     # Set scheduler
     if args.lr_scheduler:
-        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[x for x in range(1, args.max_epochs) if x % 7 == 0], gamma=0.7)
+        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[x for x in range(1, args.max_epochs) if x % 10 == 0], gamma=0.7)
     
     total_batches = len(trainloader)
     
@@ -163,10 +132,9 @@ def train(model, trainloader, testloader, args):
         for idx, data in enumerate(trainloader, 0):
             inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
-
+            ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
             optimizer.zero_grad()
-            
-            outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
+            outputs = model(ty_infos=ty_infos, radar_map=inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
 
             outputs = outputs.view(-1, outputs.shape[1]*outputs.shape[2]*outputs.shape[3])
             labels = labels.view(-1, labels.shape[1]*labels.shape[2]*labels.shape[3])
@@ -255,8 +223,10 @@ def test(model, testloader, args):
 
     with torch.no_grad():
         for _, data in enumerate(testloader, 0):
-            inputs, labels = data['inputs'].to(args.device, dtype=args.value_dtype), data['targets'].to(args.device, dtype=args.value_dtype)
-            outputs = model(inputs)
+            inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
+            labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
+            ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
+            outputs = model(ty_infos=ty_infos, radar_map=inputs) 
             if args.normalize_target:
                 outputs = (outputs - args.min_values['QPE']) / (args.max_values['QPE'] - args.min_values['QPE'])
             loss += args.loss_function(outputs, labels)/n_batch

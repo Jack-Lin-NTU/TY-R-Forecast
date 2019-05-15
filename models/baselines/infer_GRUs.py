@@ -6,6 +6,7 @@ import pandas as pd
 pd.set_option('precision', 4)
 
 import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
 
 ## import torch modules
 import torch
@@ -39,18 +40,9 @@ if __name__ == "__main__":
         else:
             optimizer = optimizer(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
-    args.params_folder += '_'+args.model.upper()
-    size = '{}X{}'.format(args.I_shape[0], args.I_shape[1])
-    if args.weather_list == []:
-        args.params_folder = os.path.join(args.params_folder, size, 'RAD_no_weather')
-    else:
-        args.params_folder = os.path.join(args.params_folder, size, 'RAD_weather')
-    args.params_folder = os.path.join(args.params_folder, 'wd{:.5f}_lr{:f}'.format(args.weight_decay, args.lr))
-    if args.lr_scheduler and args.optimizer != 'Adam':
-        args.params_folder += '_scheduler'
-    args.params_folder += '_'+args.optimizer
 
-    param_pt = os.path.join(args.params_folder, 'params.pt')
+
+    param_pt = os.path.join(args.params_folder, 'params_30.pt')
     checkpoint = torch.load(param_pt)
 
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -63,18 +55,20 @@ if __name__ == "__main__":
 
     model.eval()
 
-    for idx, data in enumerate(trainloader, 0):
+    for idx, data in enumerate(testloader, 0):
         if idx == 10:
             inputs, labels = data['inputs'].to(args.device, dtype=args.value_dtype), data['targets'].to(args.device, dtype=args.value_dtype)
             outputs = model(inputs).to('cpu').detach().numpy()
             # outputs = outputs*(args.max_values['QPE'] - args.min_values['QPE'])+args.min_values['QPE']
             break
-    breakpoint()
-    fig, ax = plt.subplots(1,5,figsize=(40,8))
+    
+    m = Basemap(projection='cyl', resolution='h', llcrnrlat=args.I_y[0], urcrnrlat=args.I_y[1], llcrnrlon=args.I_x[0], urcrnrlon=args.I_x[1])
+    fig, ax = plt.subplots(1,1,figsize=(8,8))
+    _ = m.readshapefile(args.TW_map_file, name='Taiwan', linewidth=0.25, drawbounds=True, color='k', ax=ax)
     X, Y = np.meshgrid(np.linspace(args.I_x[0],args.I_x[1],args.I_shape[0]),np.linspace(args.I_y[0],args.I_y[1],args.I_shape[1]))
-    ax[0].contourf(X,Y,outputs[0,0,:,:],colors=args.QPE_cmap, levels=args.QPE_level)
-    ax[1].contourf(X,Y,outputs[0,1,:,:],colors=args.QPE_cmap, levels=args.QPE_level)
-    ax[2].contourf(X,Y,outputs[0,2,:,:],colors=args.QPE_cmap, levels=args.QPE_level)
-    ax[3].contourf(X,Y,outputs[0,3,:,:],colors=args.QPE_cmap, levels=args.QPE_level)
-    ax[4].contourf(X,Y,outputs[0,4,:,:],colors=args.QPE_cmap, levels=args.QPE_level)
-    fig.savefig('/home/jack/Desktop/test.png')
+    m.contourf(X,Y,outputs[0,0,:,:], colors=args.QPE_cmap, levels=args.QPE_level, ax=ax)
+    # ax[1].contourf(X,Y,outputs[0,1,:,:],colors=args.QPE_cmap, levels=args.QPE_level)
+    # ax[2].contourf(X,Y,outputs[0,2,:,:],colors=args.QPE_cmap, levels=args.QPE_level)
+    # ax[3].contourf(X,Y,outputs[0,3,:,:],colors=args.QPE_cmap, levels=args.QPE_level)
+    # ax[4].contourf(X,Y,outputs[0,4,:,:],colors=args.QPE_cmap, levels=args.QPE_level)
+    fig.savefig('/home/jack/Desktop/test.png', dpi=120, bbox_inches='tight')

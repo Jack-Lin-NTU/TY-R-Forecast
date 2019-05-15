@@ -79,7 +79,7 @@ class DeConvGRUCell(nn.Module):
 
 class Encoder(nn.Module):
     def __init__(self, channel_input, channel_downsample, channel_rnn, 
-                downsample_k, downsample_s,downsample_p,
+                downsample_k, downsample_s, downsample_p,
                 rnn_k, rnn_s, rnn_p, n_layers, 
                 batch_norm=False, device=None, value_dtype=None):
         '''
@@ -211,7 +211,6 @@ class Forecaster(nn.Module):
         n_output_layers=1
         '''
         super().__init__()
-
         # channel size
         if type(channel_upsample) != list:
             channel_upsample = [channel_upsample]*int(n_layers/2)

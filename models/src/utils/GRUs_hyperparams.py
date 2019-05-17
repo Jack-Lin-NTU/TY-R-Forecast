@@ -43,7 +43,7 @@ def CONVGRU_HYPERPARAMs(args):
                     'encoder_rnn_channels': [32*c, 96*c, 96*c],
                     'encoder_downsample_k': [7,4,3],
                     'encoder_downsample_s': [5,3,2],
-                    'encoder_downsample_p':[1,1,1],
+                    'encoder_downsample_p': [1,1,1],
                     'encoder_rnn_k': [3,3,3],
                     'encoder_rnn_s': [1,1,1],
                     'encoder_rnn_p': [1,1,1],

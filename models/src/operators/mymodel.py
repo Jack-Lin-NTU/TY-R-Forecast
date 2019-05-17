@@ -205,24 +205,20 @@ class my_multi_GRU(nn.Module):
                                     forecaster_n_layers, forecaster_output_cout, forecaster_output_k, forecaster_output_s, forecaster_output_p, 
                                     forecaster_n_output_layers, batch_norm, device, value_dtype)
 
-    def forward(self, inputs, ty_infos, radarmap):
-
+    def forward(self, encoder_inputs, ty_infos, radar_map):
         for i in range(self.input_frames):
-            
-            tmp_map = radarmap[:,i,:,:,:]
+            input_ = encoder_inputs[:,i,:,:,:]
             if i == 0:
                 prev_state = self.encoder1(input_, hidden=None)
             else:
-                input_ = self.tycatcher(tmp_ty_info, tmp_map)
                 prev_state = self.encoder1(input_, hidden=prev_state)
-
+        
         outputs = []
         for i in range(self.output_frames):
-            tmp_ty_info = ty_infos[:,i+self.input_frames,:]
-            tmp_map = radar_map[:,-1,:,:,:]
-            input_ = self.ty_catcher(tmp_ty_info, tmp_map)
-            prev_state = self.encoder(input_)
-            output_ = self.forecaster(prev_state)
+            tmp_ty_info = ty_infos[:, i,:]
+            input_ = self.tycatcher(tmp_ty_info, radar_map)
+            prev_state = self.encoder2(input_, hidden=prev_state)
+            output_ = self.forecaster(prev_state[::-1])
 
             outputs.append(output_)
         outputs = torch.cat(outputs, dim=1)

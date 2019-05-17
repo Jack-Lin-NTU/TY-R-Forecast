@@ -105,7 +105,7 @@ class TyDataset(Dataset):
                 ty_name = i
                 year = str(self.idx_list.loc[i, 'The starting time'].year)
 
-                # Input data(a tensor with shape (input_frames X C X H X W))
+                # Input data(a tensor with shape (input_frames X C X H X W))(0-5)
                 input_data = np.zeros((self.input_frames, self.input_channels, self.I_shape[1], self.I_shape[0]))
                 
                 for j in range(self.input_frames):
@@ -132,10 +132,10 @@ class TyDataset(Dataset):
                         tmp += 1
                         input_data[j,tmp,:,:] = gird_y
                         tmp += 1 
-
-                # QPE data(a tensor with shape (target_frames X H X W))
-                target_data = np.zeros((self.target_frames, self.F_shape[1], self.F_shape[0]))
+                # (6-24)
                 idx_tmp += self.input_frames
+                # QPE data(a tensor with shape (target_frames X H X W))(6-24)
+                target_data = np.zeros((self.target_frames, self.F_shape[1], self.F_shape[0]))
                 for j in range(self.target_frames):
                     file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
                     data_path = os.path.join(self.radar_wrangled_data_folder, 'QPE', year+'.'+ty_name+'.'+file_time+'.pkl')

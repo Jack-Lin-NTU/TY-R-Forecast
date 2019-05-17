@@ -36,13 +36,22 @@ def get_dataloader(args, train_num=None):
     return trainloader, testloader
 
 def get_model(from_scratch=True, args=None):
-    from src.operators.mymodel import myGRU
-    from src.utils.mymodel_hyperparams import MYMODEL_HYPERPARAMs
-    MYMODEL = MYMODEL_HYPERPARAMs(args)
-    model = myGRU(MYMODEL.input_frames, MYMODEL.target_frames, MYMODEL.TyCatcher_channel_input, MYMODEL.TyCatcher_channel_hidden, MYMODEL.TyCatcher_channel_n_layers, 
-                    MYMODEL.gru_channel_input, MYMODEL.gru_channel_hidden, MYMODEL.gru_kernel, MYMODEL.gru_stride, MYMODEL.gru_padding, batch_norm=args.batch_norm, 
-                    device=args.device, value_dtype=args.value_dtype).to(device=args.device, dtype=args.value_dtype)
-
+    from src.operators.mymodel import my_single_GRU, my_multi_GRU
+    from src.utils.mymodel_hyperparams import MYSINGLEMODEL_HYPERPARAMs, MYMULTIMODEL_HYPERPARAMs
+    
+    if args.model.upper() == 'MYSINGLEMODEL':
+        MYMODEL = MYSINGLEMODEL_HYPERPARAMs(args)
+        model = my_single_GRU(MYMODEL.input_frames, MYMODEL.target_frames, MYMODEL.TyCatcher_channel_input, MYMODEL.TyCatcher_channel_hidden, 
+                            MYMODEL.TyCatcher_channel_n_layers, MYMODEL.gru_channel_input, MYMODEL.gru_channel_hidden, MYMODEL.gru_kernel, MYMODEL.gru_stride, MYMODEL.gru_padding, batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(device=args.device, dtype=args.value_dtype)
+    elif args.model.upper() == 'MYMULTIMODEL':
+        MYMODEL = MYMULTIMODEL_HYPERPARAMs(args)
+        model = my_multi_GRU(MYMODEL.input_frames, MYMODEL.target_frames, MYMODEL.TyCatcher_input, MYMODEL.TyCatcher_hidden, MYMODEL.TyCatcher_n_layers, 
+                            MYMODEL.encoder_input, MYMODEL.encoder_downsample, MYMODEL.encoder_gru, MYMODEL.encoder_downsample_k, MYMODEL.encoder_downsample_s, 
+                            MYMODEL.encoder_downsample_p, MYMODEL.encoder_gru_k, MYMODEL.encoder_gru_s, MYMODEL.encoder_gru_p, MYMODEL.encoder_n_layers, 
+                            MYMODEL.forecaster_upsample_cin, MYMODEL.forecaster_upsample_cout, MYMODEL.forecaster_upsample_k, MYMODEL.forecaster_upsample_p, 
+                            MYMODEL.forecaster_upsample_s, MYMODEL.forecaster_n_layers, MYMODEL.forecaster_output_cout, MYMODEL.forecaster_output_k, 
+                            MYMODEL.forecaster_output_s, MYMODEL.forecaster_output_p, MYMODEL.forecaster_n_output_layers, 
+                            batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(device=args.device, dtype=args.value_dtype)
     return model
 
 def train(model, trainloader, testloader, args):
@@ -130,11 +139,13 @@ def train(model, trainloader, testloader, args):
 
 
         for idx, data in enumerate(trainloader, 0):
-            inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
+            inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
+            radar_map = data['radar_map'].to(device=args.device, dtype=args.value_dtype)
+            
             optimizer.zero_grad()
-            outputs = model(ty_infos=ty_infos, radar_map=inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
+            outputs = model(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map)    # outputs.shape = [batch_size, target_frames, H, W]
 
             outputs = outputs.view(-1, outputs.shape[1]*outputs.shape[2]*outputs.shape[3])
             labels = labels.view(-1, labels.shape[1]*labels.shape[2]*labels.shape[3])
@@ -223,10 +234,12 @@ def test(model, testloader, args):
 
     with torch.no_grad():
         for _, data in enumerate(testloader, 0):
-            inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
+            inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
-            outputs = model(ty_infos=ty_infos, radar_map=inputs) 
+            radar_map = data['radar_map'].to(device=args.device, dtype=args.value_dtype)
+            
+            outputs = model(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map)    # outputs.shape = [batch_size, target_frames, H, W]
             if args.normalize_target:
                 outputs = (outputs - args.min_values['QPE']) / (args.max_values['QPE'] - args.min_values['QPE'])
             loss += args.loss_function(outputs, labels)/n_batch

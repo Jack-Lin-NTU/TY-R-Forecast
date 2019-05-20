@@ -4,13 +4,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class CNN2D_cell(nn.Module):
-    def __init__(self, channel_input, channel_hidden, kernel_size, stride=1, padding=1, batch_norm=False, negative_slope=0):
+    def __init__(self, channel_input, channel_output, kernel=3, stride=1, padding=1, batch_norm=False, negative_slope=0):
         super().__init__()
 
         layer_sublist = []
-        layer_sublist.append(nn.Conv2d(channel_input, channel_hidden, kernel_size, stride=stride, padding=padding))
+        layer_sublist.append(nn.Conv2d(channel_input, channel_output, kernel, stride, padding))
         if batch_norm:
-            layer_sublist.append(nn.BatchNorm2d(channel_hidden))
+            layer_sublist.append(nn.BatchNorm2d(channel_output))
         layer_sublist.append(nn.ReLU())
 
         nn.init.kaiming_normal_(layer_sublist[0].weight, a=negative_slope, mode='fan_in', nonlinearity='leaky_relu')
@@ -23,13 +23,13 @@ class CNN2D_cell(nn.Module):
         return out
 
 class DeCNN2D_cell(nn.Module):
-    def __init__(self, channel_input, channel_hidden, kernel_size, stride=1, padding=1, batch_norm=False, negative_slope=0):
+    def __init__(self, channel_input, channel_output, kernel=3, stride=1, padding=1, batch_norm=False, negative_slope=0):
         super().__init__()
 
         layer_sublist = []
-        layer_sublist.append(nn.ConvTranspose2d(channel_input, channel_hidden, kernel_size, stride=stride, padding=padding))
+        layer_sublist.append(nn.ConvTranspose2d(channel_input, channel_output, kernel, stride, padding))
         if batch_norm:
-            layer_sublist.append(nn.BatchNorm2d(channel_hidden))
+            layer_sublist.append(nn.BatchNorm2d(channel_output))
         layer_sublist.append(nn.ReLU())
 
         nn.init.kaiming_normal_(layer_sublist[0].weight, a=negative_slope, mode='fan_in', nonlinearity='leaky_relu')
@@ -46,32 +46,31 @@ class Encoder(nn.Module):
     '''
     Generate a 2-D CNN encoder
     '''
-    def __init__(self, channel_input, channel_hidden, kernel_size, stride, padding, n_layers, batch_norm=False):
+    def __init__(self, channel_input, channel_output, kernel, stride, padding, n_layers, batch_norm=False):
         '''
-        channel_input: integral. the channel size of input tensors.
-        channel_hidden: integer or list. the channel size of hidden layers.
-                if integral, the same hidden size is used for all layers.
-        kernel_size: integer or list. the kernel size of each hidden layers.
-                if integer, the same kernel size is used for all layers.
-        stride: integer or list. the stride size of each hidden layers.
-                if integer, the same stride size is used for all layers.
-        padding: integer or list. the padding size of each hidden layers.
-                if integer, the same padding size is used for all layers.
-        n_layers: integral. the number of hidden layers (int)
-        padding: boolean, the decision to do padding
-        batch_norm = boolean, the decision to do batch normalization
+        channel_input: integral or list, the channel size of input size of each layer.
+        channel_output: integer or list, the channel size of output size of each layer.
+        kernel: integer or list, the kernel size of each layer.
+        stride: integer or list, the stride size of each hidden layer.
+        padding: integer or list, the padding size of each hidden layer.
+        n_layers: integral. the number of layers.
+        batch_norm: boolean, the decision to do batch normalization.
         '''
         super().__init__()
-
-        if type(channel_hidden) != list:
-            channel_hidden = [channel_hidden]*n_layers
+        if type(channel_input) != list:
+            channel_input = [channel_input]*n_layers
         else:
-            assert len(channel_hidden) == n_layers, '`channel_hidden` must have the same length as n_layers'
+            assert len(channel_input) == n_layers, '`channel_input` must have the same length as n_layers'
 
-        if type(kernel_size) != list:
-            kernel_size = [kernel_size]*n_layers
+        if type(channel_output) != list:
+            channel_output = [channel_output]*n_layers
         else:
-            assert len(kernel_size) == n_layers, '`kernel_size` must have the same length as n_layers'
+            assert len(channel_output) == n_layers, '`channel_output` must have the same length as n_layers'
+
+        if type(kernel) != list:
+            kernel = [kernel]*n_layers
+        else:
+            assert len(kernel) == n_layers, '`kernel` must have the same length as n_layers'
            
         if type(stride) != list:
             stride = [stride]*n_layers
@@ -87,15 +86,9 @@ class Encoder(nn.Module):
 
         # nn layers
         layers = []
-        for layer_idx in range(self.n_layers):
-            if layer_idx == 0:
-                input_dim = channel_input
-            else:
-                input_dim = channel_hidden[layer_idx-1]
-
-            layer = CNN2D_cell(input_dim, channel_hidden[layer_idx], kernel_size[layer_idx], stride=stride[layer_idx],
-                                padding=padding[layer_idx], batch_norm=batch_norm)
-            name = 'Conv_' + str(layer_idx).zfill(2)
+        for i in range(self.n_layers):
+            layer = CNN2D_cell(channel_input[i], channel_hidden[i], kernel[i], stride[i], padding[i], batch_norm)
+            name = 'Conv2D_' + str(layer_idx).zfill(2)
             setattr(self, name, layer)
             layers.append(getattr(self, name))
 
@@ -109,10 +102,9 @@ class Encoder(nn.Module):
         '''
         input_ = x
 
-        for layer_idx in range(self.n_layers):
-            layer = self.layers[layer_idx]
+        for i in range(self.n_layers):
             # pass through layers
-            input_ = layer(input_)
+            input_ = self.layers[i](input_)
 
         return input_
 
@@ -120,38 +112,37 @@ class Decoder(nn.Module):
     '''
     Generate a 2-D CNN decoder.
     '''
-    def __init__(self, channel_input, channel_hidden, kernel_size, stride, padding, n_layers, batch_norm=False):
+    def __init__(self, channel_input, channel_output, kernel, stride, padding, n_layers, batch_norm=False):
         '''
-        channel_input: integral. the channel size of input tensors.
-        channel_hidden: integer or list. the channel size of hidden layers.
-                if integral, the same hidden size is used for all layers.
-        kernel_size: integer or list. the kernel size of each hidden layers.
-                if integer, the same kernel size is used for all layers.
-        stride: integer or list. the stride size of each hidden layers.
-                if integer, the same stride size is used for all layers.
-        padding: integer or list. the padding size of each hidden layers.
-                if integer, the same padding size is used for all layers.
-        n_layers: integral. the number of hidden layers (int)
-        padding: boolean, the decision to do padding
-        batch_norm = boolean, the decision to do batch normalization
+        channel_input: integral or list, the channel size of input size of each layer.
+        channel_output: integer or list, the channel size of output size of each layer.
+        kernel: integer or list, the kernel size of each layer.
+        stride: integer or list, the stride size of each hidden layer.
+        padding: integer or list, the padding size of each hidden layer.
+        n_layers: integral. the number of layers.
+        batch_norm: boolean, the decision to do batch normalization.
         '''
         super().__init__()
-
-        if type(channel_hidden) != list:
-            channel_hidden = [channel_hidden]*n_layers
+        if type(channel_input) != list:
+            channel_input = [channel_input]*n_layers
         else:
-            assert len(channel_hidden) == n_layers, '`channel_hidden` must have the same length as n_layers'
+            assert len(channel_input) == n_layers, '`channel_input` must have the same length as n_layers'
 
-        if type(kernel_size) != list:
-            kernel_size = [kernel_size]*n_layers
+        if type(channel_output) != list:
+            channel_output = [channel_output]*n_layers
         else:
-            assert len(kernel_size) == n_layers, '`kernel_size` must have the same length as n_layers'
+            assert len(channel_output) == n_layers, '`channel_output` must have the same length as n_layers'
 
+        if type(kernel) != list:
+            kernel = [kernel]*n_layers
+        else:
+            assert len(kernel) == n_layers, '`kernel` must have the same length as n_layers'
+           
         if type(stride) != list:
             stride = [stride]*n_layers
         else:
             assert len(stride) == n_layers, '`stride` must have the same length as n_layers'
-            
+
         if type(padding) != list:
             padding = [padding]*n_layers
         else:
@@ -161,15 +152,9 @@ class Decoder(nn.Module):
 
         # nn layers
         layers = []
-        for layer_idx in range(self.n_layers):
-            if layer_idx == 0:
-                input_dim = channel_input
-            else:
-                input_dim = channel_hidden[layer_idx-1]
-
-            layer = DeCNN2D_cell(input_dim, channel_hidden[layer_idx], kernel_size[layer_idx], stride=stride[layer_idx],
-                                padding=padding[layer_idx], batch_norm=batch_norm)
-            name = 'DeConv_' + str(layer_idx).zfill(2)
+        for i in range(self.n_layers):
+            layer = CNN2D_cell(channel_input[i], channel_hidden[i], kernel[i], stride[i], padding[i], batch_norm)
+            name = 'Conv2D_' + str(layer_idx).zfill(2)
             setattr(self, name, layer)
             layers.append(getattr(self, name))
 
@@ -183,9 +168,9 @@ class Decoder(nn.Module):
         '''
         input_ = x
 
-        for _, layer in enumerate(self.n_layers):
+        for i in range(self.n_layers):
             # pass through layers
-            input_ = layer(input_)
+            input_ = self.layers[i](input_)
 
         return input_
 
@@ -200,7 +185,7 @@ class Fully_Connect(nn.Module):
         if type(n_hidden) != list:
             self.n_hidden = [n_hidden]*n_layers
         else:
-            assert len(n_hidden) == n_layers, '`kernel_size` must have the same length as n_layers'
+            assert len(n_hidden) == n_layers, '`kernel` must have the same length as n_layers'
             self.n_hidden = n_hidden
         self.n_layers = n_layers
 
@@ -241,9 +226,9 @@ class Model(nn.Module):
                     decoder_input, decoder_hidden, decoder_kernel, decoder_n_layer, decoder_stride, decoder_padding,
                     fully_input=None, fully_hidden=None, fully_layers=None, batch_norm=False):
         super().__init__()
-        self.encoder = Encoder(channel_input=encoder_input, channel_hidden=encoder_hidden, kernel_size=encoder_kernel,
+        self.encoder = Encoder(channel_input=encoder_input, channel_hidden=encoder_hidden, kernel=encoder_kernel,
                                 n_layers=encoder_n_layer, stride=encoder_stride, padding=encoder_padding, batch_norm=batch_norm)
-        self.decoder = Decoder(channel_input=decoder_input,channel_hidden=decoder_hidden,kernel_size=decoder_kernel,
+        self.decoder = Decoder(channel_input=decoder_input,channel_hidden=decoder_hidden,kernel=decoder_kernel,
                                 n_layers=decoder_n_layer, stride=decoder_stride, padding=decoder_padding, batch_norm=batch_norm)
         self.fully = False
         if fully_input is not None:

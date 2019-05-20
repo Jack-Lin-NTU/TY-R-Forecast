@@ -135,9 +135,13 @@ def get_args():
     args.max_values = pd.concat([rad_overall, meteo_overall, ty_overall], axis=1, sort=False).T['max']
     args.min_values = pd.concat([rad_overall, meteo_overall, ty_overall], axis=1, sort=False).T['min']
 
-    if args.loss_function == 'BMSE':
+    if args.loss_function.upper() == 'BMSE':
         args.loss_function = MSE(max_values=args.max_values['QPE'], min_values=args.min_values['QPE'], balance=True, normalize_target=args.normalize_target)
-    elif args.loss_function == 'BMAE':
+    elif args.loss_function.upper() == 'BMAE':
+        args.loss_function = MAE(max_values=args.max_values['QPE'], min_values=args.min_values['QPE'], balance=True, normalize_target=args.normalize_target)
+    elif args.loss_function.upper() == 'MSE':
+        args.loss_function = MSE(max_values=args.max_values['QPE'], min_values=args.min_values['QPE'], balance=False, normalize_target=args.normalize_target)
+    elif args.loss_function.upper() == 'MAE':
         args.loss_function = MAE(max_values=args.max_values['QPE'], min_values=args.min_values['QPE'], balance=True, normalize_target=args.normalize_target)
 
     args.I_x_iloc = [int((args.I_x[0]-args.O_x[0])/args.res_degree), int((args.I_x[1]-args.O_x[0])/args.res_degree + 1)]
@@ -163,6 +167,7 @@ def get_args():
 
     args.TW_map_file = make_path(os.path.join('07_gis_data','03_TW_shapefile','gadm36_TWN_2'), working_folder)
 
+    # make folders' path
     args.result_folder = os.path.join(args.result_folder, args.model.upper())
     args.params_folder = os.path.join(args.params_folder, args.model.upper())
 
@@ -174,16 +179,25 @@ def get_args():
     else:
         args.result_folder = os.path.join(args.result_folder, size, 'RAD_weather')
         args.params_folder = os.path.join(args.params_folder, size, 'RAD_weather')
-
-    args.result_folder = os.path.join(args.result_folder, 'wd{:.5f}_lr{:f}'.format(args.weight_decay, args.lr))
-    args.params_folder = os.path.join(args.params_folder, 'wd{:.5f}_lr{:f}'.format(args.weight_decay, args.lr))
-
-    if args.lr_scheduler and args.optimizer != 'Adam':
+    
+    if args.input_with_grid:
+        args.result_folder += '_grid'
+        args.params_folder += '_grid'
+    
+    if args.lr_scheduler:
         args.result_folder += '_scheduler'
         args.params_folder += '_scheduler'
-    
+
     args.result_folder += '_'+args.optimizer
     args.params_folder += '_'+args.optimizer
+
+    args.result_folder = os.path.join(args.result_folder, 'wd{:.5f}_lr{:.5f}'.format(args.weight_decay, args.lr))
+    args.params_folder = os.path.join(args.params_folder, 'wd{:.5f}_lr{:.5f}'.format(args.weight_decay, args.lr))
+
+    if args.clip:
+        args.result_folder += '_clip'+str(args.clip_max_norm)
+        args.params_folder += '_clip'+str(args.clip_max_norm)
+    
 
     return args
 

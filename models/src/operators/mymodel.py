@@ -26,7 +26,7 @@ class TyCatcher(nn.Module):
             nn.init.kaiming_normal_(layer.weight)
             nn.init.constant_(layer.bias, 0.)
 
-            name = 'Layer1_' + str(i).zfill(2)
+            name = 'Layer_' + str(i).zfill(2)
             setattr(self, name, layer)
             layers.append(getattr(self, name))
 
@@ -41,8 +41,10 @@ class TyCatcher(nn.Module):
             layer = self.layers[i]
             output = layer(output)
         # breakpoint()
-        output = output.view(-1,2,3)
-        theta = torch.tensor([[1, 0, 0],[0, 1, 0]]).to(device=self.device, dtype=self.value_dtype).expand(b,2,3) + output
+        output1, output2 = output.view(-1,2,3).chunk(2, dim=2)
+        theta1 = torch.tensor([[1, 0],[0, 1]]).to(device=self.device, dtype=self.value_dtype).expand(b,2,2)
+        theta2 = torch.zeros(b,2,1).to(device=self.device, dtype=self.value_dtype)
+        theta = torch.cat([theta1+0.1*output1, theta2+output2], dim=2)
         size = torch.Size((b,c,400,400))
         flowfield = F.affine_grid(theta, size)
         sample = F.grid_sample(rader_map, flowfield)

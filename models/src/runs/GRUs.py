@@ -37,21 +37,21 @@ def get_dataloader(args, train_num=None):
     return trainloader, testloader
 
 
-def get_model(from_scratch=True, args=None):
+def get_model(args=None):
     if args.model.upper() == 'TRAJGRU':
         from src.operators.trajGRU import Single_unit_Model
         print('Model: TRAJGRU')
         TRAJGRU = TRAJGRU_HYPERPARAMs(args=args)
-        model = Single_unit_Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, rnn_link_size=TRAJGRU.rnn_link_size,
+        model = Single_unit_Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, gru_link_size=TRAJGRU.gru_link_size,
                 encoder_input_channel=TRAJGRU.encoder_input_channel, encoder_downsample_channels=TRAJGRU.encoder_downsample_channels,
-                encoder_rnn_channels=TRAJGRU.encoder_rnn_channels, encoder_downsample_k=TRAJGRU.encoder_downsample_k,
+                encoder_gru_channels=TRAJGRU.encoder_gru_channels, encoder_downsample_k=TRAJGRU.encoder_downsample_k,
                 encoder_downsample_s=TRAJGRU.encoder_downsample_s, encoder_downsample_p=TRAJGRU.encoder_downsample_p, 
-                encoder_rnn_k=TRAJGRU.encoder_rnn_k, encoder_rnn_s=TRAJGRU.encoder_rnn_s, encoder_rnn_p=TRAJGRU.encoder_rnn_p, 
-                encoder_n_layers=TRAJGRU.encoder_n_layers, forecaster_input_channel=TRAJGRU.forecaster_input_channel, 
-                forecaster_upsample_channels=TRAJGRU.forecaster_upsample_channels, forecaster_rnn_channels=TRAJGRU.forecaster_rnn_channels,
+                encoder_gru_k=TRAJGRU.encoder_gru_k, encoder_gru_s=TRAJGRU.encoder_gru_s, encoder_gru_p=TRAJGRU.encoder_gru_p, 
+                encoder_n_cells=TRAJGRU.encoder_n_cells, forecaster_input_channel=TRAJGRU.forecaster_input_channel, 
+                forecaster_upsample_channels=TRAJGRU.forecaster_upsample_channels, forecaster_gru_channels=TRAJGRU.forecaster_gru_channels,
                 forecaster_upsample_k=TRAJGRU.forecaster_upsample_k, forecaster_upsample_s=TRAJGRU.forecaster_upsample_s, 
-                forecaster_upsample_p=TRAJGRU.forecaster_upsample_p, forecaster_rnn_k=TRAJGRU.forecaster_rnn_k, forecaster_rnn_s=TRAJGRU.forecaster_rnn_s,
-                forecaster_rnn_p=TRAJGRU.forecaster_rnn_p, forecaster_n_layers=TRAJGRU.forecaster_n_layers, forecaster_output=TRAJGRU.forecaster_output_channels, 
+                forecaster_upsample_p=TRAJGRU.forecaster_upsample_p, forecaster_gru_k=TRAJGRU.forecaster_gru_k, forecaster_gru_s=TRAJGRU.forecaster_gru_s,
+                forecaster_gru_p=TRAJGRU.forecaster_gru_p, forecaster_n_cells=TRAJGRU.forecaster_n_cells, forecaster_output=TRAJGRU.forecaster_output_channels, 
                 forecaster_output_k=TRAJGRU.forecaster_output_k, forecaster_output_s=TRAJGRU.forecaster_output_s, 
                 forecaster_output_p=TRAJGRU.forecaster_output_p, forecaster_output_layers=TRAJGRU.forecaster_output_layers, 
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)
@@ -62,14 +62,14 @@ def get_model(from_scratch=True, args=None):
         CONVGRU = CONVGRU_HYPERPARAMs(args=args)
         model = Single_unit_Model(n_encoders=args.input_frames, n_forecasters=args.target_frames,
                 encoder_input_channel=CONVGRU.encoder_input_channel, encoder_downsample_channels=CONVGRU.encoder_downsample_channels,
-                encoder_rnn_channels=CONVGRU.encoder_rnn_channels, encoder_downsample_k=CONVGRU.encoder_downsample_k,
+                encoder_gru_channels=CONVGRU.encoder_gru_channels, encoder_downsample_k=CONVGRU.encoder_downsample_k,
                 encoder_downsample_s=CONVGRU.encoder_downsample_s, encoder_downsample_p=CONVGRU.encoder_downsample_p, 
-                encoder_rnn_k=CONVGRU.encoder_rnn_k,encoder_rnn_s=CONVGRU.encoder_rnn_s, encoder_rnn_p=CONVGRU.encoder_rnn_p, 
-                encoder_n_layers=CONVGRU.encoder_n_layers, forecaster_input_channel=CONVGRU.forecaster_input_channel, 
-                forecaster_upsample_channels=CONVGRU.forecaster_upsample_channels, forecaster_rnn_channels=CONVGRU.forecaster_rnn_channels,
+                encoder_gru_k=CONVGRU.encoder_gru_k,encoder_gru_s=CONVGRU.encoder_gru_s, encoder_gru_p=CONVGRU.encoder_gru_p, 
+                encoder_n_cells=CONVGRU.encoder_n_cells, forecaster_input_channel=CONVGRU.forecaster_input_channel, 
+                forecaster_upsample_channels=CONVGRU.forecaster_upsample_channels, forecaster_gru_channels=CONVGRU.forecaster_gru_channels,
                 forecaster_upsample_k=CONVGRU.forecaster_upsample_k, forecaster_upsample_s=CONVGRU.forecaster_upsample_s, 
-                forecaster_upsample_p=CONVGRU.forecaster_upsample_p, forecaster_rnn_k=CONVGRU.forecaster_rnn_k, forecaster_rnn_s=CONVGRU.forecaster_rnn_s,
-                forecaster_rnn_p=CONVGRU.forecaster_rnn_p, forecaster_n_layers=CONVGRU.forecaster_n_layers, forecaster_output=CONVGRU.forecaster_output_channels, 
+                forecaster_upsample_p=CONVGRU.forecaster_upsample_p, forecaster_gru_k=CONVGRU.forecaster_gru_k, forecaster_gru_s=CONVGRU.forecaster_gru_s,
+                forecaster_gru_p=CONVGRU.forecaster_gru_p, forecaster_n_cells=CONVGRU.forecaster_n_cells, forecaster_output=CONVGRU.forecaster_output_channels, 
                 forecaster_output_k=CONVGRU.forecaster_output_k, forecaster_output_s=CONVGRU.forecaster_output_s, 
                 forecaster_output_p=CONVGRU.forecaster_output_p, forecaster_output_layers=CONVGRU.forecaster_output_layers, 
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)
@@ -184,7 +184,7 @@ def train(model, trainloader, testloader, args):
             # print('Max outputs: {:.6f}, Loss: {:.6f}'.format(torch.max(outputs).item(), loss.item()))
 
             loss.backward()
-            # 'clip_grad_norm' helps prevent the exploding gradient problem in RNNs or LSTMs.
+            # 'clip_grad_norm' helps prevent the exploding gradient problem in grus or LSTMs.
             if args.clip:
                 nn.utils.clip_grad_norm_(model.parameters(), max_norm=args.clip_max_norm)
             optimizer.step()

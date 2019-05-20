@@ -10,27 +10,27 @@ class flow_warp(nn.Module):
     Arguments:
         The subcnn model and the M warp function 
     '''
-    def __init__(self, channel_input, channel_hidden, link_size, kernel_size=1, stride=1, padding=0, batch_norm=False, device=None, value_dtype=None):
+    def __init__(self, channel_input, channel_output, link_size, batch_norm=False, device=None, value_dtype=None):
         super().__init__()
         self.device = device
         self.value_dtype = value_dtype
         self.channel_input = channel_input
-        self.channel_hidden = channel_hidden
+        self.channel_output = channel_output
         self.link_size = link_size
         # 2 cnn layers
         displacement_layers = []
-        displacement_layers.append(nn.Conv2d(channel_input+channel_hidden, 32, 5, 1, 2))
+        displacement_layers.append(nn.Conv2d(channel_input+channel_output, 32, 5, 1, 2))
         displacement_layers.append(nn.LeakyReLU(negative_slope=0.2))
         displacement_layers.append(nn.Conv2d(32, link_size*2, 5, 1, 2))
-        displacement_layers.append(nn.LeakyReLU(negative_slope=0.2))
+        # displacement_layers.append(nn.LeakyReLU(negative_slope=0.2))
 
         # initialize the weightings in each layers.
-        # nn.nn.init.orthogonal_(displacement_layers[0].weight)
+        # nn.init.orthogonal_(displacement_layers[0].weight)
 
-        nn.init.kaiming_normal_(displacement_layers[0].weight, a=0.2, mode='fan_in', nonlinearity='leaky_relu')
-        nn.init.kaiming_normal_(displacement_layers[2].weight, a=0.2, mode='fan_in', nonlinearity='leaky_relu')
-        # nn.init.zeros_(displacement_layers[0].weight)
-        # nn.init.zeros_(displacement_layers[2].weight)
+        # nn.init.kaiming_normal_(displacement_layers[0].weight, a=0.2, mode='fan_in', nonlinearity='leaky_relu')
+        # nn.init.kaiming_normal_(displacement_layers[2].weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
+        nn.init.zeros_(displacement_layers[0].weight)
+        nn.init.zeros_(displacement_layers[2].weight)
         nn.init.zeros_(displacement_layers[0].bias)
         nn.init.zeros_(displacement_layers[2].bias)
         self.displacement_layers = nn.Sequential(*displacement_layers)
@@ -41,14 +41,16 @@ class flow_warp(nn.Module):
         '''
         input_ = x
         b, _, h, w = input_.shape
+
         u, v = flow[:,0:self.link_size,:,:], flow[:,self.link_size:,:,:]
+        y_, x_ = torch.meshgrid(torch.arange(h), torch.arange(w))
+        y_, x_ = y_.expand(b,h,w).to(self.device, dtype=self.value_dtype), x_.expand(b,h,w).to(self.device, dtype=self.value_dtype)
+
         samples = []
         for i in range(self.link_size):
-            y_, x_ = torch.meshgrid(torch.arange(h), torch.arange(w))
-            y_, x_ = y_.expand(b,-1,-1).to(self.device, dtype=self.value_dtype), x_.expand(b,-1,-1).to(self.device, dtype=self.value_dtype)
-            x_ = (x_*2/w)-1 + u[:,i,:,:]
-            y_ = (y_*2/w)-1 + v[:,i,:,:]
-            grids = torch.stack([x_, y_], 3)
+            new_x = (x_*2/w)-1 + u[:,i,:,:]
+            new_y = (y_*2/h)-1 + v[:,i,:,:]
+            grids = torch.stack([new_x, new_y], dim=3)
             samples.append(F.grid_sample(input_, grids))
         return torch.cat(samples, dim=1)
 
@@ -67,26 +69,31 @@ class flow_warp(nn.Module):
 
         return output
 
-class TrajGRUCell(nn.Module):
+class TrajGRUcell(nn.Module):
     """
     Arguments: 
         This class is to generate a convolutional Traj_GRU cell.
     """
-    def __init__(self, channel_input, channel_hidden, link_size, kernel_size, stride=1, padding=1, batch_norm=False, device=None, value_dtype=None):
+    def __init__(self, channel_input, channel_output, link_size, kernel=1, stride=1, padding=1, batch_norm=False, device=None, value_dtype=None):
         super().__init__()
         self.device = device
         self.value_dtype = value_dtype
         self.channel_input = channel_input
-        self.channel_hidden = channel_hidden
+        self.channel_output = channel_output
         self.link_size = link_size
 
-        self.reset_gate= CNN2D_cell(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding, batch_norm=batch_norm)
-        self.update_gate = CNN2D_cell(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding, batch_norm=batch_norm)
-        self.out_gate = CNN2D_cell(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding, batch_norm=batch_norm, negative_slope=0.2)
+        self.reset_gate = CNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm)
+        self.update_gate = CNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm)
+        self.out_gate = CNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm, negative_slope=0.2)
 
-        self.flow_warp = flow_warp(channel_input, channel_hidden, link_size, 1, 1, 0, batch_norm, device, value_dtype)
+        self.flow_warp = flow_warp(channel_input, channel_output, link_size, batch_norm, device, value_dtype)
 
-    def forward(self, x=None, prev_state=None):
+        self.reset_gate_warp  = CNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
+        self.update_gate_warp  = CNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
+        self.out_gate_warp = CNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, negative_slope=0.2)
+
+
+    def forward(self, x, prev_state=None):
         input_ = x
 
         # get batch and spatial sizes
@@ -95,176 +102,155 @@ class TrajGRUCell(nn.Module):
         
         # generate empty prev_state, if None is provided
         if prev_state is None:
-            state_size = (batch_size, self.channel_hidden, H, W)
-            if torch.cuda.is_available():
-                prev_state = torch.zeros(state_size).to(device=self.device, dtype=self.value_dtype)
-            else:
-                prev_state = torch.zeros(state_size)
-
+            state_size = (batch_size, self.channel_output, H, W)
+            prev_state = torch.zeros(state_size).to(device=self.device, dtype=self.value_dtype)
+        
         M = self.flow_warp(x=input_, prev_state=prev_state)
-        stack_inputs = torch.cat([input_, M], dim=1)
         
         # data size is [batch, channel, height, width]
-        reset = torch.sigmoid(self.reset_gate(stack_inputs)).unsqueeze(1).expand(-1,self.link_size,-1,-1,-1).reshape(batch_size,self.link_size*self.channel_hidden,H,W)
-        update = torch.sigmoid(self.update_gate(stack_inputs))
-        out_inputs = F.leaky_relu(self.out_gate(torch.cat([input_, M*reset], dim=1)), negative_slope=0.2)
+        reset = torch.sigmoid(self.reset_gate(input_)+self.reset_gate_warp(M))
+        update = torch.sigmoid(self.update_gate(input_)+self.update_gate_warp(M))
+        out_inputs = F.leaky_relu(self.out_gate(input_)+reset*self.out_gate_warp(M), negative_slope=0.2)
         new_state = prev_state*update + out_inputs*(1-update)
 
         return new_state
 
-class DeTrajGRUCell(nn.Module):
+class DeTrajGRUcell(nn.Module):
     """
     Arguments: 
         This class is to generate a deconvolutional Traj_GRU cell.
     """
-    def __init__(self, channel_input, channel_hidden, link_size, kernel_size, stride=1, padding=1, batch_norm=False, device=None, value_dtype=None):
+    def __init__(self, channel_input, channel_output, link_size, kernel=1, stride=1, padding=1, batch_norm=False, device=None, value_dtype=None):
         super().__init__()
         self.device = device
         self.value_dtype = value_dtype
         self.channel_input = channel_input
-        self.channel_hidden = channel_hidden
+        self.channel_output = channel_output
         self.link_size = link_size
+
+        if channel_input != 0:
+            self.reset_gate = DeCNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm)
+            self.update_gate = DeCNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm)
+            self.out_gate = DeCNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm, negative_slope=0.2)
+
+        self.flow_warp = flow_warp(channel_input, channel_output, link_size, batch_norm, device, value_dtype)
         
-        self.reset_gate = DeCNN2D_cell(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding, batch_norm)
-        self.update_gate = DeCNN2D_cell(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding, batch_norm)
-        self.out_gate = DeCNN2D_cell(channel_input+channel_hidden*link_size, channel_hidden, kernel_size, stride, padding, batch_norm, negative_slope=0.2)
-        self.flow_warp = flow_warp(channel_input, channel_hidden, link_size, 1, 1, 0, batch_norm, device, value_dtype)
+        self.reset_gate_warp  = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
+        self.update_gate_warp  = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
+        self.out_gate_warp = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, negative_slope=0.2)
 
     def forward(self, x=None, prev_state=None):
         input_ = x
         # get batch and spatial sizes
-        batch_size = prev_state.data.shape[0]
-        H, W = prev_state.data.shape[2:]
-
-        # generate empty prev_state, if None is provided
-        if prev_state is None:
-            state_size = (batch_size, self.channel_hidden, H, W)
-            if torch.cuda.is_available():
-                prev_state = torch.zeros(state_size).to(device=self.device, dtype=self.value_dtype)
-            else:
-                prev_state = torch.zeros(state_size)
+        if prev_state is not None:
+            batch_size = prev_state.data.shape[0]
+            H, W = prev_state.data.shape[2:]
+        else:
+            # generate empty prev_state, if None is provided
+            state_size = (batch_size, self.channel_output, H, W)
+            prev_state = torch.zeros(state_size).to(device=self.device, dtype=self.value_dtype)
 
         M = self.flow_warp(x=input_, prev_state=prev_state)
 
         if self.channel_input == 0:
-            reset = torch.sigmoid(self.reset_gate(M)).unsqueeze(1).expand(-1,self.link_size,-1,-1,-1).reshape(batch_size,self.link_size*self.channel_hidden,H,W)
-            update = torch.sigmoid(self.update_gate(M))
-            out_inputs = F.leaky_relu(self.out_gate(M*reset), negative_slope=0.2)
+            reset = torch.sigmoid(self.reset_gate_warp(M))
+            update = torch.sigmoid(self.reset_gate_warp(M))
+            out_inputs = F.leaky_relu(self.reset_gate_warp(M)*reset, negative_slope=0.2)
         else:
-            stack_inputs = torch.cat([input_, M], dim=1)
-            reset = torch.sigmoid(self.reset_gate(stack_inputs)).unsqueeze(1).expand(-1,self.link_size,-1,-1,-1).reshape(batch_size,self.link_size*self.channel_hidden,H,W)
-            update = torch.sigmoid(self.update_gate(stack_inputs))
-            out_inputs = F.leaky_relu(self.out_gate(torch.cat([input_, M*reset], dim=1)), negative_slope=0.2)
+            reset = torch.sigmoid(self.reset_gate(input_)+self.reset_gate_warp(M))
+            update = torch.sigmoid(self.update_gate(input_)+self.update_gate_warp(M))
+            out_inputs = F.leaky_relu(self.out_gate(input_)+reset*self.out_gate_warp(M), negative_slope=0.2)
         
         new_state = prev_state*(1-update) + out_inputs*update
         return new_state
 
 class Encoder(nn.Module):
-    def __init__(self, channel_input, channel_downsample, channel_rnn, downsample_k, downsample_s, downsample_p,
-                 rnn_link_size, rnn_k, rnn_s, rnn_p, n_layers, batch_norm=False, device=None, value_dtype=None):
+    def __init__(self, channel_input, channel_downsample, channel_gru, downsample_k, downsample_s, downsample_p,
+                 gru_link_size, gru_k, gru_s, gru_p, n_cells, batch_norm=False, device=None, value_dtype=None):
         '''
         Argumensts:
-            Generates a multi-layer convolutional GRU, which is called encoder.
-            Preserves spatial dimensions across cells, only altering depth.
-            [Parameters]
-            ----------
-            channel_input: (integer.) depth dimension of input tensors.
-            channel_downsample: (integer or list.) depth dimensions of downsample.
-            channel_rnn: (integer or list.) depth dimensions of rnn.
-            rnn_link_size: (integer or list.) link size to select the import points in hidden states in rnn.
-            downsample_k: (integer or list.) the kernel size of each downsample layers.
-            downsample_s: (integer or list.) the stride size of each downsample layers.
-            downsample_p: (integer or list.) the padding size of each downsample layers.
-            rnn_k: (integer or list.) the kernel size of each rnn layers.
-            rnn_s: (integer or list.) the stride size of each rnn layers.
-            rnn_p: (integer or list.) the padding size of each rnn layers.
-            n_layers: (integer.) number of chained "ConvGRUCell".
+        Generates a multi-layer convolutional GRU, which is called encoder.
+        Preserves spatial dimensions across cells, only altering depth.
+        ----------
+        [Parameters]
+        ----------
+        channel_input: (integer.) channel size of input tensors.
+        channel_downsample: (integer or list.) channel size of downsample layers.
+        channel_gru: (integer or list.) channel size of gru layers.
+        gru_link_size: (integer or list.) link size of subcnn layers in gru layers.
+        downsample_k: (integer or list.) kernel size of downsample layers.
+        downsample_s: (integer or list.) stride size of downsample layers.
+        downsample_p: (integer or list.) padding size of downsample layers.
+        gru_k: (integer or list.) kernel size of gru layers.
+        gru_s: (integer or list.) stride size of gru layers.
+        gru_p: (integer or list.) padding size of gru layers.
+        n_cells: (integer.) number of chained "TRAJGRU".
         '''
         super().__init__()
         self.device = device
         self.value_dtype = value_dtype
         self.channel_input = channel_input
 
-    ## set self variables  
+        ## set self variables  ##
         # channel size
         if type(channel_downsample) != list:
-            self.channel_downsample = [channel_downsample]*int(n_layers/2)
-        else:
-            assert len(channel_downsample) == int(n_layers/2), '`channel_downsample` must have the same length as n_layers/2'
-            self.channel_downsample = channel_downsample
+            channel_downsample = [channel_downsample]*n_cells
+        assert len(channel_downsample) == n_cells, '"channel_downsample" must have the same length as n_cells'
 
-        if type(channel_rnn) != list:
-            self.channel_rnn = [channel_rnn]*int(n_layers/2)
-        else:
-            assert len(channel_rnn) == int(n_layers/2), '`channel_rnn` must have the same length as n_layers/2'
-            self.channel_rnn = channel_rnn
+        if type(channel_gru) != list:
+            channel_gru = [channel_gru]*n_cells
+        assert len(channel_gru) == n_cells, '"channel_gru" must have the same length as n_cells'
 
-        if type(rnn_link_size) != list:
-            self.rnn_link_size = [rnn_link_size]*int(n_layers/2)
-        else:
-            assert len(rnn_link_size) == int(n_layers/2), '`rnn_link_size` must have the same length as n_layers/2'
-            self.rnn_link_size = rnn_link_size
+        if type(gru_link_size) != list:
+            gru_link_size = [gru_link_size]*n_cells
+        assert len(gru_link_size) == n_cells, '"gru_link_size" must have the same length as n_cells'
 
         # kernel size
         if type(downsample_k) != list:
-            self.downsample_k = [downsample_k]*int(n_layers/2)
-        else:
-            assert len(downsample_k) == int(n_layers/2), '`downsample_k` must have the same length as n_layers/2'
-            self.downsample_k = downsample_k
-
-        if type(rnn_k) != list:
-            self.rnn_k = [rnn_k]*int(n_layers/2)
-        else:
-            assert len(rnn_k) == int(n_layers/2), '`rnn_k` must have the same length as n_layers/2'
-            self.rnn_k = rnn_k
-
-       # stride size
+            downsample_k = [downsample_k]*n_cells
+        assert len(downsample_k) == n_cells, '"downsample_k" must have the same length as n_cells'
+        # stride size
         if type(downsample_s) != list:
-            self.downsample_s = [downsample_s]*int(n_layers/2)
-        else:
-            assert len(downsample_s) == int(n_layers/2), '`downsample_s` must have the same length as n_layers/2'
-            self.downsample_s = downsample_s
-
-        if type(rnn_s) != list:
-            self.rnn_s = [rnn_s]*int(n_layers/2)
-        else:
-            assert len(rnn_s) == int(n_layers/2), '`rnn_s` must have the same length as n_layers/2'
-            self.rnn_s = rnn_s
-
+            downsample_s = [downsample_s]*n_cells
+        assert len(downsample_s) == n_cells, '"downsample_s" must have the same length as n_cells'
         # padding size
         if type(downsample_p) != list:
-            self.downsample_p = [downsample_p]*int(n_layers/2)
-        else:
-            assert len(downsample_p) == int(n_layers/2), '`downsample_p` must have the same length as n_layers/2'
-            self.downsample_p = downsample_p
+            downsample_p = [downsample_p]*n_cells
+        assert len(downsample_p) == n_cells, '"downsample_p" must have the same length as n_cells'
 
-        if type(rnn_p) != list:
-            self.rnn_p = [rnn_p]*int(n_layers/2)
-        else:
-            assert len(rnn_p) == int(n_layers/2), '`rnn_p` must have the same length as n_layers/2'
-            self.rnn_p = rnn_p
+        if type(gru_k) != list:
+            gru_k = [gru_k]*n_cells
+        assert len(gru_k) == n_cells, '"gru_k" must have the same length as n_cells'
 
-        self.n_layers = n_layers
+        if type(gru_s) != list:
+            gru_s = [gru_s]*n_cells
+        assert len(gru_s) == n_cells, '"gru_s" must have the same length as n_cells'
 
-    ## set encoder
+        if type(gru_p) != list:
+            gru_p = [gru_p]*n_cells
+        assert len(gru_p) == n_cells, '"gru_p" must have the same length as n_cells'
+
+        self.n_cells = n_cells
+
+        ## set encoder
         cells = []
-        for i in range(int(self.n_layers/2)):
-            ## convolution cell
+        for i in range(n_cells):
+            ## Downsample cell
             if i == 0:
-                cell=CNN2D_cell(channel_input=self.channel_input, channel_hidden=self.channel_downsample[i], kernel_size=self.downsample_k[i], 
-                                stride=self.downsample_s[i], padding=self.downsample_p[i], batch_norm=batch_norm)
+                cell = CNN2D_cell(channel_input=channel_input, channel_output=channel_downsample[i], kernel=downsample_k[i], 
+                                stride=downsample_s[i], padding=downsample_p[i], batch_norm=batch_norm)
             else:
-                cell=CNN2D_cell(channel_input=self.channel_rnn[i-1], channel_hidden=self.channel_downsample[i], kernel_size=self.downsample_k[i], 
-                                stride=self.downsample_s[i], padding=self.downsample_p[i], batch_norm=batch_norm)
+                cell = CNN2D_cell(channel_input=channel_gru[i-1], channel_output=channel_downsample[i], kernel=downsample_k[i], 
+                                stride=downsample_s[i], padding=downsample_p[i], batch_norm=batch_norm)
 
             name = 'Downsample_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
             
             ## gru cell
-            cell = TrajGRUCell(channel_input=self.channel_downsample[i], channel_hidden=self.channel_rnn[i], link_size=self.rnn_link_size[i],
-                               kernel_size=self.rnn_k[i], stride=self.rnn_s[i], padding=self.rnn_p[i], device=self.device, value_dtype=self.value_dtype)
-            name = 'TrajGRUCell_' + str(i).zfill(2)
+            cell = TrajGRUcell(channel_input=channel_downsample[i], channel_output=channel_gru[i], link_size=gru_link_size[i],
+                               kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i], device=device, value_dtype=value_dtype)
+            name = 'TrajGRUcell_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
 
@@ -272,12 +258,12 @@ class Encoder(nn.Module):
     
     def forward(self, x=None, hidden=None):
         if hidden is None:
-            hidden = [None]*int(self.n_layers/2)
+            hidden = [None]*self.n_cells
 
         input_ = x
         upd_hidden = []
 
-        for i in range(int(self.n_layers/2)):
+        for i in range(self.n_cells):
             ## Convolution cell
             cell = self.cells[2*i]
             input_ = cell(input_)
@@ -289,171 +275,129 @@ class Encoder(nn.Module):
             upd_hidden.append(upd_cell_hidden)
             # Pass input_ to the next
             input_ = upd_cell_hidden
-        # retain tensors in list to allow different hidden sizes
+        # return new hidden state
         return upd_hidden
 
 class Forecaster(nn.Module):
-    '''
-        Argumensts:
-            Generates a multi-layer deconvolutional GRU, which is called forecaster.
-            Preserves spatial dimensions across cells, only altering depth.
-            [Parameters]
-            ----------
-            channel_input: (integer.) depth dimension of input tensors.
-            channel_downsample: (integer or list.) depth dimensions of downsample.
-            channel_rnn: (integer or list.) depth dimensions of rnn.
-            rnn_link_size: (integer or list.) link size to select the import points in hidden states in rnn.
-            downsample_k: (integer or list.) the kernel size of each downsample layers.
-            downsample_s: (integer or list.) the stride size of each downsample layers.
-            downsample_p: (integer or list.) the padding size of each downsample layers.
-            rnn_k: (integer or list.) the kernel size of each rnn layers.
-            rnn_s: (integer or list.) the stride size of each rnn layers.
-            rnn_p: (integer or list.) the padding size of each rnn layers.
-            n_layers: (integer.) number of chained "ConvGRUCell".
-        '''
-    def __init__(self, channel_input, channel_upsample, channel_rnn, upsample_k, upsample_p, upsample_s,
-                 rnn_link_size, rnn_k, rnn_s, rnn_p, n_layers, channel_output=1, output_k=1, output_s = 1, 
+    def __init__(self, channel_input, channel_upsample, channel_gru, upsample_k, upsample_p, upsample_s,
+                 gru_link_size, gru_k, gru_s, gru_p, n_cells, channel_output=1, output_k=1, output_s = 1, 
                  output_p=0, n_output_layers=1, batch_norm=False, device=None, value_dtype=None):
         '''
-        Generates a multi-layer convolutional GRU.
+        Argumensts:
+        Generates a multi-layer deconvolutional GRU, which is called forecaster.
         Preserves spatial dimensions across cells, only altering depth.
-        Parameters
         ----------
-        channel_input: (integer.) depth dimension of input tensors.
-        channel_upsample: (integer or list.) depth dimensions of upsample.
-        channel_rnn: (integer or list.) depth dimensions of rnn.
-        rnn_link_size: (integer or list.) link size to select the import points in hidden states in rnn.
-        upsample_s: (integer or list.) the stride size of upsample layers.
-        upsample_p: (integer or list.) the padding size of upsample layers.
-        rnn_k: (integer or list.) the kernel size of rnn layers.
-        rnn_s: (integer or list.) the stride size of rnn layers.
-        rnn_p: (integer or list.) the padding size of rnn layers.
-        n_layers: (integer.) number of chained "DeconvGRUCell".
-        ## output layer params
-        channel_output: (integer or list.) depth dimensions of output.
-        output_k: (integer or list.) the kernel size of output layers.
-        output_s: (integer or list.) the stride size of output layers.
-        output_p: (integer or list.) the padding size of output layers.
+        [Parameters]
+        ----------
+        channel_input: (integer.) channel size of input tensors.
+        channel_upsample: (integer or list.) output channel sizes of upsample layers.
+        channel_gru: (integer or list.) output channel size of gru cells.
+        gru_link_size: (integer or list.) link size of subcnn layers in gru layers.
+        upsample_k: (integer or list.) kernel size of upsample layers.
+        upsample_s: (integer or list.) stride size of upsample layers.
+        upsample_p: (integer or list.) padding size of upsample layers.
+        gru_k: (integer or list.) kernel size of gru layers.
+        gru_s: (integer or list.) stride size of gru layers.
+        gru_p: (integer or list.) padding size of gru layers.
+        n_cells: (integer.) number of chained "DeConvGRUcell".
+        # output layer params
+        channel_output: (integer or list.) output channel size of output layer.
+        output_k: (integer or list.) kernel size of output layers.
+        output_s: (integer or list.) stride size of output layers.
+        output_p: (integer or list.) padding size of output layers.
         n_output_layers=1
         '''
         super().__init__()
 
-    ## set self variables  
+        ## set self variables  
         self.device = device
         self.value_dtype = value_dtype
         self.channel_input = channel_input
     
         # channel size
         if type(channel_upsample) != list:
-            self.channel_upsample = [channel_upsample]*int(n_layers/2)
-        else:
-            assert len(channel_upsample) == int(n_layers/2), '`channel_upsample` must have the same length as n_layers/2'
-            self.channel_upsample = channel_upsample
+            channel_upsample = [channel_upsample]*n_cells
+        assert len(channel_upsample) == n_cells, '"channel_upsample" must have the same length as n_cells'
 
-        if type(channel_rnn) != list:
-            self.channel_rnn = [channel_rnn]*int(n_layers/2)
-        else:
-            assert len(channel_rnn) == int(n_layers/2), '`channel_rnn` must have the same length as n_layers/2'
-            self.channel_rnn = channel_rnn
+        if type(channel_gru) != list:
+            channel_gru = [channel_gru]*n_cells
+        assert len(channel_gru) == n_cells, '"channel_gru" must have the same length as n_cells'
 
-        if type(rnn_link_size) != list:
-            self.rnn_link_size = [rnn_link_size]*int(n_layers/2)
-        else:
-            assert len(rnn_link_size) == int(n_layers/2), '`rnn_link_size` must have the same length as n_layers/2'
-            self.rnn_link_size = rnn_link_size
-
+        if type(gru_link_size) != list:
+            gru_link_size = [gru_link_size]*n_cells
+        assert len(gru_link_size) == n_cells, '"gru_link_size" must have the same length as n_cells'
+            
         # kernel size
         if type(upsample_k) != list:
-            self.upsample_k = [upsample_k]*int(n_layers/2)
-        else:
-            assert len(upsample_k) == int(n_layers/2), '`upsample_k` must have the same length as n_layers/2'
-            self.upsample_k = upsample_k
-
-        if type(rnn_k) != list:
-            self.rnn_k = [rnn_k]*int(n_layers/2)
-        else:
-            assert len(rnn_k) == int(n_layers/2), '`rnn_k` must have the same length as n_layers/2'
-            self.rnn_k = rnn_k
-
-       # stride size
+            upsample_k = [upsample_k]*n_cells
+        assert len(upsample_k) == n_cells, '"upsample_k" must have the same length as n_cells'
+        # stride size
         if type(upsample_s) != list:
-            self.upsample_s = [upsample_s]*int(n_layers/2)
-        else:
-            assert len(upsample_s) == int(n_layers/2), '`upsample_s` must have the same length as n_layers/2'
-            self.upsample_s = upsample_s
-
-        if type(rnn_s) != list:
-            self.rnn_s = [rnn_s]*int(n_layers/2)
-        else:
-            assert len(rnn_s) == int(n_layers/2), '`rnn_s` must have the same length as n_layers/2'
-            self.rnn_s = rnn_s
-
+            upsample_s = [upsample_s]*n_cells
+        assert len(upsample_s) == n_cells, '"upsample_s" must have the same length as n_cells'
         # padding size
         if type(upsample_p) != list:
-            self.upsample_p = [upsample_p]*int(n_layers/2)
-        else:
-            assert len(upsample_p) == int(n_layers/2), '`upsample_p` must have the same length as n_layers/2'
-            self.upsample_p = upsample_p
+            upsample_p = [upsample_p]*n_cells
+        assert len(upsample_p) == n_cells, '"upsample_p" must have the same length as n_cells'
 
-        if type(rnn_p) != list:
-            self.rnn_p = [rnn_p]*int(n_layers/2)
-        else:
-            assert len(rnn_p) == int(n_layers/2), '`rnn_p` must have the same length as n_layers/2'
-            self.rnn_p = rnn_p
+
+        if type(gru_k) != list:
+            gru_k = [gru_k]*n_cells
+        assert len(gru_k) == n_cells, '"gru_k" must have the same length as n_cells'
+
+        if type(gru_s) != list:
+            gru_s = [gru_s]*n_cells
+        assert len(gru_s) == n_cells, '"gru_s" must have the same length as n_cells'
+
+        if type(gru_p) != list:
+            gru_p = [gru_p]*n_cells
+        assert len(gru_p) == n_cells, '"gru_p" must have the same length as n_cells'
 
         # output size
         if type(channel_output) != list:
-            self.channel_output = [channel_output]*int(n_output_layers)
-        else:
-            assert len(channel_output) == int(n_output_layers), '`channel_output` must have the same length as n_output_layers'
-            self.channel_output = channel_output
+            channel_output = [channel_output]*int(n_output_layers)
+        assert len(channel_output) == int(n_output_layers), '"channel_output" must have the same length as n_output_layers'
 
         if type(output_k) != list:
-            self.output_k = [output_k]*int(n_output_layers)
-        else:
-            assert len(output_k) == int(n_output_layers), '`output_k` must have the same length as n_output_layers'
-            self.output_k = output_k
+            output_k = [output_k]*int(n_output_layers)
+        assert len(output_k) == int(n_output_layers), '"output_k" must have the same length as n_output_layers'
 
         if type(output_p) != list:
-            self.output_p = [output_p]*int(n_output_layers)
-        else:
-            assert len(output_p) == int(n_output_layers), '`output_p` must have the same length as n_output_layers'
-            self.output_p = output_p
+            output_p = [output_p]*int(n_output_layers)
+        assert len(output_p) == int(n_output_layers), '"output_p" must have the same length as n_output_layers'
 
         if type(output_s) != list:
-            self.output_s = [output_s]*int(n_output_layers)
-        else:
-            assert len(output_s) == int(n_output_layers), '`output_s` must have the same length as n_output_layers'
-            self.output_s = output_s
+            output_s = [output_s]*int(n_output_layers)
+        assert len(output_s) == int(n_output_layers), '"output_s" must have the same length as n_output_layers'
 
         self.n_output_layers = n_output_layers
-        self.n_layers = n_layers
+        self.n_cells = n_cells
 
-    ## set forecaster
+        ## set forecaster
         cells = []
-        for i in range(int(self.n_layers/2)):
+        for i in range(n_cells):
             # deTraj gru
             if i == 0:
-                cell = DeTrajGRUCell(channel_input=self.channel_input, channel_hidden=self.channel_rnn[i], link_size=self.rnn_link_size[i],
-                                     kernel_size=self.rnn_k[i], stride=self.rnn_s[i], padding=self.rnn_p[i], device=self.device, value_dtype=self.value_dtype)
+                cell = DeTrajGRUcell(channel_input=channel_input, channel_output=channel_gru[i], link_size=gru_link_size[i],
+                                     kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i], device=device, value_dtype=value_dtype)
             else:
-                cell = DeTrajGRUCell(channel_input=self.channel_upsample[i-1], channel_hidden=self.channel_rnn[i], link_size=self.rnn_link_size[i],
-                                     kernel_size=self.rnn_k[i], stride=self.rnn_s[i], padding=self.rnn_p[i], device=self.device, value_dtype=self.value_dtype)
+                cell = DeTrajGRUcell(channel_input=channel_upsample[i-1], channel_output=channel_gru[i], link_size=gru_link_size[i],
+                                     kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i], device=device, value_dtype=value_dtype)
 
-            name = 'DeTrajGRUCell_' + str(i).zfill(2)
+            name = 'DeTrajGRUcell_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
             # decon  
-            cell = DeCNN2D_cell(self.channel_rnn[i], self.channel_upsample[i], self.upsample_k[i], self.upsample_s[i], self.upsample_p[i], batch_norm=batch_norm)
+            cell = DeCNN2D_cell(channel_gru[i], channel_upsample[i], upsample_k[i], upsample_s[i], upsample_p[i], batch_norm)
             name = 'Upsample_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
         # output layer
         for i in range(self.n_output_layers):
             if i == 0:
-                cell = CNN2D_cell(self.channel_upsample[-1], self.channel_output[i], self.output_k[i], self.output_s[i], self.output_p[i])
+                cell = CNN2D_cell(channel_upsample[-1], channel_output[i], output_k[i], output_s[i], output_p[i])
             else:
-                cell = CNN2D_cell(self.channel_output[i-1], self.channel_output[i], self.output_k[i], self.output_s[i], self.output_p[i])
+                cell = CNN2D_cell(channel_output[i-1], channel_output[i], output_k[i], output_s[i], output_p[i])
         
             name = 'OutputLayer_' + str(i).zfill(2)
             setattr(self, name, cell)
@@ -475,7 +419,7 @@ class Forecaster(nn.Module):
         upd_hidden = []
         output = 0
 
-        for i in range(int(self.n_layers/2)):
+        for i in range(self.n_cells):
             if i == 0:
                 ## Top gru cell in forecaster, no need the inputs
                 cell = self.cells[2*i]
@@ -510,28 +454,28 @@ class Multi_unit_Model(nn.Module):
         Argumensts:
             This class is used to construt multi-unit TrajGRU model based on given parameters.
         '''
-    def __init__(self, n_encoders, n_forecasters, rnn_link_size,
-                encoder_input_channel, encoder_downsample_channels, encoder_rnn_channels,
+    def __init__(self, n_encoders, n_forecasters, gru_link_size,
+                encoder_input_channel, encoder_downsample_channels, encoder_gru_channels,
                 encoder_downsample_k, encoder_downsample_s, encoder_downsample_p,
-                encoder_rnn_k, encoder_rnn_s, encoder_rnn_p, encoder_n_layers,
-                forecaster_input_channel, forecaster_upsample_channels, forecaster_rnn_channels,
+                encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_cells,
+                forecaster_input_channel, forecaster_upsample_channels, forecaster_gru_channels,
                 forecaster_upsample_k, forecaster_upsample_s, forecaster_upsample_p,
-                forecaster_rnn_k, forecaster_rnn_s, forecaster_rnn_p, forecaster_n_layers,
+                forecaster_gru_k, forecaster_gru_s, forecaster_gru_p, forecaster_n_cells,
                 forecaster_output=1, forecaster_output_k=1, forecaster_output_s=1, forecaster_output_p=0, forecaster_output_layers=1,
                 batch_norm=False, device=None, value_dtype=None):
 
         super().__init__()
         self.n_encoders = n_encoders
         self.n_forecasters = n_forecasters
-        self.name = 'TrajGRU'
+        self.name = 'Multi_unit_TRAJGRU'
 
         models = []
         # encoders
         for i in range(self.n_encoders):
             model = Encoder(channel_input=encoder_input_channel, channel_downsample=encoder_downsample_channels,
-                            channel_rnn=encoder_rnn_channels, downsample_k=encoder_downsample_k, downsample_s=encoder_downsample_s, 
-                            downsample_p=encoder_downsample_p, rnn_link_size=rnn_link_size, rnn_k=encoder_rnn_k, rnn_s=encoder_rnn_s, 
-                            rnn_p=encoder_rnn_p, n_layers=encoder_n_layers, batch_norm=batch_norm, device=device, value_dtype=value_dtype)
+                            channel_gru=encoder_gru_channels, downsample_k=encoder_downsample_k, downsample_s=encoder_downsample_s, 
+                            downsample_p=encoder_downsample_p, gru_link_size=gru_link_size, gru_k=encoder_gru_k, gru_s=encoder_gru_s, 
+                            gru_p=encoder_gru_p, n_cells=encoder_n_cells, batch_norm=batch_norm, device=device, value_dtype=value_dtype)
             name = 'Encoder_' + str(i).zfill(2)
             setattr(self, name, model)
             models.append(getattr(self, name))
@@ -539,9 +483,9 @@ class Multi_unit_Model(nn.Module):
         # forecasters
         for i in range(self.n_forecasters):
             model = Forecaster(channel_input=forecaster_input_channel, channel_upsample=forecaster_upsample_channels, 
-                               channel_rnn=forecaster_rnn_channels, upsample_k=forecaster_upsample_k, upsample_s=forecaster_upsample_s, 
-                               upsample_p=forecaster_upsample_p, rnn_link_size=rnn_link_size, rnn_k=forecaster_rnn_k, 
-                               rnn_s=forecaster_rnn_s, rnn_p=forecaster_rnn_p, n_layers=forecaster_n_layers,
+                               channel_gru=forecaster_gru_channels, upsample_k=forecaster_upsample_k, upsample_s=forecaster_upsample_s, 
+                               upsample_p=forecaster_upsample_p, gru_link_size=gru_link_size, gru_k=forecaster_gru_k, 
+                               gru_s=forecaster_gru_s, gru_p=forecaster_gru_p, n_cells=forecaster_n_cells,
                                channel_output=forecaster_output, output_k=forecaster_output_k, output_s=forecaster_output_s,
                                output_p=forecaster_output_p, n_output_layers=forecaster_output_layers, batch_norm=batch_norm, 
                                device=device, value_dtype=value_dtype)
@@ -554,17 +498,17 @@ class Multi_unit_Model(nn.Module):
         # set flow_warp
         encoder_flow_warp = []
         forecaster_flow_warp = []
-        for i in range(int(encoder_n_layers/2)):
-            model = flow_warp(encoder_downsample_channels[i], encoder_rnn_channels[i], rnn_link_size[i], 1, 1, 0, device, value_dtype)
+        for i in range(int(encoder_n_cells)):
+            model = flow_warp(encoder_downsample_channels[i], encoder_gru_channels[i], gru_link_size[i], 1, 1, 0, device, value_dtype)
             name = 'Encoder_flow_warp_' + str(i).zfill(2)
             setattr(self, name, model)
             encoder_flow_warp.append(getattr(self, name))
 
-        for i in range(int(forecaster_n_layers/2)):
+        for i in range(int(forecaster_n_cells)):
             if i == 0:
-                model = flow_warp(forecaster_input_channel, forecaster_rnn_channels[i], rnn_link_size[i], 1, 1, 0, device, value_dtype)
+                model = flow_warp(forecaster_input_channel, forecaster_gru_channels[i], gru_link_size[i], 1, 1, 0, device, value_dtype)
             else:
-                model = flow_warp(forecaster_upsample_channels[i-1], forecaster_rnn_channels[i], rnn_link_size[i], 1, 1, 0, device, value_dtype)
+                model = flow_warp(forecaster_upsample_channels[i-1], forecaster_gru_channels[i], gru_link_size[i], 1, 1, 0, device, value_dtype)
             name = 'Forecaster_flow_warp_' + str(i).zfill(2)
             setattr(self, name, model)
             forecaster_flow_warp.append(getattr(self, name))
@@ -575,7 +519,7 @@ class Multi_unit_Model(nn.Module):
     def forward(self, x):
         input_ = x
         if input_.size()[1] != self.n_encoders:
-            assert input_.size()[1] == self.n_encoders, '`x` must have the same as n_encoders'
+            assert input_.size()[1] == self.n_encoders, '"x" must have the same as n_encoders'
 
         forecast = []
 
@@ -597,47 +541,46 @@ class Multi_unit_Model(nn.Module):
         return forecast
 
 
-
 class Single_unit_Model(nn.Module):
     '''
         Argumensts:
             This class is used to construt single-unit TrajGRU model based on given parameters.
         '''
-    def __init__(self, n_encoders, n_forecasters, rnn_link_size,
-                encoder_input_channel, encoder_downsample_channels, encoder_rnn_channels,
+    def __init__(self, n_encoders, n_forecasters, gru_link_size,
+                encoder_input_channel, encoder_downsample_channels, encoder_gru_channels,
                 encoder_downsample_k, encoder_downsample_s, encoder_downsample_p,
-                encoder_rnn_k, encoder_rnn_s, encoder_rnn_p, encoder_n_layers,
-                forecaster_input_channel, forecaster_upsample_channels, forecaster_rnn_channels,
+                encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_cells,
+                forecaster_input_channel, forecaster_upsample_channels, forecaster_gru_channels,
                 forecaster_upsample_k, forecaster_upsample_s, forecaster_upsample_p,
-                forecaster_rnn_k, forecaster_rnn_s, forecaster_rnn_p, forecaster_n_layers,
+                forecaster_gru_k, forecaster_gru_s, forecaster_gru_p, forecaster_n_cells,
                 forecaster_output=1, forecaster_output_k=1, forecaster_output_s=1, forecaster_output_p=0, forecaster_output_layers=1,
                 batch_norm=False, device=None, value_dtype=None):
 
         super().__init__()
         self.n_encoders = n_encoders
         self.n_forecasters = n_forecasters
-        self.name = 'TrajGRU'
+        self.name = 'Single_unit_TRAJGRU'
 
         models = []
         # encoders
         self.encoder = Encoder(channel_input=encoder_input_channel, channel_downsample=encoder_downsample_channels,
-                                channel_rnn=encoder_rnn_channels, downsample_k=encoder_downsample_k, downsample_s=encoder_downsample_s, 
-                                downsample_p=encoder_downsample_p, rnn_link_size=rnn_link_size, rnn_k=encoder_rnn_k, rnn_s=encoder_rnn_s, 
-                                rnn_p=encoder_rnn_p, n_layers=encoder_n_layers, batch_norm=batch_norm, device=device, value_dtype=value_dtype)
+                                channel_gru=encoder_gru_channels, downsample_k=encoder_downsample_k, downsample_s=encoder_downsample_s, 
+                                downsample_p=encoder_downsample_p, gru_link_size=gru_link_size, gru_k=encoder_gru_k, gru_s=encoder_gru_s, 
+                                gru_p=encoder_gru_p, n_cells=encoder_n_cells, batch_norm=batch_norm, device=device, value_dtype=value_dtype)
 
         # forecasters
         self.forecaster = Forecaster(channel_input=forecaster_input_channel, channel_upsample=forecaster_upsample_channels, 
-                                    channel_rnn=forecaster_rnn_channels, upsample_k=forecaster_upsample_k, upsample_s=forecaster_upsample_s, 
-                                    upsample_p=forecaster_upsample_p, rnn_link_size=rnn_link_size, rnn_k=forecaster_rnn_k, 
-                                    rnn_s=forecaster_rnn_s, rnn_p=forecaster_rnn_p, n_layers=forecaster_n_layers,
+                                    channel_gru=forecaster_gru_channels, upsample_k=forecaster_upsample_k, upsample_s=forecaster_upsample_s, 
+                                    upsample_p=forecaster_upsample_p, gru_link_size=gru_link_size, gru_k=forecaster_gru_k, 
+                                    gru_s=forecaster_gru_s, gru_p=forecaster_gru_p, n_cells=forecaster_n_cells,
                                     channel_output=forecaster_output, output_k=forecaster_output_k, output_s=forecaster_output_s,
                                     output_p=forecaster_output_p, n_output_layers=forecaster_output_layers, batch_norm=batch_norm, 
                                     device=device, value_dtype=value_dtype)
 
     def forward(self, x):
         input_ = x
-        if input_.size()[1] != self.n_encoders:
-            assert input_.size()[1] == self.n_encoders, '`x` must have the same as n_encoders'
+        if input_.data.shape[1] != self.n_encoders:
+            assert input_.data.shape[1] == self.n_encoders, '"x" must have the same as n_encoders'
 
         forecast = []
 
@@ -656,16 +599,16 @@ class Single_unit_Model(nn.Module):
         
         return forecast
 
-    def modify_value_dtype_(self, value_dtype=None):
-        self.encoder.TrajGRUCell_00.value_dtype = value_dtype
-        self.encoder.TrajGRUCell_01.value_dtype = value_dtype
-        self.encoder.TrajGRUCell_02.value_dtype = value_dtype
-        self.forecaster.DeTrajGRUCell_00.value_dtype = value_dtype
-        self.forecaster.DeTrajGRUCell_01.value_dtype = value_dtype
-        self.forecaster.DeTrajGRUCell_02.value_dtype = value_dtype
-        self.encoder.TrajGRUCell_00.flow_warp.value_dtype = value_dtype
-        self.encoder.TrajGRUCell_01.flow_warp.value_dtype = value_dtype
-        self.encoder.TrajGRUCell_02.flow_warp.value_dtype = value_dtype
-        self.forecaster.DeTrajGRUCell_00.flow_warp.value_dtype = value_dtype
-        self.forecaster.DeTrajGRUCell_01.flow_warp.value_dtype = value_dtype
-        self.forecaster.DeTrajGRUCell_02.flow_warp.value_dtype = value_dtype
+    # def modify_value_dtype_(self, value_dtype=None):
+    #     self.encoder.TrajGRUcell_00.value_dtype = value_dtype
+    #     self.encoder.TrajGRUcell_01.value_dtype = value_dtype
+    #     self.encoder.TrajGRUcell_02.value_dtype = value_dtype
+    #     self.forecaster.DeTrajGRUcell_00.value_dtype = value_dtype
+    #     self.forecaster.DeTrajGRUcell_01.value_dtype = value_dtype
+    #     self.forecaster.DeTrajGRUcell_02.value_dtype = value_dtype
+    #     self.encoder.TrajGRUcell_00.flow_warp.value_dtype = value_dtype
+    #     self.encoder.TrajGRUcell_01.flow_warp.value_dtype = value_dtype
+    #     self.encoder.TrajGRUcell_02.flow_warp.value_dtype = value_dtype
+    #     self.forecaster.DeTrajGRUcell_00.flow_warp.value_dtype = value_dtype
+    #     self.forecaster.DeTrajGRUcell_01.flow_warp.value_dtype = value_dtype
+    #     self.forecaster.DeTrajGRUcell_02.flow_warp.value_dtype = value_dtype

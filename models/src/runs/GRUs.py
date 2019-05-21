@@ -39,10 +39,10 @@ def get_dataloader(args, train_num=None):
 
 def get_model(args=None):
     if args.model.upper() == 'TRAJGRU':
-        from src.operators.trajGRU import Single_unit_Model
+        from src.operators.trajGRU import Multi_unit_Model as Model
         print('Model: TRAJGRU')
         TRAJGRU = TRAJGRU_HYPERPARAMs(args=args)
-        model = Single_unit_Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, gru_link_size=TRAJGRU.gru_link_size,
+        model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, gru_link_size=TRAJGRU.gru_link_size,
                 encoder_input_channel=TRAJGRU.encoder_input_channel, encoder_downsample_channels=TRAJGRU.encoder_downsample_channels,
                 encoder_gru_channels=TRAJGRU.encoder_gru_channels, encoder_downsample_k=TRAJGRU.encoder_downsample_k,
                 encoder_downsample_s=TRAJGRU.encoder_downsample_s, encoder_downsample_p=TRAJGRU.encoder_downsample_p, 
@@ -57,10 +57,10 @@ def get_model(args=None):
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)
 
     elif args.model.upper() == 'CONVGRU':
-        from src.operators.convGRU import Single_unit_Model
+        from src.operators.convGRU import Single_unit_Model as Model
         print('Model: CONVGRU')
         CONVGRU = CONVGRU_HYPERPARAMs(args=args)
-        model = Single_unit_Model(n_encoders=args.input_frames, n_forecasters=args.target_frames,
+        model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames,
                 encoder_input_channel=CONVGRU.encoder_input_channel, encoder_downsample_channels=CONVGRU.encoder_downsample_channels,
                 encoder_gru_channels=CONVGRU.encoder_gru_channels, encoder_downsample_k=CONVGRU.encoder_downsample_k,
                 encoder_downsample_s=CONVGRU.encoder_downsample_s, encoder_downsample_p=CONVGRU.encoder_downsample_p, 
@@ -158,7 +158,6 @@ def train(model, trainloader, testloader, args):
                     optimizer = optimizer(model.parameters(), lr=args.lr, momentum=0.6, weight_decay=args.weight_decay)
                 else:
                     optimizer = optimizer(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-
 
         for idx, data in enumerate(trainloader, 0):
             inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]

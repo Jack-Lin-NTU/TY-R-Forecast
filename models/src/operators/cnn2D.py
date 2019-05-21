@@ -23,7 +23,7 @@ class CNN2D_cell(nn.Module):
         return out
 
 class DeCNN2D_cell(nn.Module):
-    def __init__(self, channel_input, channel_output, kernel=3, stride=1, padding=1, batch_norm=False, negative_slope=0):
+    def __init__(self, channel_input, channel_output, kernel=3, stride=1, padding=1, batch_norm=False, negative_slope=0, zeros_weight=False):
         super().__init__()
 
         layer_sublist = []
@@ -31,11 +31,12 @@ class DeCNN2D_cell(nn.Module):
         if batch_norm:
             layer_sublist.append(nn.BatchNorm2d(channel_output))
         layer_sublist.append(nn.ReLU())
-
-        nn.init.kaiming_normal_(layer_sublist[0].weight, a=negative_slope, mode='fan_in', nonlinearity='leaky_relu')
-        # nn.init.constant_(layer_sublist[0].weight, 0.1)
+        
+        if not zeros_weight:
+            nn.init.kaiming_normal_(layer_sublist[0].weight, a=negative_slope, mode='fan_in', nonlinearity='leaky_relu')
+        else:
+            nn.init.zeros_(layer_sublist[0].weight)
         nn.init.zeros_(layer_sublist[0].bias)
-
         self.layer = nn.Sequential(*layer_sublist)
 
     def forward(self, x):

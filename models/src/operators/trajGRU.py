@@ -58,7 +58,6 @@ class flow_warp(nn.Module):
         # get batch and spatial sizes
         # print('Prev:', prev_state.shape)
         input_ = x
-        
         if input_ is None:
             stacked_inputs = prev_state
         else:
@@ -111,7 +110,7 @@ class TrajGRUcell(nn.Module):
         reset = torch.sigmoid(self.reset_gate(input_)+self.reset_gate_warp(M))
         update = torch.sigmoid(self.update_gate(input_)+self.update_gate_warp(M))
         out_inputs = F.leaky_relu(self.out_gate(input_)+reset*self.out_gate_warp(M), negative_slope=0.2)
-        new_state = prev_state*update + out_inputs*(1-update)
+        new_state = out_inputs*(1-update) + update*prev_state
 
         return new_state
 
@@ -135,9 +134,9 @@ class DeTrajGRUcell(nn.Module):
 
         self.flow_warp = flow_warp(channel_input, channel_output, link_size, batch_norm, device, value_dtype)
         
-        self.reset_gate_warp  = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
-        self.update_gate_warp  = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
-        self.out_gate_warp = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, negative_slope=0.2)
+        self.reset_gate_warp  = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, zeros_weight=True)
+        self.update_gate_warp  = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, zeros_weight=True)
+        self.out_gate_warp = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, zeros_weight=True)
 
     def forward(self, x=None, prev_state=None):
         input_ = x
@@ -151,17 +150,20 @@ class DeTrajGRUcell(nn.Module):
             prev_state = torch.zeros(state_size).to(device=self.device, dtype=self.value_dtype)
 
         M = self.flow_warp(x=input_, prev_state=prev_state)
-
+        
+        # breakpoint()
         if self.channel_input == 0:
             reset = torch.sigmoid(self.reset_gate_warp(M))
-            update = torch.sigmoid(self.reset_gate_warp(M))
-            out_inputs = F.leaky_relu(self.reset_gate_warp(M)*reset, negative_slope=0.2)
+            update = torch.sigmoid(self.update_gate_warp(M))
+            out_inputs = F.leaky_relu(self.out_gate_warp(M)*reset, negative_slope=0.2)
+            # out_inputs = torch.tanh(self.out_gate_warp(M)*reset)
         else:
             reset = torch.sigmoid(self.reset_gate(input_)+self.reset_gate_warp(M))
             update = torch.sigmoid(self.update_gate(input_)+self.update_gate_warp(M))
             out_inputs = F.leaky_relu(self.out_gate(input_)+reset*self.out_gate_warp(M), negative_slope=0.2)
+            # out_inputs = torch.tanh(self.out_gate(input_)+reset*self.out_gate_warp(M))
+        new_state = out_inputs*(1-update) + update*prev_state
         
-        new_state = prev_state*(1-update) + out_inputs*update
         return new_state
 
 class Encoder(nn.Module):
@@ -495,27 +497,6 @@ class Multi_unit_Model(nn.Module):
 
         self.models = models
 
-        # set flow_warp
-        encoder_flow_warp = []
-        forecaster_flow_warp = []
-        for i in range(int(encoder_n_cells)):
-            model = flow_warp(encoder_downsample_channels[i], encoder_gru_channels[i], gru_link_size[i], 1, 1, 0, device, value_dtype)
-            name = 'Encoder_flow_warp_' + str(i).zfill(2)
-            setattr(self, name, model)
-            encoder_flow_warp.append(getattr(self, name))
-
-        for i in range(int(forecaster_n_cells)):
-            if i == 0:
-                model = flow_warp(forecaster_input_channel, forecaster_gru_channels[i], gru_link_size[i], 1, 1, 0, device, value_dtype)
-            else:
-                model = flow_warp(forecaster_upsample_channels[i-1], forecaster_gru_channels[i], gru_link_size[i], 1, 1, 0, device, value_dtype)
-            name = 'Forecaster_flow_warp_' + str(i).zfill(2)
-            setattr(self, name, model)
-            forecaster_flow_warp.append(getattr(self, name))
-
-        self.encoder_flow_warp = encoder_flow_warp
-        self.forecaster_flow_warp = forecaster_flow_warp
-
     def forward(self, x):
         input_ = x
         if input_.size()[1] != self.n_encoders:
@@ -527,17 +508,16 @@ class Multi_unit_Model(nn.Module):
             if i == 0:
                 hidden=None
             model = self.models[i]
-            hidden = model(x = input_[:,i,:,:,:], flow_warp=self.encoder_flow_warp, hidden=hidden)
+            hidden = model(x = input_[:,i,:,:,:], hidden=hidden)
 
         hidden = hidden[::-1]
 
         for i in range(self.n_forecasters):
             model = self.models[self.n_encoders+i]
-            hidden, output = model(flow_warp=self.forecaster_flow_warp, hidden=hidden)
+            hidden, output = model(hidden=hidden)
             forecast.append(output)
-            
+
         forecast = torch.cat(forecast, dim=1)
-        
         return forecast
 
 
@@ -590,6 +570,7 @@ class Single_unit_Model(nn.Module):
             hidden = self.encoder(x = input_[:,i,:,:,:], hidden=hidden)
 
         hidden = hidden[::-1]
+
 
         for i in range(self.n_forecasters):
             hidden, output = self.forecaster(hidden=hidden)

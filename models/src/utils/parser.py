@@ -183,6 +183,10 @@ def get_args():
     if args.input_with_grid:
         args.result_folder += '_grid'
         args.params_folder += '_grid'
+
+    if args.input_with_QPE:
+        args.result_folder += '_QPE'
+        args.params_folder += '_QPE'
     
     if args.lr_scheduler:
         args.result_folder += '_scheduler'

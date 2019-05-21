@@ -57,7 +57,7 @@ def get_model(args=None):
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)
 
     elif args.model.upper() == 'CONVGRU':
-        from src.operators.convGRU import Single_unit_Model as Model
+        from src.operators.convGRU import Multi_unit_Model as Model
         print('Model: CONVGRU')
         CONVGRU = CONVGRU_HYPERPARAMs(args=args)
         model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames,

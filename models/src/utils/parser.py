@@ -171,7 +171,7 @@ def get_args():
     args.result_folder = os.path.join(args.result_folder, args.model.upper())
     args.params_folder = os.path.join(args.params_folder, args.model.upper())
 
-    size = '{}X{}'.format(args.I_shape[0], args.I_shape[1])
+    size = '{}X{}'.format(args.F_shape[0], args.F_shape[1])
 
     if args.weather_list == []:
         args.result_folder = os.path.join(args.result_folder, size, 'RAD_no_weather')

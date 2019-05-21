@@ -52,20 +52,20 @@ class TyCatcher(nn.Module):
         return sample
 
 # class my_single_GRU(nn.Module):
-#     def __init__(self, input_frames, output_frames, TyCatcher_channel_input, TyCatcher_channel_hidden, TyCatcher_channel_n_layers, gru_channel_input, gru_channel_hidden, 
+#     def __init__(self, n_encoders, n_forecasters, TyCatcher_channel_input, TyCatcher_channel_hidden, TyCatcher_channel_n_layers, gru_channel_input, gru_channel_hidden, 
 #                 gru_kernel, gru_stride, gru_padding, batch_norm=False, device=None, value_dtype=None):
 #         super().__init__()
 #         self.device = device
 #         self.value_dtype = value_dtype
-#         self.input_frames = input_frames
-#         self.output_frames = output_frames
+#         self.n_encoders = n_encoders
+#         self.n_forecasters = n_forecasters
 
 #         self.tycatcher = TyCatcher(TyCatcher_channel_input, TyCatcher_channel_hidden, TyCatcher_channel_n_layers, device, value_dtype)
 #         self.model = ConvGRUCell(gru_channel_input, gru_channel_hidden, gru_kernel, gru_stride, gru_padding, batch_norm, device, value_dtype)
 
 #     def forward(self, ty_infos, radar_map):
         
-#         for i in range(self.input_frames):
+#         for i in range(self.n_encoders):
 #             tmp_ty_info = ty_infos[:,i,:]
 #             tmp_map = radar_map[:,i,:,:,:]
 #             if i == 0:
@@ -76,8 +76,8 @@ class TyCatcher(nn.Module):
 #                 prev_state = self.model(input_)
         
 #         outputs = []
-#         for i in range(self.output_frames):
-#             tmp_ty_info = ty_infos[:,i+self.input_frames,:]
+#         for i in range(self.n_forecasters):
+#             tmp_ty_info = ty_infos[:,i+self.n_encoders,:]
 #             tmp_map = radar_map[:,-1,:,:,:]
 #             input_ = self.ty_catcher(tmp_ty_info, tmp_map)
 #             prev_state = self.model(input_)
@@ -183,8 +183,8 @@ class Forecaster(nn.Module):
         return output_
     
 
-class my_multi_GRU(nn.Module):
-    def __init__(self, input_frames, output_frames, TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers, 
+class my_single_GRU(nn.Module):
+    def __init__(self, n_encoders, n_forecasters, TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers, 
                 encoder_input, encoder_downsample, encoder_gru, encoder_downsample_k, encoder_downsample_s, 
                 encoder_downsample_p, encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_layers, 
                 forecaster_upsample_cin, forecaster_upsample_cout, forecaster_upsample_k, forecaster_upsample_p, 
@@ -194,33 +194,87 @@ class my_multi_GRU(nn.Module):
         super().__init__()
         self.device = device
         self.value_dtype = value_dtype
-        self.input_frames = input_frames
-        self.output_frames = output_frames
+        self.n_encoders = n_encoders
+        self.n_forecasters = n_forecasters
 
         self.tycatcher = TyCatcher(TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers, device, value_dtype)
-        self.encoder1 = Encoder(encoder_input, encoder_downsample, encoder_gru, encoder_downsample_k, encoder_downsample_s, 
+        self.encoder = Encoder(encoder_input, encoder_downsample, encoder_gru, encoder_downsample_k, encoder_downsample_s, 
                                 encoder_downsample_p, encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_layers,
                                 batch_norm, device, value_dtype)
-        self.encoder2 = Encoder(encoder_input, encoder_downsample, encoder_gru, encoder_downsample_k, encoder_downsample_s, 
-                                encoder_downsample_p, encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_layers,
-                                batch_norm, device, value_dtype)
+
         self.forecaster = Forecaster(forecaster_upsample_cin, forecaster_upsample_cout, forecaster_upsample_k, forecaster_upsample_p, forecaster_upsample_s, 
                                     forecaster_n_layers, forecaster_output_cout, forecaster_output_k, forecaster_output_s, forecaster_output_p, 
                                     forecaster_n_output_layers, batch_norm, device, value_dtype)
 
     def forward(self, encoder_inputs, ty_infos, radar_map):
-        for i in range(self.input_frames):
+        for i in range(self.n_encoders):
             input_ = encoder_inputs[:,i,:,:,:]
             if i == 0:
-                prev_state = self.encoder1(input_, hidden=None)
+                prev_state = self.encoder(input_, hidden=None)
             else:
-                prev_state = self.encoder1(input_, hidden=prev_state)
+                prev_state = self.encoder(input_, hidden=prev_state)
         
         outputs = []
-        for i in range(self.output_frames):
+        for i in range(self.n_forecasters):
             tmp_ty_info = ty_infos[:, i,:]
             input_ = self.tycatcher(tmp_ty_info, radar_map)
-            prev_state = self.encoder2(input_, hidden=prev_state)
+            prev_state = self.encoder(input_, hidden=prev_state)
+            output_ = self.forecaster(prev_state[::-1])
+
+            outputs.append(output_)
+        outputs = torch.cat(outputs, dim=1)
+        return outputs
+
+
+class my_multi_GRU(nn.Module):
+    def __init__(self, n_encoders, n_forecasters, TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers, 
+                encoder_input, encoder_downsample, encoder_gru, encoder_downsample_k, encoder_downsample_s, 
+                encoder_downsample_p, encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_layers, 
+                forecaster_upsample_cin, forecaster_upsample_cout, forecaster_upsample_k, forecaster_upsample_p, 
+                forecaster_upsample_s, forecaster_n_layers, forecaster_output_cout=1, forecaster_output_k=1, 
+                forecaster_output_s=1, forecaster_output_p=0, forecaster_n_output_layers=1, 
+                batch_norm=False, device=None, value_dtype=None):
+        super().__init__()
+        self.device = device
+        self.value_dtype = value_dtype
+        self.n_encoders = n_encoders
+        self.n_forecasters = n_forecasters
+
+        self.tycatcher = TyCatcher(TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers, device, value_dtype)
+        encoders = []
+        for i in range(n_encoders+n_forecasters):
+            model = Encoder(encoder_input, encoder_downsample, encoder_gru, encoder_downsample_k, encoder_downsample_s, 
+                            encoder_downsample_p, encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_layers,
+                            batch_norm, device, value_dtype)
+            name = 'Encoder_' + str(i).zfill(2)
+            setattr(self, name, model)
+            encoders.append(getattr(self, name))
+
+        forecasters = []
+        for i in range(n_forecasters):
+            model = Forecaster(forecaster_upsample_cin, forecaster_upsample_cout, forecaster_upsample_k, forecaster_upsample_p, forecaster_upsample_s, 
+                                forecaster_n_layers, forecaster_output_cout, forecaster_output_k, forecaster_output_s, forecaster_output_p, 
+                                forecaster_n_output_layers, batch_norm, device, value_dtype)
+            name = 'Forecaster_' + str(i).zfill(2)
+            setattr(self, name, model)
+            forecasters.append(getattr(self, name))
+        
+        self.encoders = encoders
+        self.forecasters = forecasters
+
+    def forward(self, encoder_inputs, ty_infos, radar_map):
+        for i in range(self.n_encoders):
+            input_ = encoder_inputs[:,i,:,:,:]
+            if i == 0:
+                prev_state = self.encoders[i](input_, hidden=None)
+            else:
+                prev_state = self.encoders[i](input_, hidden=prev_state)
+        
+        outputs = []
+        for i in range(self.n_forecasters):
+            tmp_ty_info = ty_infos[:, i,:]
+            input_ = self.tycatcher(tmp_ty_info, radar_map)
+            prev_state = self.encoders[i+self.n_encoders](input_, hidden=prev_state)
             output_ = self.forecaster(prev_state[::-1])
 
             outputs.append(output_)

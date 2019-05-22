@@ -2,8 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .cnn2D import CNN2D_cell
-from .convGRU import ConvGRUCell, DeCNN2D_cell, Encoder
+from .cnn2D import CNN2D_cell, DeCNN2D_cell
+from .convGRU import Encoder
 
 class TyCatcher(nn.Module):
     def __init__(self, channel_input, channel_hidden, n_layers, device=None, value_dtype=None):
@@ -275,7 +275,7 @@ class my_multi_GRU(nn.Module):
             tmp_ty_info = ty_infos[:, i,:]
             input_ = self.tycatcher(tmp_ty_info, radar_map)
             prev_state = self.encoders[i+self.n_encoders](input_, hidden=prev_state)
-            output_ = self.forecaster(prev_state[::-1])
+            output_ = self.forecasters[i](prev_state[::-1])
 
             outputs.append(output_)
         outputs = torch.cat(outputs, dim=1)

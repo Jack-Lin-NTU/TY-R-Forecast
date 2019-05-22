@@ -47,7 +47,7 @@ def get_model(from_scratch=True, args=None):
         MYMODEL = MYMULTIMODEL_HYPERPARAMs(args)
         model = my_multi_GRU(MYMODEL.input_frames, MYMODEL.target_frames, MYMODEL.TyCatcher_input, MYMODEL.TyCatcher_hidden, MYMODEL.TyCatcher_n_layers, 
                             MYMODEL.encoder_input, MYMODEL.encoder_downsample, MYMODEL.encoder_gru, MYMODEL.encoder_downsample_k, MYMODEL.encoder_downsample_s, 
-                            MYMODEL.encoder_downsample_p, MYMODEL.encoder_gru_k, MYMODEL.encoder_gru_s, MYMODEL.encoder_gru_p, MYMODEL.encoder_n_layers, 
+                            MYMODEL.encoder_downsample_p, MYMODEL.encoder_gru_k, MYMODEL.encoder_gru_s, MYMODEL.encoder_gru_p, MYMODEL.encoder_n_cells, 
                             MYMODEL.forecaster_upsample_cin, MYMODEL.forecaster_upsample_cout, MYMODEL.forecaster_upsample_k, MYMODEL.forecaster_upsample_p, 
                             MYMODEL.forecaster_upsample_s, MYMODEL.forecaster_n_layers, MYMODEL.forecaster_output_cout, MYMODEL.forecaster_output_k, 
                             MYMODEL.forecaster_output_s, MYMODEL.forecaster_output_p, MYMODEL.forecaster_n_output_layers, 

@@ -35,7 +35,7 @@ def MYMULTIMODEL_HYPERPARAMs(args):
                     'encoder_gru_k': 3,
                     'encoder_gru_s': 1,
                     'encoder_gru_p': 1,
-                    'encoder_n_layers': 6,
+                    'encoder_n_cells': 3,
                     # hyperparameters for the Forecaster
                     'forecaster_upsample_cin': [96*c,96*c,32*c],
                     'forecaster_upsample_cout': [96*c,96*c,4*c],

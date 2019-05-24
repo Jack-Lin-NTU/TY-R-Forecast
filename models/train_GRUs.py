@@ -12,7 +12,7 @@ import torch.optim as optim
 # import our model and dataloader
 from src.utils.parser import get_args
 from src.utils.utils import createfolder
-from src.runs.GRUs import get_dataloader, get_model, train, test
+from src.runs.GRUs import get_dataloader, get_model, get_optimizer, train, test
 
 def main():
     args = get_args()
@@ -28,11 +28,15 @@ def main():
 
     # get the model
     model = get_model(args=args)
+
+    # get optimizer
+    optimizer = get_optimizer( args=args, model=model)
+    
     # train process
     time1 = time.time()
 
     # train model
-    train(model=model, trainloader=trainloader, testloader=testloader, args=args)
+    train(model=model, optimizer=optimizer, trainloader=trainloader, testloader=testloader, args=args)
 
     time2 = time.time()
     t = time2-time1

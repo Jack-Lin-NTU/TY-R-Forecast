@@ -59,10 +59,8 @@ def get_model(args=None):
                 forecaster_output_p=TRAJGRU.forecaster_output_p, forecaster_output_layers=TRAJGRU.forecaster_output_layers, 
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
         
-        if args.parallel_compute:
-            model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
-        else:
-            model = model.to(args.device, dtype=args.value_dtype)
+        model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
+        model = model.to(args.device, dtype=args.value_dtype)
 
     elif args.model.upper() == 'CONVGRU':
         from src.operators.convGRU import Multi_unit_Model as Model

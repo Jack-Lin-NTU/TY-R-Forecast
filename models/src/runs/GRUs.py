@@ -178,7 +178,7 @@ def train(model, optimizer, trainloader, testloader, args):
     breakpoint()
     for epoch in range(args.max_epochs):
         # turn on train mode
-        net.train(True)
+        model.train(True)
 
         # store time
         time1 = time.time()
@@ -202,9 +202,9 @@ def train(model, optimizer, trainloader, testloader, args):
             if args.model.upper() == 'MYMODEL':
                 ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
                 radar_map = data['radar_map'].to(device=args.device, dtype=args.value_dtype)
-                outputs = net(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map)
+                outputs = model(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map)
             else:
-                outputs = net(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
+                outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
 
             optimizer.zero_grad()
             outputs = outputs.view(-1, outputs.shape[1]*outputs.shape[2]*outputs.shape[3])

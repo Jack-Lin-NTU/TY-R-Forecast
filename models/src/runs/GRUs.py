@@ -57,7 +57,12 @@ def get_model(args=None):
                 forecaster_gru_p=TRAJGRU.forecaster_gru_p, forecaster_n_cells=TRAJGRU.forecaster_n_cells, forecaster_output=TRAJGRU.forecaster_output_channels, 
                 forecaster_output_k=TRAJGRU.forecaster_output_k, forecaster_output_s=TRAJGRU.forecaster_output_s, 
                 forecaster_output_p=TRAJGRU.forecaster_output_p, forecaster_output_layers=TRAJGRU.forecaster_output_layers, 
-                batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)
+                batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
+        
+        if args.parallel_compute:
+            model = torch.nn.DataParallel(model, device_ids=[0, 1])
+        else:
+            model.to(args.device, dtype=args.value_dtype)
 
     elif args.model.upper() == 'CONVGRU':
         from src.operators.convGRU import Multi_unit_Model as Model
@@ -75,7 +80,12 @@ def get_model(args=None):
                 forecaster_gru_p=CONVGRU.forecaster_gru_p, forecaster_n_cells=CONVGRU.forecaster_n_cells, forecaster_output=CONVGRU.forecaster_output_channels, 
                 forecaster_output_k=CONVGRU.forecaster_output_k, forecaster_output_s=CONVGRU.forecaster_output_s, 
                 forecaster_output_p=CONVGRU.forecaster_output_p, forecaster_output_layers=CONVGRU.forecaster_output_layers, 
-                batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(args.device, dtype=args.value_dtype)
+                batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
+        
+        if args.parallel_compute:
+            model = torch.nn.DataParallel(model, device_ids=[0, 1])
+        else:
+            model.to(args.device, dtype=args.value_dtype)
     
     elif args.model.upper() == 'MYMODEL':
         from src.operators.mymodel import my_multi_GRU as Model
@@ -87,7 +97,12 @@ def get_model(args=None):
                     MYMODEL.forecaster_upsample_cin, MYMODEL.forecaster_upsample_cout, MYMODEL.forecaster_upsample_k, MYMODEL.forecaster_upsample_p, 
                     MYMODEL.forecaster_upsample_s, MYMODEL.forecaster_n_layers, MYMODEL.forecaster_output_cout, MYMODEL.forecaster_output_k, 
                     MYMODEL.forecaster_output_s, MYMODEL.forecaster_output_p, MYMODEL.forecaster_n_output_layers, 
-                    batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype).to(device=args.device, dtype=args.value_dtype)
+                    batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
+        
+        if args.parallel_compute:
+            model = torch.nn.DataParallel(model, device_ids=[0, 1])
+        else:
+            model.to(args.device, dtype=args.value_dtype)
     
     return model
 
@@ -159,9 +174,6 @@ def train(model, optimizer, trainloader, testloader, args):
     
     # To create a pd.DataFrame to store training, validating loss, and learning rate.
     result_df = pd.DataFrame([], index=pd.Index(range(1, args.max_epochs+1), name='epoch'), columns=['train_loss', 'val_loss', 'lr'])
-
-    if args.parallel_compute:
-        net = torch.nn.DataParallel(model, device_ids=[0, 1])
 
     breakpoint()
     for epoch in range(args.max_epochs):

@@ -51,6 +51,7 @@ def get_args():
     parser.add_argument('--change-value-dtype', action='store_true', help='Change the data type of computation or not.')
 
     # hyperparameters for training
+    parser.add_argument('--parallel-compute', action='store_true', help='Parallel computing or not.')
     parser.add_argument('--seed', metavar='', type=int, default=1, help='The setting of random seed. (default: 1)')
     parser.add_argument('--train-num', metavar='', type=int, default=10, help='The number of training events. (default: 10)')
     parser.add_argument('--max-epochs', metavar='', type=int, default=30, help='Max epochs. (default: 30)')

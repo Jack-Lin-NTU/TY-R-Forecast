@@ -30,7 +30,7 @@ def main():
     model = get_model(args=args)
 
     if args.parallel_compute:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[0,1], output_device=[0])
+        model = torch.nn.DataParallel(model, device_ids=[0, 1])
     
     # get optimizer
     optimizer = get_optimizer( args=args, model=model)

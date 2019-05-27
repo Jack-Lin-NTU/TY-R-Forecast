@@ -58,9 +58,9 @@ def get_model(args=None):
                 forecaster_output_k=TRAJGRU.forecaster_output_k, forecaster_output_s=TRAJGRU.forecaster_output_s, 
                 forecaster_output_p=TRAJGRU.forecaster_output_p, forecaster_output_layers=TRAJGRU.forecaster_output_layers, 
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
-        if torch.cuda.device_count() > 1:
-            # device_ids has a default : all
-            model = torch.nn.DataParallel(model, device_ids=[0, 1]) 
+        # if torch.cuda.device_count() > 1:
+        #     # device_ids has a default : all
+        #     model = torch.nn.DataParallel(model, device_ids=[0, 1]) 
         model.to(args.device, dtype=args.value_dtype)
         # model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
         # model = model.to(args.device, dtype=args.value_dtype)
@@ -83,10 +83,9 @@ def get_model(args=None):
                 forecaster_output_p=CONVGRU.forecaster_output_p, forecaster_output_layers=CONVGRU.forecaster_output_layers, 
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
         
-        if args.parallel_compute:
-            model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
-        else:
-            model = model.to(args.device, dtype=args.value_dtype)
+        # if args.parallel_compute:
+        #     model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
+        model = model.to(args.device, dtype=args.value_dtype)
     
     elif args.model.upper() == 'MYMODEL':
         from src.operators.mymodel import my_multi_GRU as Model
@@ -100,10 +99,9 @@ def get_model(args=None):
                     MYMODEL.forecaster_output_s, MYMODEL.forecaster_output_p, MYMODEL.forecaster_n_output_layers, 
                     batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
         
-        if args.parallel_compute:
-            model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
-        else:
-            model = model.to(args.device, dtype=args.value_dtype)
+        # if args.parallel_compute:
+        #     model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
+        model = model.to(args.device, dtype=args.value_dtype)
     
     return model
 
@@ -149,6 +147,19 @@ def get_train_logger(filename):
     logger.addHandler(f)
 
     return logger
+
+def data_parallel(module, inputs, device_ids, output_device=None):
+    if not device_ids:
+        return module(inputs)
+
+    if output_device is None:
+        output_device = device_ids[0]
+
+    replicas = nn.parallel.replicate(module, device_ids)
+    inputs = nn.parallel.scatter(inputs, device_ids)
+    replicas = replicas[:len(inputs)]
+    outputs = nn.parallel.parallel_apply(replicas, inputs)
+    return nn.parallel.gather(outputs, output_device)
 
 
 def train(model, optimizer, trainloader, testloader, args):
@@ -199,13 +210,15 @@ def train(model, optimizer, trainloader, testloader, args):
             inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
 
-            breakpoint()
             if args.model.upper() == 'MYMODEL':
                 ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
                 radar_map = data['radar_map'].to(device=args.device, dtype=args.value_dtype)
                 outputs = model(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map)
             else:
-                outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
+                if args.parallel_compute:
+                    outputs = data_parallel(model, inputs, device_ids=[0, 1])
+                else:
+                    outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
 
             optimizer.zero_grad()
             outputs = outputs.view(-1, outputs.shape[1]*outputs.shape[2]*outputs.shape[3])

@@ -60,9 +60,9 @@ def get_model(args=None):
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
         
         if args.parallel_compute:
-            model = torch.nn.DataParallel(model, device_ids=[0, 1])
+            model = torch.nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')  ])
         else:
-            model.to(args.device, dtype=args.value_dtype)
+            model = model.to(args.device, dtype=args.value_dtype)
 
     elif args.model.upper() == 'CONVGRU':
         from src.operators.convGRU import Multi_unit_Model as Model
@@ -83,9 +83,9 @@ def get_model(args=None):
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
         
         if args.parallel_compute:
-            model = torch.nn.DataParallel(model, device_ids=[0, 1])
+            model = torch.nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')  ])
         else:
-            model.to(args.device, dtype=args.value_dtype)
+            model = model.to(args.device, dtype=args.value_dtype)
     
     elif args.model.upper() == 'MYMODEL':
         from src.operators.mymodel import my_multi_GRU as Model
@@ -100,9 +100,9 @@ def get_model(args=None):
                     batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
         
         if args.parallel_compute:
-            model = torch.nn.DataParallel(model, device_ids=[0, 1])
+            model = torch.nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')  ])
         else:
-            model.to(args.device, dtype=args.value_dtype)
+            model = model.to(args.device, dtype=args.value_dtype)
     
     return model
 

@@ -29,6 +29,9 @@ def main():
     # get the model
     model = get_model(args=args)
 
+    if args.parallel_compute:
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[0,1], output_device=[0])
+    
     # get optimizer
     optimizer = get_optimizer( args=args, model=model)
     

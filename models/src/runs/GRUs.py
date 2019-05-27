@@ -161,7 +161,7 @@ def train(model, optimizer, trainloader, testloader, args):
     result_df = pd.DataFrame([], index=pd.Index(range(1, args.max_epochs+1), name='epoch'), columns=['train_loss', 'val_loss', 'lr'])
 
     if args.parallel_compute:
-        model = torch.nn.DataParallel(model, device_ids=[0, 1])
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[0,1], output_device=[0,1])
     breakpoint()
     for epoch in range(args.max_epochs):
         # turn on train mode

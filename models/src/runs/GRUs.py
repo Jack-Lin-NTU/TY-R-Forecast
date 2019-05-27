@@ -60,7 +60,7 @@ def get_model(args=None):
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
         
         if args.parallel_compute:
-            model = torch.nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')  ])
+            model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
         else:
             model = model.to(args.device, dtype=args.value_dtype)
 
@@ -83,7 +83,7 @@ def get_model(args=None):
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
         
         if args.parallel_compute:
-            model = torch.nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')  ])
+            model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
         else:
             model = model.to(args.device, dtype=args.value_dtype)
     
@@ -100,7 +100,7 @@ def get_model(args=None):
                     batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
         
         if args.parallel_compute:
-            model = torch.nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')  ])
+            model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
         else:
             model = model.to(args.device, dtype=args.value_dtype)
     

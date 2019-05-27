@@ -21,10 +21,7 @@ def get_dataloader(args, train_num=None):
     '''
     This function is used to get trainloader and testloader.
     '''
-    if args.model.upper() == 'MYMODEL':
-        from src.dataseters.mymodel import TyDataset, ToTensor, Normalize
-    else:
-        from src.dataseters.GRUs import TyDataset, ToTensor, Normalize
+    from src.dataseters.GRUs import TyDataset, ToTensor, Normalize
 
     # transform
     transform = transforms.Compose([ToTensor(), Normalize(args)])

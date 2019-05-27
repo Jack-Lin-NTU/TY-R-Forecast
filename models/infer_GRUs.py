@@ -74,7 +74,8 @@ if __name__ == "__main__":
     # breakpoint()
     video = os.path.join('/home/jack/ssd/Onedrive/01_IIS', args.model+'.mp4')
 
-    prediction_time = dt.datetime.strptime(prediction_time,'%Y%m%d%H%M%S')
+    breakpoint()
+    prediction_time = dt.datetime.strptime(prediction_time,'%Y%m%d%H%M')
     with writer.saving(fig, video, 200):
         for i in range(times):
             data = [outputs[i], labels[i]]
@@ -92,7 +93,7 @@ if __name__ == "__main__":
                 cbar.ax.tick_params(labelsize=10)
                 # ax.legend(fontsize=10)
                 ax.set_title(data_type[idx], fontsize=10)
-                fig.suptitle(prediction_time+dt.timedelta(seconds=i*600))
+                fig.suptitle(prediction_time+dt.timedelta(minutes=i*10))
 
             plt.tight_layout()
             writer.grab_frame()
@@ -115,7 +116,7 @@ if __name__ == "__main__":
             cbar.ax.tick_params(labelsize=10)
             # ax.legend(fontsize=10)
             ax.set_title(data_type[idx], fontsize=10)
-            fig.suptitle(prediction_time+dt.timedelta(seconds=i*600))
+            fig.suptitle(prediction_time+dt.timedelta(minutes=i*10))
 
         plt.tight_layout()
         fig.savefig(images, dpi=args.figure_dpi, bbox_inches='tight')

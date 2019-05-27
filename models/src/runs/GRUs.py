@@ -162,7 +162,7 @@ def train(model, optimizer, trainloader, testloader, args):
 
     if args.parallel_compute:
         model = torch.nn.DataParallel(model, device_ids=[0, 1])
-
+    breakpoint()
     for epoch in range(args.max_epochs):
         # turn on train mode
         model.train(True)

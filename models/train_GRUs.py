@@ -28,9 +28,6 @@ def main():
 
     # get the model
     model = get_model(args=args)
-
-    if args.parallel_compute:
-        model = torch.nn.DataParallel(model, device_ids=[0, 1])
     
     # get optimizer
     optimizer = get_optimizer( args=args, model=model)

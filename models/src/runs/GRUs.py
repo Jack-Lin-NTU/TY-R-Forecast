@@ -160,10 +160,13 @@ def train(model, optimizer, trainloader, testloader, args):
     # To create a pd.DataFrame to store training, validating loss, and learning rate.
     result_df = pd.DataFrame([], index=pd.Index(range(1, args.max_epochs+1), name='epoch'), columns=['train_loss', 'val_loss', 'lr'])
 
+    if args.parallel_compute:
+        net = torch.nn.DataParallel(model, device_ids=[0, 1])
+
     breakpoint()
     for epoch in range(args.max_epochs):
         # turn on train mode
-        model.train(True)
+        net.train(True)
 
         # store time
         time1 = time.time()
@@ -187,9 +190,9 @@ def train(model, optimizer, trainloader, testloader, args):
             if args.model.upper() == 'MYMODEL':
                 ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
                 radar_map = data['radar_map'].to(device=args.device, dtype=args.value_dtype)
-                outputs = model(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map)
+                outputs = net(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map)
             else:
-                outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
+                outputs = net(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
 
             optimizer.zero_grad()
             outputs = outputs.view(-1, outputs.shape[1]*outputs.shape[2]*outputs.shape[3])

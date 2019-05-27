@@ -176,7 +176,6 @@ def train(model, optimizer, trainloader, testloader, args):
     # To create a pd.DataFrame to store training, validating loss, and learning rate.
     result_df = pd.DataFrame([], index=pd.Index(range(1, args.max_epochs+1), name='epoch'), columns=['train_loss', 'val_loss', 'lr'])
 
-    breakpoint()
     for epoch in range(args.max_epochs):
         # turn on train mode
         model.train(True)
@@ -200,6 +199,7 @@ def train(model, optimizer, trainloader, testloader, args):
             inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
 
+            breakpoint()
             if args.model.upper() == 'MYMODEL':
                 ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
                 radar_map = data['radar_map'].to(device=args.device, dtype=args.value_dtype)

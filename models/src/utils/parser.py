@@ -34,10 +34,11 @@ def get_args():
     parser.add_argument('--ty-info-wrangled-data-folder', metavar='', type=str, default=make_path('01_wrangled_files', ty_info_folder),
                     help='The folder path of wrangled ty-info data (relative or absolute).')
 
-
     parser.add_argument('--result-folder', metavar='', type=str, default=make_path('04_results', working_folder),
                     help='The path of result folder.')
     parser.add_argument('--params-folder', metavar='', type=str, default=make_path('05_params', working_folder),
+                    help='The path of params folder.')
+    parser.add_argument('--infers-folder', metavar='', type=str, default=make_path('06_inferences', working_folder),
                     help='The path of params folder.')
 
     parser.add_argument('--ty-list', metavar='', type=str, default=make_path('ty_list.csv', working_folder),
@@ -156,7 +157,7 @@ def get_args():
     args.figure_dpi = 120
 
     args.RAD_level = [-5, 0, 10, 20, 30, 40, 50, 60, 70]
-    args.QPE_level = [-5, 0, 10, 20, 35, 50, 80, 120, 160, 200]
+    args.QPE_level = [-5, 0, 5, 10, 20, 35, 50, 80, 100, 200]
     args.QPF_level = [-5, 0, 10, 20, 35, 50, 80, 120, 160, 200]
 
     args.RAD_cmap = ['#FFFFFF','#FFD8D8','#FFB8B8','#FF9090','#FF6060','#FF2020','#CC0000','#A00000','#600000']

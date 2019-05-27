@@ -100,6 +100,7 @@ class TyDataset(Dataset):
             if idx > self.idx_list.loc[i, 'The ending idx']:
                 continue
             else:
+                # print('idx:',idx)
                 # determine some indexes
                 idx_tmp = idx - self.idx_list.loc[i, 'The starting idx']
                 # set typhoon's name
@@ -180,9 +181,11 @@ class TyDataset(Dataset):
                     file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
                     data_path = os.path.join(self.radar_wrangled_data_folder, 'QPE', year+'.'+ty_name+'.'+file_time+'.pkl')
                     target_data[j,:,:] = pd.read_pickle(data_path, compression=self.compression).loc[self.F_y[0]:self.F_y[1], self.F_x[0]:self.F_x[1]].to_numpy()
-
+                    # print(file_time)
+                # the start time of prediction 
+                pre_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp)), format='%Y%m%d%H%M')
                 # return the idx of sample
-                self.sample = {'inputs': input_data, 'targets': target_data, 'ty_infos': ty_infos, 'radar_map': radar_map}
+                self.sample = {'inputs': input_data, 'targets': target_data, 'ty_infos': ty_infos, 'radar_map': radar_map, 'time': pre_time}
                 
                 if self.transform:
                     self.sample = self.transform(self.sample)
@@ -196,7 +199,8 @@ class ToTensor(object):
         return {'inputs': torch.from_numpy(sample['inputs']),
                 'targets': torch.from_numpy(sample['targets']), 
                 'ty_infos': torch.from_numpy(sample['ty_infos']),
-                'radar_map': torch.from_numpy(sample['radar_map'])}
+                'radar_map': torch.from_numpy(sample['radar_map']),
+                'time': sample['time']}
 
 class Normalize(object):
     '''
@@ -264,4 +268,4 @@ class Normalize(object):
 
         # numpy data: x_tsteps X H X W
         # torch data: x_tsteps X H X W
-        return {'inputs': input_data, 'targets': target_data, 'ty_infos': ty_infos, 'radar_map': radar_map}
+        return {'inputs': input_data, 'targets': target_data, 'ty_infos': ty_infos, 'radar_map': radar_map, 'time': sample['time']}

@@ -35,9 +35,10 @@ def get_dataloader(args, train_num=None):
     testdataset = TyDataset(args=args, train=False, train_num=train_num, transform=transform)
 
     # dataloader
-    kwargs = {'num_workers': 4, 'pin_memory': True} if args.able_cuda else {}
-    trainloader = DataLoader(dataset=traindataset, batch_size=args.batch_size, shuffle=True, **kwargs)
-    testloader = DataLoader(dataset=testdataset, batch_size=args.batch_size, shuffle=False, **kwargs)
+    train_kwargs = {'num_workers': 4, 'pin_memory': True} if args.able_cuda else {}
+    test_kwargs = {'num_workers': 1, 'pin_memory': True} if args.able_cuda else {}
+    trainloader = DataLoader(dataset=traindataset, batch_size=args.batch_size, shuffle=True, **train_kwargs)
+    testloader = DataLoader(dataset=testdataset, batch_size=args.batch_size, shuffle=False, **test_kwargs)
     
     return trainloader, testloader
 
@@ -45,7 +46,7 @@ def get_dataloader(args, train_num=None):
 def get_model(args=None):
     if args.model.upper() == 'TRAJGRU':
         from src.operators.trajGRU import Multi_unit_Model as Model
-        print('Model: TRAJGRU')
+        print('Model:', args.model.upper())
         TRAJGRU = TRAJGRU_HYPERPARAMs(args=args)
         model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, gru_link_size=TRAJGRU.gru_link_size,
                 encoder_input_channel=TRAJGRU.encoder_input_channel, encoder_downsample_channels=TRAJGRU.encoder_downsample_channels,
@@ -63,7 +64,7 @@ def get_model(args=None):
 
     elif args.model.upper() == 'CONVGRU':
         from src.operators.convGRU import Multi_unit_Model as Model
-        print('Model: CONVGRU')
+        print('Model:', args.model.upper())
         CONVGRU = CONVGRU_HYPERPARAMs(args=args)
         model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames,
                 encoder_input_channel=CONVGRU.encoder_input_channel, encoder_downsample_channels=CONVGRU.encoder_downsample_channels,
@@ -81,6 +82,7 @@ def get_model(args=None):
     
     elif args.model.upper() == 'MYMODEL':
         from src.operators.mymodel import my_multi_GRU as Model
+        print('Model:', args.model.upper())
         MYMODEL = MYMODEL_HYPERPARAMs(args)
         model = Model(MYMODEL.input_frames, MYMODEL.target_frames, MYMODEL.TyCatcher_input, MYMODEL.TyCatcher_hidden, MYMODEL.TyCatcher_n_layers, 
                     MYMODEL.encoder_input, MYMODEL.encoder_downsample, MYMODEL.encoder_gru, MYMODEL.encoder_downsample_k, MYMODEL.encoder_downsample_s, 
@@ -255,7 +257,15 @@ def train(model, optimizer, trainloader, testloader, args):
             f_params.close()
 
     print('Training process has finished!')
-    
+
+def continue_train(model, optimizer, trainloader, testloader, epoch, args):
+    pass
+
+
+
+
+
+
 def test(model, testloader, args):
     '''
     Arguments: this function is about to test the given model on test data.

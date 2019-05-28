@@ -57,7 +57,7 @@ def get_model(args=None):
                 forecaster_gru_p=TRAJGRU.forecaster_gru_p, forecaster_n_cells=TRAJGRU.forecaster_n_cells, forecaster_output=TRAJGRU.forecaster_output_channels, 
                 forecaster_output_k=TRAJGRU.forecaster_output_k, forecaster_output_s=TRAJGRU.forecaster_output_s, 
                 forecaster_output_p=TRAJGRU.forecaster_output_p, forecaster_output_layers=TRAJGRU.forecaster_output_layers, 
-                batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
+                batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype, batch_size=args.batch_size)
         # if torch.cuda.device_count() > 1:
         #     # device_ids has a default : all
         #     model = torch.nn.DataParallel(model, device_ids=[0, 1]) 

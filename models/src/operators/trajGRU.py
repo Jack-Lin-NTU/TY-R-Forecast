@@ -10,7 +10,7 @@ class flow_warp(nn.Module):
     Arguments:
         The subcnn model and the M warp function 
     '''
-    def __init__(self, channel_input, channel_output, link_size, batch_norm=False, device=None, value_dtype=None):
+    def __init__(self, channel_input, channel_output, link_size, batch_norm=False, device=None, value_dtype=None, batch_size=None, imgsize=None):
         super().__init__()
         self.device = device
         self.value_dtype = value_dtype
@@ -35,21 +35,28 @@ class flow_warp(nn.Module):
         nn.init.zeros_(displacement_layers[2].bias)
         self.displacement_layers = nn.Sequential(*displacement_layers)
 
+        b = batch_size
+        h, w = imgsize
+        y_, x_ = torch.meshgrid(torch.arange(h), torch.arange(w))
+        y_, x_ = y_.expand(b,h,w).to(self.device, dtype=self.value_dtype), x_.expand(b,h,w).to(self.device, dtype=self.value_dtype)   
+        self.register_buffer('y_', y_)
+        self.register_buffer('x_', x_)
+        self.h = h
+        self.w = w
+        self.b = b
+
     def grid_sample(self, x, flow):
         '''
         Function for sampling pixels based on given grid data.
         '''
         input_ = x
-        b, _, h, w = input_.shape
 
         u, v = flow[:,0:self.link_size,:,:], flow[:,self.link_size:,:,:]
-        y_, x_ = torch.meshgrid(torch.arange(h), torch.arange(w))
-        y_, x_ = y_.expand(b,h,w).to(self.device, dtype=self.value_dtype), x_.expand(b,h,w).to(self.device, dtype=self.value_dtype)
-
+        
         samples = []
         for i in range(self.link_size):
-            new_x = (x_*2/w)-1 + u[:,i,:,:]
-            new_y = (y_*2/h)-1 + v[:,i,:,:]
+            new_x = (self.x_*2/self.w)-1 + u[:,i,:,:]
+            new_y = (self.y_*2/self.h)-1 + v[:,i,:,:]
             grids = torch.stack([new_x, new_y], dim=3)
             samples.append(F.grid_sample(input_, grids))
         return torch.cat(samples, dim=1)
@@ -73,7 +80,8 @@ class TrajGRUcell(nn.Module):
     Arguments: 
         This class is to generate a convolutional Traj_GRU cell.
     """
-    def __init__(self, channel_input, channel_output, link_size, kernel=1, stride=1, padding=1, batch_norm=False, device=None, value_dtype=None):
+    def __init__(self, channel_input, channel_output, link_size, kernel=1, stride=1, padding=1, batch_norm=False, device=None, value_dtype=None, 
+                batch_size=None, imgsize=None):
         super().__init__()
         self.device = device
         self.value_dtype = value_dtype
@@ -85,12 +93,15 @@ class TrajGRUcell(nn.Module):
         self.update_gate = CNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm)
         self.out_gate = CNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm, negative_slope=0.2)
 
-        self.flow_warp = flow_warp(channel_input, channel_output, link_size, batch_norm, device, value_dtype)
+        self.flow_warp = flow_warp(channel_input, channel_output, link_size, batch_norm, device, value_dtype, batch_size, imgsize)
 
         self.reset_gate_warp  = CNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
         self.update_gate_warp  = CNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
         self.out_gate_warp = CNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, negative_slope=0.2)
-
+        
+        state_size = (batch_size, self.channel_output, imgsize[0], imgsize[1])
+        init_state = torch.zeros(state_size)    
+        self.register_buffer('init_state', init_state)
 
     def forward(self, x, prev_state=None):
         input_ = x
@@ -100,9 +111,9 @@ class TrajGRUcell(nn.Module):
         H, W = input_.data.shape[2:]
         
         # generate empty prev_state, if None is provided
+        # breakpoint()
         if prev_state is None:
-            state_size = (batch_size, self.channel_output, H, W)
-            prev_state = torch.zeros(state_size).to(device=self.device, dtype=self.value_dtype)
+            prev_state = self.init_state
         
         M = self.flow_warp(x=input_, prev_state=prev_state)
         
@@ -119,7 +130,8 @@ class DeTrajGRUcell(nn.Module):
     Arguments: 
         This class is to generate a deconvolutional Traj_GRU cell.
     """
-    def __init__(self, channel_input, channel_output, link_size, kernel=1, stride=1, padding=1, batch_norm=False, device=None, value_dtype=None):
+    def __init__(self, channel_input, channel_output, link_size, kernel=1, stride=1, padding=1, batch_norm=False, device=None, value_dtype=None, 
+                 batch_size=None, imgsize=None):
         super().__init__()
         self.device = device
         self.value_dtype = value_dtype
@@ -132,11 +144,15 @@ class DeTrajGRUcell(nn.Module):
             self.update_gate = DeCNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm)
             self.out_gate = DeCNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm, negative_slope=0.2)
 
-        self.flow_warp = flow_warp(channel_input, channel_output, link_size, batch_norm, device, value_dtype)
+        self.flow_warp = flow_warp(channel_input, channel_output, link_size, batch_norm, device, value_dtype, batch_size, imgsize)
         
         self.reset_gate_warp  = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, zeros_weight=True)
         self.update_gate_warp  = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, zeros_weight=True)
         self.out_gate_warp = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, zeros_weight=True)
+
+        state_size = (batch_size, self.channel_output, imgsize[0], imgsize[1])
+        init_state = torch.zeros(state_size)    
+        self.register_buffer('init_state', init_state)
 
     def forward(self, x=None, prev_state=None):
         input_ = x
@@ -145,9 +161,7 @@ class DeTrajGRUcell(nn.Module):
             batch_size = prev_state.data.shape[0]
             H, W = prev_state.data.shape[2:]
         else:
-            # generate empty prev_state, if None is provided
-            state_size = (batch_size, self.channel_output, H, W)
-            prev_state = torch.zeros(state_size).to(device=self.device, dtype=self.value_dtype)
+            prev_state = self.init_state
 
         M = self.flow_warp(x=input_, prev_state=prev_state)
         
@@ -168,7 +182,8 @@ class DeTrajGRUcell(nn.Module):
 
 class Encoder(nn.Module):
     def __init__(self, channel_input, channel_downsample, channel_gru, downsample_k, downsample_s, downsample_p,
-                 gru_link_size, gru_k, gru_s, gru_p, n_cells, batch_norm=False, device=None, value_dtype=None):
+                 gru_link_size, gru_k, gru_s, gru_p, n_cells, batch_norm=False, device=None, value_dtype=None,
+                 batch_size=None):
         '''
         Argumensts:
         Generates a multi-layer convolutional GRU, which is called encoder.
@@ -236,6 +251,7 @@ class Encoder(nn.Module):
 
         ## set encoder
         cells = []
+        imgsize = [400,400]
         for i in range(n_cells):
             ## Downsample cell
             if i == 0:
@@ -249,9 +265,12 @@ class Encoder(nn.Module):
             setattr(self, name, cell)
             cells.append(getattr(self, name))
             
+            imgsize[0] = int((imgsize[0]-downsample_k[i]+2*downsample_p[i])/downsample_s[i]) + 1
+            imgsize[1] = imgsize[0]
             ## gru cell
             cell = TrajGRUcell(channel_input=channel_downsample[i], channel_output=channel_gru[i], link_size=gru_link_size[i],
-                               kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i], device=device, value_dtype=value_dtype)
+                               kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i], device=device, value_dtype=value_dtype, 
+                               batch_size=batch_size, imgsize=imgsize)
             name = 'TrajGRUcell_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
@@ -283,7 +302,7 @@ class Encoder(nn.Module):
 class Forecaster(nn.Module):
     def __init__(self, channel_input, channel_upsample, channel_gru, upsample_k, upsample_p, upsample_s,
                  gru_link_size, gru_k, gru_s, gru_p, n_cells, channel_output=1, output_k=1, output_s = 1, 
-                 output_p=0, n_output_layers=1, batch_norm=False, device=None, value_dtype=None):
+                 output_p=0, n_output_layers=1, batch_norm=False, device=None, value_dtype=None, batch_size=None):
         '''
         Argumensts:
         Generates a multi-layer deconvolutional GRU, which is called forecaster.
@@ -377,14 +396,17 @@ class Forecaster(nn.Module):
 
         ## set forecaster
         cells = []
+        imgsize = [14,14]
         for i in range(n_cells):
             # deTraj gru
             if i == 0:
                 cell = DeTrajGRUcell(channel_input=channel_input, channel_output=channel_gru[i], link_size=gru_link_size[i],
-                                     kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i], device=device, value_dtype=value_dtype)
+                                     kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i], device=device, value_dtype=value_dtype,
+                                     batch_size=batch_size, imgsize=imgsize)
             else:
                 cell = DeTrajGRUcell(channel_input=channel_upsample[i-1], channel_output=channel_gru[i], link_size=gru_link_size[i],
-                                     kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i], device=device, value_dtype=value_dtype)
+                                     kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i], device=device, value_dtype=value_dtype,
+                                     batch_size=batch_size, imgsize=imgsize)
 
             name = 'DeTrajGRUcell_' + str(i).zfill(2)
             setattr(self, name, cell)
@@ -394,6 +416,10 @@ class Forecaster(nn.Module):
             name = 'Upsample_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
+
+            imgsize[0] = (imgsize[0]-1)*upsample_s[i] + upsample_k[i] - 2*upsample_p[i]
+            imgsize[1] = imgsize[0]
+
         # output layer
         for i in range(self.n_output_layers):
             if i == 0:
@@ -464,7 +490,7 @@ class Multi_unit_Model(nn.Module):
                 forecaster_upsample_k, forecaster_upsample_s, forecaster_upsample_p,
                 forecaster_gru_k, forecaster_gru_s, forecaster_gru_p, forecaster_n_cells,
                 forecaster_output=1, forecaster_output_k=1, forecaster_output_s=1, forecaster_output_p=0, forecaster_output_layers=1,
-                batch_norm=False, device=None, value_dtype=None):
+                batch_norm=False, device=None, value_dtype=None, batch_size=None):
 
         super().__init__()
         self.n_encoders = n_encoders
@@ -477,7 +503,8 @@ class Multi_unit_Model(nn.Module):
             model = Encoder(channel_input=encoder_input_channel, channel_downsample=encoder_downsample_channels,
                             channel_gru=encoder_gru_channels, downsample_k=encoder_downsample_k, downsample_s=encoder_downsample_s, 
                             downsample_p=encoder_downsample_p, gru_link_size=gru_link_size, gru_k=encoder_gru_k, gru_s=encoder_gru_s, 
-                            gru_p=encoder_gru_p, n_cells=encoder_n_cells, batch_norm=batch_norm, device=device, value_dtype=value_dtype)
+                            gru_p=encoder_gru_p, n_cells=encoder_n_cells, batch_norm=batch_norm, device=device, value_dtype=value_dtype,
+                            batch_size=batch_size)
             name = 'Encoder_' + str(i).zfill(2)
             setattr(self, name, model)
             models.append(getattr(self, name))
@@ -490,7 +517,7 @@ class Multi_unit_Model(nn.Module):
                                gru_s=forecaster_gru_s, gru_p=forecaster_gru_p, n_cells=forecaster_n_cells,
                                channel_output=forecaster_output, output_k=forecaster_output_k, output_s=forecaster_output_s,
                                output_p=forecaster_output_p, n_output_layers=forecaster_output_layers, batch_norm=batch_norm, 
-                               device=device, value_dtype=value_dtype)
+                               device=device, value_dtype=value_dtype, batch_size=batch_size)
             name = 'Forecaster_' + str(i).zfill(2)
             setattr(self, name, model)
             models.append(getattr(self, name))

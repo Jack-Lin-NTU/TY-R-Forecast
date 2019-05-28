@@ -39,7 +39,6 @@ def get_dataloader(args, train_num=None):
     
     return trainloader, testloader
 
-
 def get_model(args=None):
     if args.model.upper() == 'TRAJGRU':
         from src.operators.trajGRU import Multi_unit_Model as Model
@@ -58,9 +57,7 @@ def get_model(args=None):
                 forecaster_output_k=TRAJGRU.forecaster_output_k, forecaster_output_s=TRAJGRU.forecaster_output_s, 
                 forecaster_output_p=TRAJGRU.forecaster_output_p, forecaster_output_layers=TRAJGRU.forecaster_output_layers, 
                 batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype, batch_size=args.batch_size)
-        # if torch.cuda.device_count() > 1:
-        #     # device_ids has a default : all
-        #     model = torch.nn.DataParallel(model, device_ids=[0, 1]) 
+
         model.to(args.device, dtype=args.value_dtype)
         # model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
         # model = model.to(args.device, dtype=args.value_dtype)
@@ -161,7 +158,6 @@ def data_parallel(module, inputs, device_ids, output_device=None):
     outputs = nn.parallel.parallel_apply(replicas, inputs)
     return nn.parallel.gather(outputs, output_device)
 
-
 def train(model, optimizer, trainloader, testloader, args):
     '''
     This function is to train the model.
@@ -205,20 +201,18 @@ def train(model, optimizer, trainloader, testloader, args):
         # initilaize loss
         train_loss = 0.
         running_loss = 0.
-
+        # breakpoint()
         for idx, data in enumerate(trainloader, 0):
             inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
-
+            if idx == total_batches:
+                print(inputs.shape)
             if args.model.upper() == 'MYMODEL':
                 ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
                 radar_map = data['radar_map'].to(device=args.device, dtype=args.value_dtype)
                 outputs = model(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map)
             else:
-                if args.parallel_compute:
-                    outputs = data_parallel(model, inputs, device_ids=[0, 1])
-                else:
-                    outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
+                outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
 
             optimizer.zero_grad()
             outputs = outputs.view(-1, outputs.shape[1]*outputs.shape[2]*outputs.shape[3])

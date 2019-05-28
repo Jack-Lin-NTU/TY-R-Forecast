@@ -22,10 +22,9 @@ class flow_warp(nn.Module):
         displacement_layers.append(nn.Conv2d(channel_input+channel_output, 32, 5, 1, 2))
         displacement_layers.append(nn.LeakyReLU(negative_slope=0.2))
         displacement_layers.append(nn.Conv2d(32, link_size*2, 5, 1, 2))
-        # displacement_layers.append(nn.LeakyReLU(negative_slope=0.2))
+        displacement_layers.append(nn.LeakyReLU(negative_slope=0.2))
 
         # initialize the weightings in each layers.
-        # nn.init.orthogonal_(displacement_layers[0].weight)
 
         # nn.init.kaiming_normal_(displacement_layers[0].weight, a=0.2, mode='fan_in', nonlinearity='leaky_relu')
         # nn.init.kaiming_normal_(displacement_layers[2].weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
@@ -35,28 +34,24 @@ class flow_warp(nn.Module):
         nn.init.zeros_(displacement_layers[2].bias)
         self.displacement_layers = nn.Sequential(*displacement_layers)
 
-        b = batch_size
         h, w = imgsize
-        y_, x_ = torch.meshgrid(torch.arange(h), torch.arange(w))
-        y_, x_ = y_.expand(b,h,w).to(self.device, dtype=self.value_dtype), x_.expand(b,h,w).to(self.device, dtype=self.value_dtype)   
+        y_, x_ = torch.meshgrid(torch.arange(h, dtype=value_dtype), torch.arange(w, dtype=value_dtype))
+        y_, x_ = (y_*2/h-1), (x_*2/w-1)
         self.register_buffer('y_', y_)
         self.register_buffer('x_', x_)
-        self.h = h
-        self.w = w
-        self.b = b
 
     def grid_sample(self, x, flow):
         '''
         Function for sampling pixels based on given grid data.
         '''
         input_ = x
-
-        u, v = flow[:,0:self.link_size,:,:], flow[:,self.link_size:,:,:]
+        b = flow.shape[0]
         
+        u, v = flow[:,0:self.link_size,:,:], flow[:,self.link_size:,:,:]
         samples = []
         for i in range(self.link_size):
-            new_x = (self.x_*2/self.w)-1 + u[:,i,:,:]
-            new_y = (self.y_*2/self.h)-1 + v[:,i,:,:]
+            new_x = self.x_.expand(b,-1,-1) + u[:,i,:,:]
+            new_y = self.y_.expand(b,-1,-1) + v[:,i,:,:]
             grids = torch.stack([new_x, new_y], dim=3)
             samples.append(F.grid_sample(input_, grids))
         return torch.cat(samples, dim=1)
@@ -69,7 +64,7 @@ class flow_warp(nn.Module):
             stacked_inputs = prev_state
         else:
             stacked_inputs = torch.cat([input_, prev_state], dim=1)
-
+        
         output = self.displacement_layers(stacked_inputs)
         output = self.grid_sample(x=prev_state, flow=output)
 
@@ -99,22 +94,20 @@ class TrajGRUcell(nn.Module):
         self.update_gate_warp  = CNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
         self.out_gate_warp = CNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, negative_slope=0.2)
         
-        state_size = (batch_size, self.channel_output, imgsize[0], imgsize[1])
+        state_size = (channel_output, imgsize[0], imgsize[1])
         init_state = torch.zeros(state_size)    
         self.register_buffer('init_state', init_state)
+        
 
     def forward(self, x, prev_state=None):
         input_ = x
-
-        # get batch and spatial sizes
-        batch_size = input_.data.shape[0]
-        H, W = input_.data.shape[2:]
         
         # generate empty prev_state, if None is provided
         # breakpoint()
         if prev_state is None:
-            prev_state = self.init_state
-        
+            b = input_.shape[0]
+            prev_state = self.init_state.expand(b,-1,-1,-1)
+
         M = self.flow_warp(x=input_, prev_state=prev_state)
         
         # data size is [batch, channel, height, width]
@@ -150,7 +143,7 @@ class DeTrajGRUcell(nn.Module):
         self.update_gate_warp  = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, zeros_weight=True)
         self.out_gate_warp = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, zeros_weight=True)
 
-        state_size = (batch_size, self.channel_output, imgsize[0], imgsize[1])
+        state_size = (1, self.channel_output, imgsize[0], imgsize[1])
         init_state = torch.zeros(state_size)    
         self.register_buffer('init_state', init_state)
 
@@ -161,7 +154,8 @@ class DeTrajGRUcell(nn.Module):
             batch_size = prev_state.data.shape[0]
             H, W = prev_state.data.shape[2:]
         else:
-            prev_state = self.init_state
+            b = input_.shape
+            prev_state = self.init_state.expand(b,-1,-1,-1)
 
         M = self.flow_warp(x=input_, prev_state=prev_state)
         

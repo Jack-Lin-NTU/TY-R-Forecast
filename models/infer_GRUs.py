@@ -17,6 +17,7 @@ import torch.optim as optim
 # import our model and dataloader
 from src.utils.parser import get_args
 from src.utils.utils import createfolder, remove_file, Adam16
+from src.utils.loss import Criterion
 from src.runs.GRUs import get_dataloader, get_model, get_optimizer, test
 
 if __name__ == "__main__":
@@ -44,21 +45,28 @@ if __name__ == "__main__":
     trainloader, testloader = get_dataloader(args=args)
 
     model.eval()
+    lev = [0.5, 2, 5, 10, 30]
+    criterion = pd.DataFrame(np.zeros((2,len(lev))),index=['CSI', 'HSS'], columns=lev)
 
-    for idx, data in enumerate(trainloader, 0):
-        if idx == 200:
-            inputs, labels = data['inputs'].to(args.device, dtype=args.value_dtype), data['targets'].to(args.device, dtype=args.value_dtype)
-            prediction_time = data['time'][0]
-            if args.model.upper() == 'MYMODEL':
-                ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
-                radar_map = data['radar_map'].to(device=args.device, dtype=args.value_dtype)
-                outputs = model(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map)
-            else:
-                outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
-            break
-    outputs = outputs[0,:,:,:].to('cpu').detach().numpy()
-    labels = labels[0,:,:,:].to('cpu').detach().numpy()
-    # breakpoint()
+    for idx, data in enumerate(testloader, 0):
+        inputs, labels = data['inputs'].to(args.device, dtype=args.value_dtype), data['targets'].to(args.device, dtype=args.value_dtype)
+        prediction_time = data['time'][0]
+
+        if args.model.upper() == 'MYMODEL':
+            ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
+            radar_map = data['radar_map'].to(device=args.device, dtype=args.value_dtype)
+            outputs = model(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map)
+        else:
+            outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
+
+        outputs = outputs.detach().to('cpu').numpy()
+        labels = labels.detach().to('cpu').numpy()
+        c = Criterion(outputs, labels)
+        for threshold in lev:
+            criterion[threshold] = criterion[threshold] + [c.csi(threshold)/len(trainloader), c.hss(threshold)/len(trainloader)]
+    criterion.to_csv('/home/jack/ssd/01_ty_research/criterion_{:s}.csv'.format(args.model.upper()))
+    breakpoint()
+
 
     fig = plt.figure(figsize=(16,8), dpi=args.figure_dpi)
     X, Y = np.meshgrid(np.linspace(args.I_x[0],args.I_x[1],args.I_shape[0]),np.linspace(args.I_y[0],args.I_y[1],args.I_shape[1]))    
@@ -74,7 +82,6 @@ if __name__ == "__main__":
     # breakpoint()
     video = os.path.join('/home/jack/ssd/Onedrive/01_IIS', args.model+'.mp4')
 
-    breakpoint()
     prediction_time = dt.datetime.strptime(prediction_time,'%Y%m%d%H%M')
     with writer.saving(fig, video, 200):
         for i in range(times):

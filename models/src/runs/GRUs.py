@@ -15,6 +15,7 @@ from torchvision import transforms, utils
 
 # import our model and dataloader
 from src.utils.utils import createfolder, remove_file, Adam16
+from src.utils.loss import Criterion
 from src.utils.GRUs_hparams import TRAJGRU_HYPERPARAMs, CONVGRU_HYPERPARAMs, MYMODEL_HYPERPARAMs
 
 def get_dataloader(args, train_num=None):
@@ -205,8 +206,7 @@ def train(model, optimizer, trainloader, testloader, args):
         for idx, data in enumerate(trainloader, 0):
             inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
-            if idx == total_batches:
-                print(inputs.shape)
+
             if args.model.upper() == 'MYMODEL':
                 ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
                 radar_map = data['radar_map'].to(device=args.device, dtype=args.value_dtype)
@@ -281,9 +281,6 @@ def train(model, optimizer, trainloader, testloader, args):
 
 def continue_train(model, optimizer, trainloader, testloader, epoch, args):
     pass
-
-
-
 
 
 

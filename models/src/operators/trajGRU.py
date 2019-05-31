@@ -22,15 +22,13 @@ class flow_warp(nn.Module):
         displacement_layers.append(nn.Conv2d(channel_input+channel_output, 32, 5, 1, 2))
         displacement_layers.append(nn.LeakyReLU(negative_slope=0.2))
         displacement_layers.append(nn.Conv2d(32, link_size*2, 5, 1, 2))
-        displacement_layers.append(nn.LeakyReLU(negative_slope=0.2))
 
         # initialize the weightings in each layers.
 
         # nn.init.kaiming_normal_(displacement_layers[0].weight, a=0.2, mode='fan_in', nonlinearity='leaky_relu')
-        # nn.init.kaiming_normal_(displacement_layers[2].weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
         nn.init.zeros_(displacement_layers[0].weight)
-        nn.init.zeros_(displacement_layers[2].weight)
         nn.init.zeros_(displacement_layers[0].bias)
+        nn.init.zeros_(displacement_layers[2].weight)
         nn.init.zeros_(displacement_layers[2].bias)
         self.displacement_layers = nn.Sequential(*displacement_layers)
 
@@ -53,7 +51,7 @@ class flow_warp(nn.Module):
             new_x = self.x_.expand(b,-1,-1) + u[:,i,:,:]
             new_y = self.y_.expand(b,-1,-1) + v[:,i,:,:]
             grids = torch.stack([new_x, new_y], dim=3)
-            samples.append(F.grid_sample(input_, grids))
+            samples.append(F.grid_sample(input_, grids, padding_mode='border'))
         return torch.cat(samples, dim=1)
 
     def forward(self, x=None, prev_state=None):
@@ -67,7 +65,6 @@ class flow_warp(nn.Module):
         
         output = self.displacement_layers(stacked_inputs)
         output = self.grid_sample(x=prev_state, flow=output)
-
         return output
 
 class TrajGRUcell(nn.Module):

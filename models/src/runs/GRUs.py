@@ -110,13 +110,13 @@ def get_optimizer(args, model):
         optimizer = Adam16(model.parameters(), lr=args.lr, weight_decay=args.weight_decay, device=args.device)
     else:
         optimizer = getattr(optim, args.optimizer)
-        if args.optimizer == 'Adam16':
-            optimizer = optimizer(model.parameters(), lr=args.lr, eps=1e-07, weight_decay=args.weight_decay)
+        if args.optimizer == 'Adam':
+            optimizer = optimizer(model.parameters(), lr=args.lr, betas=(0.5, 0.5), eps=1e-07, weight_decay=args.weight_decay)
         elif args.optimizer == 'SGD':
             optimizer = optimizer(model.parameters(), lr=args.lr, momentum=0.6, weight_decay=args.weight_decay)
         else:
             optimizer = optimizer(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-
+    print(optimizer)
     return optimizer
 
 
@@ -197,13 +197,14 @@ def train(model, optimizer, trainloader, testloader, args):
 
         # Save the learning rate per epoch
         result_df.iloc[epoch, 2] = optimizer.param_groups[0]['lr']
-        logger.debug('lr: {:.1e}'.format(optimizer.param_groups[0]['lr']))
+        logger.debug('lr: {:f}'.format(optimizer.param_groups[0]['lr']))
         
         # initilaize loss
         train_loss = 0.
         running_loss = 0.
         # breakpoint()
         for idx, data in enumerate(trainloader, 0):
+            
             inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
 
@@ -214,6 +215,7 @@ def train(model, optimizer, trainloader, testloader, args):
             else:
                 outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
 
+            # print('Batch {:03d}: {:.4f}'.format(idx, outputs.max().item()))
             optimizer.zero_grad()
             outputs = outputs.view(-1, outputs.shape[1]*outputs.shape[2]*outputs.shape[3])
             labels = labels.view(-1, labels.shape[1]*labels.shape[2]*labels.shape[3])

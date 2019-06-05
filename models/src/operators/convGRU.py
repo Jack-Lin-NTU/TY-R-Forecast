@@ -9,24 +9,27 @@ class ConvGRUcell(nn.Module):
     '''
     Generate a convolutional GRU cell
     '''
-    def __init__(self, channel_input, channel_output, kernel, stride, padding, batch_norm=False, device=None, value_dtype=None):
+    def __init__(self, channel_input, channel_output, kernel, stride, padding, batch_norm=False):
         super().__init__()
-        self.device = device
-        self.value_dtype = value_dtype
         self.channel_output = channel_output
         self.reset_gate = CNN2D_cell(channel_input+channel_output, channel_output, kernel, stride, padding, batch_norm)
         self.update_gate = CNN2D_cell(channel_input+channel_output, channel_output, kernel, stride, padding, batch_norm)
         self.out_gate = CNN2D_cell(channel_input+channel_output, channel_output, kernel, stride, padding, batch_norm, negative_slope=0.2)
+
     
     def forward(self, x, prev_state=None):
         input_ = x
         batch_size = input_.data.shape[0]
         spatial_size = input_.data.shape[2:]
 
+        # get device and dtype
+        device = self.reset_gate.layer[0].weight.device
+        dtype = self.reset_gate.layer[0].weight.dtype
+
         # generate empty prev_state, if None is provided
         if prev_state is None:
             state_size = [batch_size, self.channel_output] + list(spatial_size)
-            prev_state = torch.zeros(state_size).to(device=self.device, dtype=self.value_dtype)
+            prev_state = torch.zeros(state_size).to(device=device, dtype=dtype)
 
         # data size is [batch, channel, height, width]
         stacked_inputs = torch.cat([input_, prev_state], dim=1)
@@ -140,7 +143,7 @@ class Encoder(nn.Module):
             setattr(self, name, cell)
             cells.append(getattr(self, name))
 
-            cell = ConvGRUcell(channel_downsample[i], channel_gru[i], gru_k[i], gru_s[i], gru_p[i], batch_norm, device, value_dtype)
+            cell = ConvGRUcell(channel_downsample[i], channel_gru[i], gru_k[i], gru_s[i], gru_p[i], batch_norm)
             name = 'ConvGRUcell_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
@@ -426,11 +429,3 @@ class Single_unit_Model(nn.Module):
         forecast = torch.cat(forecast, dim=1)
 
         return forecast
-
-    # def modify_value_dtype_(self, value_dtype=None):
-    #     self.encoder.ConvGRUcell_00.value_dtype = value_dtype
-    #     self.encoder.ConvGRUcell_01.value_dtype = value_dtype
-    #     self.encoder.ConvGRUcell_02.value_dtype = value_dtype
-    #     self.forecaster.DeConvGRUcell_00.value_dtype = value_dtype
-    #     self.forecaster.DeConvGRUcell_01.value_dtype = value_dtype
-    #     self.forecaster.DeConvGRUcell_02.value_dtype = value_dtype

@@ -10,10 +10,8 @@ class flow_warp(nn.Module):
     Arguments:
         The subcnn model and the M warp function 
     '''
-    def __init__(self, channel_input, channel_output, link_size, batch_norm=False, device=None, value_dtype=None, batch_size=None, imgsize=None):
+    def __init__(self, channel_input, channel_output, link_size, batch_norm=False):
         super().__init__()
-        self.device = device
-        self.value_dtype = value_dtype
         self.channel_input = channel_input
         self.channel_output = channel_output
         self.link_size = link_size
@@ -32,24 +30,25 @@ class flow_warp(nn.Module):
         nn.init.zeros_(displacement_layers[2].bias)
         self.displacement_layers = nn.Sequential(*displacement_layers)
 
-        h, w = imgsize
-        y_, x_ = torch.meshgrid(torch.arange(h, dtype=value_dtype), torch.arange(w, dtype=value_dtype))
-        y_, x_ = (y_*2/h-1), (x_*2/w-1)
-        self.register_buffer('y_', y_)
-        self.register_buffer('x_', x_)
 
     def grid_sample(self, x, flow):
         '''
         Function for sampling pixels based on given grid data.
         '''
-        input_ = x
-        b = flow.shape[0]
+        # get device and dtype
+        device = self.displacement_layers[0].weight.device
+        dtype = self.displacement_layers[0].weight.dtype
         
+        input_ = x
+        b, _, h, w = flow.shape
+        y_, x_ = torch.meshgrid(torch.arange(h, device=device, dtype=dtype), torch.arange(w, device=device,dtype=dtype))
+        y_, x_ = (y_*2/h-1).expand(b,-1,-1), (x_*2/w-1).expand(b,-1,-1)
+
         u, v = flow[:,0:self.link_size,:,:], flow[:,self.link_size:,:,:]
         samples = []
         for i in range(self.link_size):
-            new_x = self.x_.expand(b,-1,-1) + u[:,i,:,:]
-            new_y = self.y_.expand(b,-1,-1) + v[:,i,:,:]
+            new_x = x_ + u[:,i,:,:]
+            new_y = y_ + v[:,i,:,:]
             grids = torch.stack([new_x, new_y], dim=3)
             samples.append(F.grid_sample(input_, grids, padding_mode='border'))
         return torch.cat(samples, dim=1)
@@ -72,11 +71,9 @@ class TrajGRUcell(nn.Module):
     Arguments: 
         This class is to generate a convolutional Traj_GRU cell.
     """
-    def __init__(self, channel_input, channel_output, link_size, kernel=1, stride=1, padding=1, batch_norm=False, device=None, value_dtype=None, 
-                batch_size=None, imgsize=None):
+    def __init__(self, channel_input, channel_output, link_size, kernel=1, stride=1, padding=1, batch_norm=False):
         super().__init__()
-        self.device = device
-        self.value_dtype = value_dtype
+
         self.channel_input = channel_input
         self.channel_output = channel_output
         self.link_size = link_size
@@ -85,25 +82,26 @@ class TrajGRUcell(nn.Module):
         self.update_gate = CNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm)
         self.out_gate = CNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm, negative_slope=0.2)
 
-        self.flow_warp = flow_warp(channel_input, channel_output, link_size, batch_norm, device, value_dtype, batch_size, imgsize)
+        self.flow_warp = flow_warp(channel_input, channel_output, link_size, batch_norm)
 
         self.reset_gate_warp  = CNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
         self.update_gate_warp  = CNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
         self.out_gate_warp = CNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, negative_slope=0.2)
-        
-        state_size = (channel_output, imgsize[0], imgsize[1])
-        init_state = torch.zeros(state_size)    
-        self.register_buffer('init_state', init_state)
-        
-
+    
     def forward(self, x, prev_state=None):
         input_ = x
-        
+        # get batch and spatial sizes
+        batch_size = input_.data.shape[0]
+        spatial_size = input_.data.shape[2:]
+
+        # get device and dtype
+        device = self.reset_gate.layer[0].weight.device
+        dtype = self.reset_gate.layer[0].weight.dtype
+
         # generate empty prev_state, if None is provided
-        # breakpoint()
         if prev_state is None:
-            b = input_.shape[0]
-            prev_state = self.init_state.expand(b,-1,-1,-1)
+            state_size = [batch_size, self.channel_output] + list(spatial_size)
+            prev_state = torch.zeros(state_size).to(device=device, dtype=dtype)
 
         M = self.flow_warp(x=input_, prev_state=prev_state)
         
@@ -120,11 +118,9 @@ class DeTrajGRUcell(nn.Module):
     Arguments: 
         This class is to generate a deconvolutional Traj_GRU cell.
     """
-    def __init__(self, channel_input, channel_output, link_size, kernel=1, stride=1, padding=1, batch_norm=False, device=None, value_dtype=None, 
-                 batch_size=None, imgsize=None):
+    def __init__(self, channel_input, channel_output, link_size, kernel=1, stride=1, padding=1, batch_norm=False):
         super().__init__()
-        self.device = device
-        self.value_dtype = value_dtype
+
         self.channel_input = channel_input
         self.channel_output = channel_output
         self.link_size = link_size
@@ -134,25 +130,14 @@ class DeTrajGRUcell(nn.Module):
             self.update_gate = DeCNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm)
             self.out_gate = DeCNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm, negative_slope=0.2)
 
-        self.flow_warp = flow_warp(channel_input, channel_output, link_size, batch_norm, device, value_dtype, batch_size, imgsize)
+        self.flow_warp = flow_warp(channel_input, channel_output, link_size, batch_norm)
         
         self.reset_gate_warp  = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, zeros_weight=True)
         self.update_gate_warp  = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, zeros_weight=True)
         self.out_gate_warp = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, zeros_weight=True)
 
-        state_size = (1, self.channel_output, imgsize[0], imgsize[1])
-        init_state = torch.zeros(state_size)    
-        self.register_buffer('init_state', init_state)
-
     def forward(self, x=None, prev_state=None):
         input_ = x
-        # get batch and spatial sizes
-        if prev_state is not None:
-            batch_size = prev_state.data.shape[0]
-            H, W = prev_state.data.shape[2:]
-        else:
-            b = input_.shape
-            prev_state = self.init_state.expand(b,-1,-1,-1)
 
         M = self.flow_warp(x=input_, prev_state=prev_state)
         
@@ -260,8 +245,7 @@ class Encoder(nn.Module):
             imgsize[1] = imgsize[0]
             ## gru cell
             cell = TrajGRUcell(channel_input=channel_downsample[i], channel_output=channel_gru[i], link_size=gru_link_size[i],
-                               kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i], device=device, value_dtype=value_dtype, 
-                               batch_size=batch_size, imgsize=imgsize)
+                               kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i])
             name = 'TrajGRUcell_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
@@ -392,12 +376,10 @@ class Forecaster(nn.Module):
             # deTraj gru
             if i == 0:
                 cell = DeTrajGRUcell(channel_input=channel_input, channel_output=channel_gru[i], link_size=gru_link_size[i],
-                                     kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i], device=device, value_dtype=value_dtype,
-                                     batch_size=batch_size, imgsize=imgsize)
+                                     kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i])
             else:
                 cell = DeTrajGRUcell(channel_input=channel_upsample[i-1], channel_output=channel_gru[i], link_size=gru_link_size[i],
-                                     kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i], device=device, value_dtype=value_dtype,
-                                     batch_size=batch_size, imgsize=imgsize)
+                                     kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i])
 
             name = 'DeTrajGRUcell_' + str(i).zfill(2)
             setattr(self, name, cell)

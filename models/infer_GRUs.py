@@ -17,7 +17,7 @@ import torch.optim as optim
 # import our model and dataloader
 from src.utils.parser import get_args
 from src.utils.utils import createfolder, remove_file, Adam16
-from src.utils.loss import Criterion
+from src.utils.loss import Criterion, MSE
 from src.runs.GRUs import get_dataloader, get_model, get_optimizer, test
 
 if __name__ == "__main__":
@@ -59,13 +59,13 @@ if __name__ == "__main__":
         else:
             outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
 
+        breakpoint()
         outputs = outputs.detach().to('cpu').numpy()
         labels = labels.detach().to('cpu').numpy()
         c = Criterion(outputs, labels)
         for threshold in lev:
             criterion[threshold] = criterion[threshold] + [c.csi(threshold)/len(trainloader), c.hss(threshold)/len(trainloader)]
     criterion.to_csv('/home/jack/ssd/01_ty_research/criterion_{:s}.csv'.format(args.model.upper()))
-    breakpoint()
 
 
     fig = plt.figure(figsize=(16,8), dpi=args.figure_dpi)
@@ -128,3 +128,6 @@ if __name__ == "__main__":
         plt.tight_layout()
         fig.savefig(images, dpi=args.figure_dpi, bbox_inches='tight')
         fig.clf()
+
+
+    

@@ -103,7 +103,6 @@ def get_model(args=None):
     
     return model
 
-
 def get_optimizer(args, model):
     # set optimizer
     if args.optimizer == 'Adam16':
@@ -111,7 +110,7 @@ def get_optimizer(args, model):
     else:
         optimizer = getattr(optim, args.optimizer)
         if args.optimizer == 'Adam':
-            optimizer = optimizer(model.parameters(), lr=args.lr, betas=(0.5, 0.5), eps=1e-07, weight_decay=args.weight_decay)
+            optimizer = optimizer(model.parameters(), lr=args.lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
         elif args.optimizer == 'SGD':
             optimizer = optimizer(model.parameters(), lr=args.lr, momentum=0.6, weight_decay=args.weight_decay)
         else:

@@ -16,8 +16,8 @@ class CNN2D_cell(nn.Module):
         nn.init.kaiming_normal_(layer_sublist[0].weight, a=negative_slope, mode='fan_in', nonlinearity='leaky_relu')
         # nn.init.constant_(layer_sublist[0].weight, 0.1)
         nn.init.zeros_(layer_sublist[0].bias)
-        
         self.layer = nn.Sequential(*layer_sublist)
+        
     def forward(self, x):
         out = self.layer(x)
         return out

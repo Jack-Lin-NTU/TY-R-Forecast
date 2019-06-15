@@ -30,7 +30,6 @@ class flow_warp(nn.Module):
         nn.init.zeros_(displacement_layers[2].bias)
         self.displacement_layers = nn.Sequential(*displacement_layers)
 
-
     def grid_sample(self, x, flow):
         '''
         Function for sampling pixels based on given grid data.

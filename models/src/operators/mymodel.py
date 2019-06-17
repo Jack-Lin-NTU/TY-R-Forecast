@@ -53,41 +53,6 @@ class TyCatcher(nn.Module):
         sample = F.grid_sample(rader_map, flowfield)
         return sample
 
-# class my_single_GRU(nn.Module):
-#     def __init__(self, n_encoders, n_forecasters, TyCatcher_channel_input, TyCatcher_channel_hidden, TyCatcher_channel_n_layers, gru_channel_input, gru_channel_hidden, 
-#                 gru_kernel, gru_stride, gru_padding, batch_norm=False, device=None, value_dtype=None):
-#         super().__init__()
-#         self.device = device
-#         self.value_dtype = value_dtype
-#         self.n_encoders = n_encoders
-#         self.n_forecasters = n_forecasters
-
-#         self.tycatcher = TyCatcher(TyCatcher_channel_input, TyCatcher_channel_hidden, TyCatcher_channel_n_layers, device, value_dtype)
-#         self.model = ConvGRUCell(gru_channel_input, gru_channel_hidden, gru_kernel, gru_stride, gru_padding, batch_norm, device, value_dtype)
-
-#     def forward(self, ty_infos, radar_map):
-        
-#         for i in range(self.n_encoders):
-#             tmp_ty_info = ty_infos[:,i,:]
-#             tmp_map = radar_map[:,i,:,:,:]
-#             if i == 0:
-#                 input_ = self.tycatcher(tmp_ty_info, tmp_map)
-#                 prev_state = self.model(input_, prev_state=None)
-#             else:
-#                 input_ = self.tycatcher(tmp_ty_info, tmp_map)
-#                 prev_state = self.model(input_)
-        
-#         outputs = []
-#         for i in range(self.n_forecasters):
-#             tmp_ty_info = ty_infos[:,i+self.n_encoders,:]
-#             tmp_map = radar_map[:,-1,:,:,:]
-#             input_ = self.ty_catcher(tmp_ty_info, tmp_map)
-#             prev_state = self.model(input_)
-
-#             outputs.append(prev_state)
-#         outputs = torch.cat(outputs, dim=1)
-#         return outputs
-
 class Forecaster(nn.Module):
     def __init__(self, upsample_cin, upsample_cout, upsample_k, upsample_p, upsample_s, n_layers, 
                 output_cout=1, output_k=1, output_s=1, output_p=0, n_output_layers=1,

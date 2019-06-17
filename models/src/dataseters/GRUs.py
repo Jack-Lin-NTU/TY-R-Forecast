@@ -188,7 +188,7 @@ class TyDataset(Dataset):
                     target_data[j,:,:] = pd.read_pickle(data_path, compression=self.compression).loc[self.F_y[0]:self.F_y[1], self.F_x[0]:self.F_x[1]].to_numpy()
 
                 if self.target_RAD:
-                    target_data = 
+                    target_data = ((10**(target_data/10))/200)**(5/8)
 
                 # the start time of prediction 
                 pre_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp)), format='%Y%m%d%H%M')

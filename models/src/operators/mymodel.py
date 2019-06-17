@@ -198,7 +198,7 @@ class Model(nn.Module):
         self.n_forecasters = n_forecasters
         self.name = 'STN-CONVGRU'
 
-        self.tycatcher = TyCatcher(TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers, device, value_dtype)
+        self.tycatcher = TyCatcher(TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers)
         self.encoder = Encoder(encoder_input, encoder_downsample, encoder_gru, encoder_downsample_k, encoder_downsample_s, 
                                 encoder_downsample_p, encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_layers,
                                 batch_norm)

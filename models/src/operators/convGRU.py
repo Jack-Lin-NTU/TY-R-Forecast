@@ -351,7 +351,7 @@ class Model(nn.Module):
 
         hidden = None
 
-        for i in range(self.n_encoders)
+        for i in range(self.n_encoders):
             hidden = self.encoder(x = x[:,i,:,:,:], hidden=hidden)
 
         hidden = hidden[::-1]

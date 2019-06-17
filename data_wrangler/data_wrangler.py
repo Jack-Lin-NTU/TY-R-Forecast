@@ -1,10 +1,13 @@
+import os
 import sys
 import gzip
-import pandas as pd
 import numpy as np
+import pandas as pd
 import datetime as dt
-import os
-from args_tools import args, createfolder
+from utils.parser import get_args
+from utils.tools import createfolder, checkpath, print_dict, make_path
+
+pd.set_option('precision', 4)
 
 def extract_original_data():
     '''
@@ -12,173 +15,187 @@ def extract_original_data():
         This function is to extract the selected event data form original data.
     '''
     #load typhoon list file
-    ty_list = pd.read_excel(args.ty_list)
-
-    origin_files_folder = args.origin_files_folder
-    compressed_files_folder = args.compressed_files_folder
+    ty_list = pd.read_csv(args.ty_list)
+    ty_list.loc[:, 'Time of issuing'] = pd.to_datetime(ty_list.loc[:, 'Time of issuing'])
+    ty_list.loc[:, 'Time of canceling'] = pd.to_datetime(ty_list.loc[:, 'Time of canceling'])
+    
+    radar_original_data_folder = args.radar_raw_data_folder
+    radar_compressed_data_folder = args.radar_compressed_data_folder
 
     for i in range(len(ty_list)):
         # get the start and end time of the typhoon
-        year = ty_list.loc[i,"Time of issuing"].year
-        date_s = dt.datetime.strftime(ty_list["Time of issuing"][i] - dt.timedelta(hours=8),format="%Y%m%d")
-        date_e = dt.datetime.strftime(ty_list["Time of canceling"][i] - dt.timedelta(hours=8),format="%Y%m%d")
-        time_s = dt.datetime.strftime(ty_list["Time of issuing"][i] - dt.timedelta(hours=8),format="%H%M")
-        time_e = dt.datetime.strftime(ty_list["Time of canceling"][i] - dt.timedelta(hours=8),format="%H%M")
-        ty_name = ty_list.loc[i,"En name"]
+        year = ty_list.loc[i, 'Time of issuing'].year
+        time_start = ty_list.loc[i, 'Time of issuing'] - dt.timedelta(hours=8)
+        time_end =ty_list.loc[i, 'Time of canceling'] - dt.timedelta(hours=8)
+        ty_name = ty_list.loc[i, 'En name']
+        info = '|{:8s}| start time: {} | end time: {} |'.format(ty_name, time_start+dt.timedelta(hours=8), time_end+dt.timedelta(hours=8))
+        print(info)
 
-        print("|{:8s}| start time: {:s} | end time: {:s} |".format(ty_name+"",date_s,date_e))
-        print("|{:8s}|             {:8s} |           {:8s} |".format(" ",time_s,time_e))
-
-        tmp_path1 = os.path.join(origin_files_folder,str(year))
-        for j in os.listdir(tmp_path1):
-            if dt.datetime.strptime(date_s,"%Y%m%d") <= dt.datetime.strptime(j,"%Y%m%d") <= dt.datetime.strptime(date_e,"%Y%m%d"):
-                tmp_path2 = os.path.join(tmp_path1,j)
-                output_folder = os.path.join(compressed_files_folder, str(year)+'.'+ty_name)
+        tmp_path1 = os.path.join(radar_original_data_folder, str(year))
+        
+        for j in sorted(os.listdir(tmp_path1)):
+            if time_start.date() <= dt.datetime.strptime(j, '%Y%m%d').date() <= time_end.date():
+                tmp_path2 = os.path.join(tmp_path1, j)
+                output_folder = os.path.join(radar_compressed_data_folder, str(year)+'.'+ty_name)
                 createfolder(output_folder)
                 for k in os.listdir(tmp_path2):
-                    tmp_path3 = os.path.join(tmp_path2,k)
+                    tmp_path3 = os.path.join(tmp_path2, k)
                     for o in os.listdir(tmp_path3):
-                        if dt.datetime.strptime(date_s+"."+time_s,"%Y%m%d.%H%M") <= dt.datetime.strptime(o[-16:-3],"%Y%m%d.%H%M") <= dt.datetime.strptime(date_e+"."+time_e,"%Y%m%d.%H%M"):
-                            tmp_path4 = os.path.join(tmp_path3,o)
-                            output_path = os.path.join(output_folder,o)
+                        if time_start <= dt.datetime.strptime(o[-16:-3], '%Y%m%d.%H%M') <= time_end:
+                            tmp_path4 = os.path.join(tmp_path3, o)
+                            output_path = os.path.join(output_folder, o)
 
-                            command = "cp {:s} {:s}".format(tmp_path4, output_path)
+                            command = 'cp {:s} {:s}'.format(tmp_path4, output_path)
                             os.system(command)
                         else:
                             pass
             else:
                 pass
-        print("|----------------------------------------------------|")
+        print('|'+'-'*(len(info)-2)+'|')
 
-def uncompress_and_output_numpy_files():
+def output_files(args):
     '''
     Arguments:
-        This function is to uncompress the extracted files and output the numpy files(*.npz).
+        This function is to uncompress the extracted files and output the wrangled files.
     '''
     # load typhoon list file
-    ty_list = pd.read_excel(args.ty_list)
+    ty_list = pd.read_csv(args.ty_list)
+    ty_list.loc[:, 'Time of issuing'] = pd.to_datetime(ty_list.loc[:, 'Time of issuing'])
+    ty_list.loc[:, 'Time of canceling'] = pd.to_datetime(ty_list.loc[:, 'Time of canceling'])
 
-    compressed_files_folder = args.compressed_files_folder
-    tmp_uncompressed_folder = 'tmp'
+    radar_compressed_data_folder = args.radar_compressed_data_folder
+    tmp_uncompressed_folder = os.path.join(args.radar_folder, 'tmp')
     createfolder(tmp_uncompressed_folder)
+    
     count_qpe = {}
     count_qpf = {}
     count_rad = {}
     # uncompress the file and output the readable file
-    for i in sorted(os.listdir(compressed_files_folder)):
-        print("-" * 40)
+    
+    for i in sorted(os.listdir(radar_compressed_data_folder)):
+        print('-' * 40)
         print(i)
-        compressed_files_folder = os.path.join(args.compressed_files_folder,i)
-        count_qpe[i] = len([x for x in os.listdir(compressed_files_folder) if 'C' == x[0]])
-        count_qpf[i] = len([x for x in os.listdir(compressed_files_folder) if 'M' == x[0]])
-        count_rad[i] = len([x for x in os.listdir(compressed_files_folder) if 'q' == x[0]])
-        for j in sorted(os.listdir(compressed_files_folder)):
-            compressed_file = os.path.join(compressed_files_folder,j)
+        radar_compressed_data_folder = os.path.join(args.radar_compressed_data_folder, i)
+        count_qpe[i] = len([x for x in os.listdir(radar_compressed_data_folder) if 'C' == x[0]])
+        count_qpf[i] = len([x for x in os.listdir(radar_compressed_data_folder) if 'M' == x[0]])
+        count_rad[i] = len([x for x in os.listdir(radar_compressed_data_folder) if 'q' == x[0]])
+        
+        for j in sorted(os.listdir(radar_compressed_data_folder)):
+            compressed_file = os.path.join(radar_compressed_data_folder, j)
             outputtime = j[-16:-8]+j[-7:-3]
-            outputtime = dt.datetime.strftime(dt.datetime.strptime(outputtime,"%Y%m%d%H%M")+dt.timedelta(hours=8),"%Y%m%d%H%M")
+            outputtime = dt.datetime.strftime(dt.datetime.strptime(outputtime, '%Y%m%d%H%M')+dt.timedelta(hours=8), '%Y%m%d%H%M')
 
-            if j[0] == "C":
+            if j[0] == 'C':
                 name = 'QPE'
-                output_folder = os.path.join(args.numpy_files_folder,name)
+                output_folder = os.path.join(args.radar_wrangled_data_folder, name)
                 createfolder(output_folder)
-            elif j[0] == "M":
+            elif j[0] == 'M':
                 name = 'RAD'
-                output_folder = os.path.join(args.numpy_files_folder,name)
+                output_folder = os.path.join(args.radar_wrangled_data_folder, name)
                 createfolder(output_folder)
-            elif j[0] == "q":
+            elif j[0] == 'q':
                 name = 'QPF'
-                output_folder = os.path.join(args.numpy_files_folder,name)
+                output_folder = os.path.join(args.radar_wrangled_data_folder, name)
                 createfolder(output_folder)
-            tmp_uncompressed_file = os.path.join(tmp_uncompressed_folder,name+'_'+outputtime)
+            
+            tmp_uncompressed_file = os.path.join(tmp_uncompressed_folder, name+'_'+outputtime)
 
             # define the object of gzip
             g_file = gzip.GzipFile(compressed_file)
             # use read() to open gzip and write into the open file。
-            open(tmp_uncompressed_file, "wb").write(g_file.read())
+            open(tmp_uncompressed_file, 'wb').write(g_file.read())
             # close the object of gzip
             g_file.close()
 
-            tmp_file_out = os.path.join(tmp_uncompressed_folder, name+"_"+outputtime+".txt")
-            bashcommand = os.path.join('.',args.fortran_code_folder,'{:s}.out {:s} {:s}'.format(name, tmp_uncompressed_file, tmp_file_out))
-
+            tmp_file_out = os.path.join(tmp_uncompressed_folder, name+'_'+outputtime+'.txt')
+            bashcommand = os.path.join('.', args.fortran_code_folder, '{:s}.out {:s} {:s}'.format(name, tmp_uncompressed_file, tmp_file_out))
             os.system(bashcommand)
 
-            data = pd.read_table(tmp_file_out,delim_whitespace=True,header=None)
-            output_path = os.path.join(output_folder,i+"."+outputtime)
-
-            np.savez_compressed(output_path, data=data)
-
+            data = pd.read_csv(tmp_file_out, sep='\s+', header=None)
+            if j[0] == 'M':
+                data[data<args.denoise] = 0
+            output_path = os.path.join(output_folder, i+'.'+outputtime)
+            
+            data.columns = pd.Index(np.linspace(args.O_x[0], args.O_x[1], args.O_shape[0]), name='longitude')
+            data.index = pd.Index(np.linspace(args.O_y[0], args.O_y[1], args.O_shape[1]), name='latitude')
+            data.to_pickle(output_path+'.pkl', compression=args.compression)
+            
             os.remove(tmp_uncompressed_file)
             os.remove(tmp_file_out)
 
     return count_qpe, count_qpf, count_rad
 
-def check_data_and_create_miss_data():
+def check_data_and_create_miss_data(args):
     '''
     Arguments:
         This function is to check whether the wrangled files are continuous in each typhoon events and address missing files.
     '''
     # Set path
-    numpy_files_folder = args.numpy_files_folder
+    radar_wrangled_data_folder = args.radar_wrangled_data_folder
 
-    ty_list = pd.read_excel(args.ty_list)
-
+    ty_list = pd.read_csv(args.ty_list)
+    ty_list.loc[:, 'Time of issuing'] = pd.to_datetime(ty_list.loc[:, 'Time of issuing'])
+    ty_list.loc[:, 'Time of canceling'] = pd.to_datetime(ty_list.loc[:, 'Time of canceling'])
     count_qpe = {}
     count_qpf = {}
     count_rad = {}
-    for i in sorted(os.listdir(numpy_files_folder)):
-        for j in ty_list.loc[:,"En name"]:
-            if i == "QPE":
-                count_qpe[j] = len([x for x in os.listdir(os.path.join(numpy_files_folder,"QPE")) if j in x])
-            elif i == "QPF":
+    for i in sorted(os.listdir(radar_wrangled_data_folder)):
+        for j in ty_list.loc[:, 'En name']:
+            if i == 'QPE':
+                count_qpe[j] = len([x for x in os.listdir(os.path.join(radar_wrangled_data_folder, 'QPE')) if j in x])
+            elif i == 'QPF':
                 pass
-                # count_qpf[j] = len([x for x in os.listdir(os.path.join(numpy_files_folder,"QPF")) if j in x])
+                # count_qpf[j] = len([x for x in os.listdir(os.path.join(radar_wrangled_data_folder, 'QPF')) if j in x])
             else:
-                count_rad[j] = len([x for x in os.listdir(os.path.join(numpy_files_folder,"RAD")) if j in x])
+                count_rad[j] = len([x for x in os.listdir(os.path.join(radar_wrangled_data_folder, 'RAD')) if j in x])
 
-    qpe_list = [x[-16:-4] for x in os.listdir(os.path.join(numpy_files_folder,"QPE"))]
-    # qpf_list = [x[-16:-4] for x in os.listdir(os.path.join(numpy_files_folder,"QPF"))]
-    rad_list = [x[-16:-4] for x in os.listdir(os.path.join(numpy_files_folder,"RAD"))]
+    qpe_list = [x[-16:-4] for x in os.listdir(os.path.join(radar_wrangled_data_folder, 'QPE'))]
+    # qpf_list = [x[-16:-4] for x in os.listdir(os.path.join(radar_wrangled_data_folder, 'QPF'))]
+    rad_list = [x[-16:-4] for x in os.listdir(os.path.join(radar_wrangled_data_folder, 'RAD'))]
 
     qpe_list_miss = []
     # qpf_list_miss = []
     rad_list_miss = []
+    
+    file_end = '.pkl'
 
     for i in np.arange(len(ty_list)):
         for j in np.arange(1000):
-            time = ty_list.loc[i,"Time of issuing"] + pd.Timedelta(minutes=10*j)
-            if time > ty_list.loc[i,"Time of canceling"]:
+            time = ty_list.loc[i, 'Time of issuing'] + pd.Timedelta(minutes=10*j)
+            if time > ty_list.loc[i, 'Time of canceling']:
                 break
-            time = time.strftime("%Y%m%d%H%M")
+            time = time.strftime('%Y%m%d%H%M')
             if time not in qpe_list:
-                qpe_list_miss.append(time[:4]+"."+ty_list.loc[i,"En name"]+"."+time+".npz")
+                qpe_list_miss.append(time[:4]+'.'+ty_list.loc[i, 'En name']+'.'+time+file_end)
             # if time not in qpf_list:
-            #     qpf_list_miss.append(time[:4]+"."+ty_list.loc[i,"En name"]+"."+time+".npz")
+            #     qpf_list_miss.append(time[:4]+'.'+ty_list.loc[i, 'En name']+'.'+time+file_end)
             if time not in rad_list:
-                rad_list_miss.append(time[:4]+"."+ty_list.loc[i,"En name"]+"."+time+".npz")
-    missfiles = np.concatenate([np.array(qpe_list_miss),np.array(rad_list_miss)])
+                rad_list_miss.append(time[:4]+'.'+ty_list.loc[i, 'En name']+'.'+time+file_end)
+    missfiles = np.concatenate([np.array(qpe_list_miss), np.array(rad_list_miss)])
     missfiles_index = []
     for i in range(len(qpe_list_miss)):
-        missfiles_index.append("QPE")
+        missfiles_index.append('QPE')
     for i in range(len(rad_list_miss)):
-        missfiles_index.append("RAD")
+        missfiles_index.append('RAD')
     # for i in range(len(qpf_list_miss)):
-    #     missfiles_index.append("QPF")
+    #     missfiles_index.append('QPF')
 
-    missfiles = pd.DataFrame(missfiles,index=missfiles_index,columns=["File_name"])
-    missfiles.to_excel(os.path.join(args.radar_folder,"Missing_files.xlsx"))
+    missfiles = pd.DataFrame(missfiles, index=missfiles_index, columns=['File_name'])
+    missfiles.to_csv(os.path.join(args.radar_folder, 'Missing_files.csv'))
+    
     for i in range(len(missfiles)):
-        missdatatime = dt.datetime.strptime(missfiles.iloc[i,0][-16:-4],"%Y%m%d%H%M")
-        forwardtime = dt.datetime.strftime((missdatatime - dt.timedelta(minutes=10)),"%Y%m%d%H%M")
-        backwardtime = dt.datetime.strftime((missdatatime + dt.timedelta(minutes=10)),"%Y%m%d%H%M")
+        missdatatime = dt.datetime.strptime(missfiles.iloc[i, 0][-16:-4], '%Y%m%d%H%M')
+        forwardtime = dt.datetime.strftime((missdatatime - dt.timedelta(minutes=10)), '%Y%m%d%H%M')
+        backwardtime = dt.datetime.strftime((missdatatime + dt.timedelta(minutes=10)), '%Y%m%d%H%M')
 
-        forwardfile = missfiles.iloc[i,0][:-16] + forwardtime + missfiles.iloc[i,0][-4:]
-        backwardfile  = missfiles.iloc[i,0][:-16] + backwardtime + missfiles.iloc[i,0][-4:]
-
-        forwarddata = np.load(os.path.join(args.numpy_files_folder,missfiles.index[i],forwardfile))['data']
-        backwarddata = np.load(os.path.join(args.numpy_files_folder,missfiles.index[i],backwardfile))['data']
+        forwardfile = missfiles.iloc[i, 0][:-16] + forwardtime + missfiles.iloc[i, 0][-4:]
+        backwardfile  = missfiles.iloc[i, 0][:-16] + backwardtime + missfiles.iloc[i, 0][-4:]
+        
+        forwarddata = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, missfiles.index[i], forwardfile), compression=args.compression)
+        backwarddata = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, missfiles.index[i], backwardfile), compression=args.compression)
         data = (forwarddata+backwarddata)/2
-        np.savez_compressed(os.path.join(args.numpy_files_folder,missfiles.index[i],missfiles.iloc[i,0]), data=data)
+        data.to_pickle(os.path.join(args.radar_wrangled_data_folder, missfiles.index[i], missfiles.iloc[i, 0]), compression=args.compression)
+        
     return count_qpe, count_qpf, count_rad
 
 def overall_of_data():
@@ -186,91 +203,91 @@ def overall_of_data():
     Arguments:
         This function is to summarize the overall property of the wrangled data.
     '''
-    # Taipei
-    study_area = args.study_area
     # Set path
-    numpy_files_folder = args.numpy_files_folder
-    radar_folder = args.radar_folder
+    measures = pd.DataFrame(np.ones((4,3))*10, index=['max','min','mean','std'], columns=sorted(os.listdir(args.radar_wrangled_data_folder)))
+    measures.index.name = 'Measures'
+    tmp_mean = 0
+    for i in sorted(os.listdir(args.radar_wrangled_data_folder)):
+        for j in sorted(os.listdir(os.path.join(args.radar_wrangled_data_folder, i))):
+            tmp_data = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, i , j), compression=args.compression).values
+            if measures.loc['max', i] < np.max(tmp_data):
+                measures.loc['max', i] = np.max(tmp_data)
+            if measures.loc['min', i] > np.min(tmp_data):
+                measures.loc['min', i] = np.min(tmp_data)
+            tmp_mean += np.mean(tmp_data)/100
+        measures.loc['mean', i] = tmp_mean/len(os.listdir(os.path.join(args.radar_wrangled_data_folder, i)))*100
+    tmp = 0
+    for i in sorted(os.listdir(args.radar_wrangled_data_folder)):
+        for j in sorted(os.listdir(os.path.join(args.radar_wrangled_data_folder, i))):
+            tmp_data = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, i , j), compression=args.compression).values
+            tmp += np.mean((tmp_data - measures.loc['mean', i])**2)
+        measures.loc['std', i] = np.sqrt(tmp/len(os.listdir(os.path.join(args.radar_wrangled_data_folder, i))))
+    output_path = os.path.join(args.radar_folder,'overall.csv')
+    measures.to_csv(output_path)
+    
+    return measures
 
-    file_out = open(os.path.join(radar_folder,'overall.txt'),'w')
-    file_out_mu_std = open(os.path.join(radar_folder,'mu_std.txt'),'w')
+if __name__ == '__main__':
+    args = get_args()
+    args.denoise = 0
+    checkpath(args.ty_list)
+    checkpath(args.TW_map_file+'.prj')
+    checkpath(args.radar_wrangled_data_folder)
+    # extract raw zip files
 
-    for i in sorted(os.listdir(numpy_files_folder)):
-        tmp_path = os.path.join(numpy_files_folder,i)
-        # print(tmp_path)
-        tmp=0
-        tmp_max = []
-        tmp_min = []
-        tmp_max_file = []
-        tmp_min_file = []
-        tmp_ty = []
-        mu = 0
-        std = 0
+    if not checkpath(args.radar_compressed_data_folder):
+        extract_original_data()
+    # wrangle files to pickle files
+    _ = output_files(args)
+    # check data and wrangle missing data
+    _ = check_data_and_create_miss_data(args)
 
-        for j in sorted(os.listdir(tmp_path)):
-            if j[:-17] not in tmp_ty:
-                tmp_ty.append(j[:-17])
-                tmp_max.append(0)
-                tmp_min.append(100)
-                tmp_max_file.append(0)
-                tmp_min_file.append(0)
-                tmp = tmp+1
+    ## deal with the specific data
+    # 2012.SAOLA
+    data1 = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2012.SAOLA.201208021530.pkl'),compression=args.compression)
+    data2 = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2012.SAOLA.201208021620.pkl'),compression=args.compression)
 
-            file_in = os.path.join(tmp_path,j)
-            # print(file_in)
-            data = np.load(file_in)['data']
-            mu += np.sum(data)
-            if tmp_max[tmp-1] < np.max(data):
-                tmp_max[tmp-1] = np.max(data)
-                tmp_max_file[tmp-1] = j
-            if tmp_min[tmp-1] > np.min(data):
-                tmp_min[tmp-1] = np.min(data)
-                tmp_min_file[tmp-1] = j
+    data = data1 + (data2 - data1)/5*1
+    data.to_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2012.SAOLA.201208021540.pkl'),compression=args.compression)
+    data = data1 + (data2 - data1)/5*2
+    data.to_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2012.SAOLA.201208021550.pkl'),compression=args.compression)
+    data = data1 + (data2 - data1)/5*3
+    data.to_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2012.SAOLA.201208021600.pkl'),compression=args.compression)
+    data = data1 + (data2 - data1)/5*4
+    data.to_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2012.SAOLA.201208021610.pkl'),compression=args.compression)
 
-        mu = mu/(len(os.listdir(tmp_path))*data.size)
+    # 2015.SOUDELOR
+    l1 = ['080700','080800','081000','081200','081750','081850','082050','090150','090700','091000']
+    l2 = ['080710','080810','081010','081210','081800','081900','082100','090200','090710','091010']
+    ll = ['080720','080820','081020','081220','081810','081910','082110','090210','090720','091020']
+    for i in range(len(ll)):
+        data1 = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2015.SOUDELOR.201508'+l1[i]+'.pkl'),compression=args.compression)
+        data2 = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2015.SOUDELOR.201508'+l2[i]+'.pkl'),compression=args.compression)
 
-        for j in sorted(os.listdir(tmp_path)):
-            file_in = os.path.join(tmp_path,j)
-            data = np.load(file_in)['data']
-            std += np.sum((data-mu)**2)
-        std = np.sqrt(std/(len(os.listdir(tmp_path))*data.size))
+        data = data1 + (data2 - data1)/2
+        data.to_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2015.SOUDELOR.201508'+ll[i]+'.pkl'),compression=args.compression)
+        
+    data1 = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2015.SOUDELOR.201508081100.pkl'),compression=args.compression)
+    data2 = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2015.SOUDELOR.201508081130.pkl'),compression=args.compression)
 
-        file_out_mu_std.writelines('{:>5s}: |mu: {:6.3f} |std: {:6.3f}\n'.format(i,mu,std))
+    data = data1 + (data2 - data1)/3*1
+    data.to_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2015.SOUDELOR.201508081110.pkl'),compression=args.compression)
+    data = data1 + (data2 - data1)/3*2
+    data.to_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2015.SOUDELOR.201508081120.pkl'),compression=args.compression)
 
-        file_out.writelines('-----------------------------------------------------------------------------------------------------------------------------\n')
-        file_out.writelines(i+'\n')
+    # 2016.MEGI
+    data1 = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2016.MEGI.201609271830.pkl'),compression=args.compression)
+    data2 = pd.read_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2016.MEGI.201609271740.pkl'),compression=args.compression)
 
-        for i in np.arange(len(tmp_ty)):
-            file_out.writelines('{:<18s}\t|min:{:7.2f}\tfile_min:{:28s}\t|max:{:7.2f} file_max:{:s}\n'.
-                                format(tmp_ty[i],tmp_min[i],tmp_min_file[i],tmp_max[i],tmp_min_file[i]))
-
-    file_out_mu_std.close()
-    file_out.close()
-
-if __name__ == "__main__":
-    info = "*{:^58s}*".format('Data extracter')
-    print("*" * len(info))
-    print(info)
-    print("*" * len(info))
-    print("-" * len(info))
-
-    if os.path.exists(args.compressed_files_folder):
-        print('Already extract oringinal data')
-        print("-" * len(info))
-    else:
-        print(extract_original_data())
-        print("-" * len(info))
-
-    if os.path.exists(args.numpy_files_folder):
-        print('Already output numpy files')
-        print("-" * len(info))
-    else:
-        print(uncompress_and_output_numpy_files())
-        print("-" * len(info))
-
-    count_qpe, _, count_rad = check_data_and_create_miss_data()
-    print('The number of the missing files in QPE data:', count_qpe)
-    print('The number of the missing files in RAD data:', count_rad)
-
-    # summarize data
-    overall_of_data()
+    data = data1 + (data2 - data1)/7*1
+    data.to_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2016.MEGI.201609271840.pkl'),compression=args.compression)
+    data = data1 + (data2 - data1)/7*2
+    data.to_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2016.MEGI.201609271850.pkl'),compression=args.compression)
+    data = data1 + (data2 - data1)/7*3
+    data.to_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2016.MEGI.201609271900.pkl'),compression=args.compression)
+    data = data1 + (data2 - data1)/7*4
+    data.to_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2016.MEGI.201609271910.pkl'),compression=args.compression)
+    data = data1 + (data2 - data1)/7*5
+    data.to_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2016.MEGI.201609271920.pkl'),compression=args.compression)
+    data = data1 + (data2 - data1)/7*6
+    data.to_pickle(os.path.join(args.radar_wrangled_data_folder, 'RAD', '2016.MEGI.201609271930.pkl'),compression=args.compression)

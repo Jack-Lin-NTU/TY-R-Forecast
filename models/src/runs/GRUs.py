@@ -40,9 +40,9 @@ def get_dataloader(args, train_num=None):
     
     return trainloader, testloader
 
-def get_model(args=None):
+def get_model(args):
     if args.model.upper() == 'TRAJGRU':
-        from src.operators.trajGRU import Multi_unit_Model as Model
+        from src.operators.trajGRU import  Model
         print('Model:', args.model.upper())
         TRAJGRU = TRAJGRU_HYPERPARAMs(args=args)
         model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, gru_link_size=TRAJGRU.gru_link_size,
@@ -57,14 +57,12 @@ def get_model(args=None):
                 forecaster_gru_p=TRAJGRU.forecaster_gru_p, forecaster_n_cells=TRAJGRU.forecaster_n_cells, forecaster_output=TRAJGRU.forecaster_output_channels, 
                 forecaster_output_k=TRAJGRU.forecaster_output_k, forecaster_output_s=TRAJGRU.forecaster_output_s, 
                 forecaster_output_p=TRAJGRU.forecaster_output_p, forecaster_output_layers=TRAJGRU.forecaster_output_layers, 
-                batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype, batch_size=args.batch_size)
-
-        model.to(args.device, dtype=args.value_dtype)
+                batch_norm=args.batch_norm).to(args.device, dtype=args.value_dtype)
         # model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
         # model = model.to(args.device, dtype=args.value_dtype)
 
     elif args.model.upper() == 'CONVGRU':
-        from src.operators.convGRU import Multi_unit_Model as Model
+        from src.operators.convGRU import Model
         print('Model:', args.model.upper())
         CONVGRU = CONVGRU_HYPERPARAMs(args=args)
         model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames,
@@ -79,14 +77,13 @@ def get_model(args=None):
                 forecaster_gru_p=CONVGRU.forecaster_gru_p, forecaster_n_cells=CONVGRU.forecaster_n_cells, forecaster_output=CONVGRU.forecaster_output_channels, 
                 forecaster_output_k=CONVGRU.forecaster_output_k, forecaster_output_s=CONVGRU.forecaster_output_s, 
                 forecaster_output_p=CONVGRU.forecaster_output_p, forecaster_output_layers=CONVGRU.forecaster_output_layers, 
-                batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
+                batch_norm=args.batch_norm).to(args.device, dtype=args.value_dtype)
         
         # if args.parallel_compute:
         #     model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
-        model = model.to(args.device, dtype=args.value_dtype)
     
     elif args.model.upper() == 'MYMODEL':
-        from src.operators.mymodel import my_multi_GRU as Model
+        from src.operators.mymodel import Model
         print('Model:', args.model.upper())
         MYMODEL = MYMODEL_HYPERPARAMs(args)
         model = Model(MYMODEL.input_frames, MYMODEL.target_frames, MYMODEL.TyCatcher_input, MYMODEL.TyCatcher_hidden, MYMODEL.TyCatcher_n_layers, 
@@ -95,11 +92,10 @@ def get_model(args=None):
                     MYMODEL.forecaster_upsample_cin, MYMODEL.forecaster_upsample_cout, MYMODEL.forecaster_upsample_k, MYMODEL.forecaster_upsample_p, 
                     MYMODEL.forecaster_upsample_s, MYMODEL.forecaster_n_layers, MYMODEL.forecaster_output_cout, MYMODEL.forecaster_output_k, 
                     MYMODEL.forecaster_output_s, MYMODEL.forecaster_output_p, MYMODEL.forecaster_n_output_layers, 
-                    batch_norm=args.batch_norm, device=args.device, value_dtype=args.value_dtype)
+                    batch_norm=args.batch_norm).to(args.device, dtype=args.value_dtype)
         
         # if args.parallel_compute:
         #     model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
-        model = model.to(args.device, dtype=args.value_dtype)
     
     return model
 
@@ -176,7 +172,7 @@ def train(model, optimizer, trainloader, testloader, args):
     logger = get_train_logger(log_file)
     # Set scheduler
     if args.lr_scheduler:
-        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[x for x in range(1, args.max_epochs) if x % 7 == 0], gamma=0.7)
+        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=np.linspace(int(args.max_epochs/10), args.max_epochs, 10, dtype=int), gamma=0.7)
     
     total_batches = len(trainloader)
     
@@ -282,7 +278,6 @@ def train(model, optimizer, trainloader, testloader, args):
 
 def continue_train(model, optimizer, trainloader, testloader, epoch, args):
     pass
-
 
 
 def test(model, testloader, args):

@@ -6,8 +6,8 @@ import argparse
 import torch
 import torch.optim as optim
 
-from .utils import make_path
-from .loss import MAE, MSE
+from.utils import make_path
+from.loss import MAE, MSE
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -48,28 +48,29 @@ def get_args():
     parser.add_argument('--able-cuda', action='store_true', help='Able cuda. (default: disable cuda)')
     parser.add_argument('--gpu', metavar='', type=int, default=0, help='GPU device. (default: 0)')
     parser.add_argument('--value-dtype', metavar='', type=str, default='float32', help='The data type of computation. (default: float32)')
-    parser.add_argument('--change-value-dtype', action='store_true', help='Change the data type of computation or not.')
+    parser.add_argument('--change-value-dtype', action='store_true', help='Change the data type of computation.')
 
     # hyperparameters for training
-    parser.add_argument('--parallel-compute', action='store_true', help='Parallel computing or not.')
+    parser.add_argument('--parallel-compute', action='store_true', help='Parallel computing.')
     parser.add_argument('--seed', metavar='', type=int, default=1, help='The setting of random seed. (default: 1)')
     parser.add_argument('--train-num', metavar='', type=int, default=10, help='The number of training events. (default: 10)')
     parser.add_argument('--max-epochs', metavar='', type=int, default=30, help='Max epochs. (default: 30)')
     parser.add_argument('--batch-size', metavar='', type=int, default=4, help='Batch size. (default: 8)')
     parser.add_argument('--lr', metavar='', type=float, default=1e-3, help='Learning rate. (default: 1e-3)')
-    parser.add_argument('--lr-scheduler', action='store_true', help='Set a scheduler for controlling learning rate or not.')
+    parser.add_argument('--lr-scheduler', action='store_true', help='Set a scheduler for controlling learning rate.')
     parser.add_argument('--weight-decay', metavar='', type=float, default=0, help='The value setting of wegiht decay. (default: 0)')
-    parser.add_argument('--clip', action='store_true', help='Clip the weightings in the model or not.')
+    parser.add_argument('--clip', action='store_true', help='Clip the weightings in the model.')
     parser.add_argument('--clip-max-norm', metavar='', type=float, default=10, help='Max norm value for clipping weightings. (default: 1)')
-    parser.add_argument('--batch-norm', action='store_true', help='Do batch normalization or not.')
-    parser.add_argument('--normalize-target', action='store_true', help='Normalize targets or not.')
+    parser.add_argument('--batch-norm', action='store_true', help='Do batch normalization.')
+    parser.add_argument('--normalize-target', action='store_true', help='Normalize targets.')
 
     parser.add_argument('--optimizer', metavar='', type=str, default='Adam', help='The optimizer. (default: Adam)')
     parser.add_argument('--loss-function', metavar='', type=str, default='BMSE', help='The loss function. (default: BMSE)')
     parser.add_argument('--input-frames', metavar='', type=int, default=6, help='The size of input frames. (default: 6)')
     parser.add_argument('--target-frames', metavar='', type=int, default=18, help='The size of target frames. (default: 18)')
-    parser.add_argument('--input-with-grid', action='store_true', help='Input with grid data or not.')
-    parser.add_argument('--input-with-QPE', action='store_true', help='Input with QPE data or not.')
+    parser.add_argument('--input-with-grid', action='store_true', help='Input with grid data.')
+    parser.add_argument('--input-with-QPE', action='store_true', help='Input with QPE data.')
+    parser.add_argument('--target-RAD', action='store_true', help='Use RAD-transformed data as targets.')
     parser.add_argument('--channel-factor', metavar='', type=int, default=2, help='Channel factor. (default: 2)')
 
     # parser.add_argument('--I-x-l', metavar='', type=float, default=120.9625, help='The lowest longitude of input map. (default: 120.9625)')
@@ -176,11 +177,11 @@ def get_args():
     size = '{}X{}'.format(args.F_shape[0], args.F_shape[1])
 
     if args.weather_list == []:
-        args.result_folder = os.path.join(args.result_folder, size, 'RAD_no_weather')
-        args.params_folder = os.path.join(args.params_folder, size, 'RAD_no_weather')
+        args.result_folder = os.path.join(args.result_folder, 'RAD')
+        args.params_folder = os.path.join(args.params_folder, 'RAD')
     else:
-        args.result_folder = os.path.join(args.result_folder, size, 'RAD_weather')
-        args.params_folder = os.path.join(args.params_folder, size, 'RAD_weather')
+        args.result_folder = os.path.join(args.result_folder, 'RAD_weather')
+        args.params_folder = os.path.join(args.params_folder, 'RAD_weather')
     
     if args.input_with_grid:
         args.result_folder += '_grid'
@@ -197,8 +198,12 @@ def get_args():
     args.result_folder += '_'+args.optimizer
     args.params_folder += '_'+args.optimizer
 
-    args.result_folder = os.path.join(args.result_folder, 'wd{:.5f}_lr{:.5f}'.format(args.weight_decay, args.lr))
-    args.params_folder = os.path.join(args.params_folder, 'wd{:.5f}_lr{:.5f}'.format(args.weight_decay, args.lr))
+    if args.weight_decay==0:
+        args.result_folder += 'lr{:.5f}'.format(args.weight_decay, args.lr)
+        args.params_folder += 'lr{:.5f}'.format(args.weight_decay, args.lr)
+    else:
+        args.result_folder += 'wd{:.5f}_lr{:.5f}'.format(args.weight_decay, args.lr)
+        args.params_folder += 'wd{:.5f}_lr{:.5f}'.format(args.weight_decay, args.lr)
 
     if args.clip:
         args.result_folder += '_clip'+str(args.clip_max_norm)

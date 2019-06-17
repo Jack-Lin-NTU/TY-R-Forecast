@@ -50,6 +50,7 @@ class TyDataset(Dataset):
             self.F_shape = args.F_shape
             self.O_shape = args.O_shape
             self.compression = args.compression
+            self.target_RAD = args.target_RAD
 
         self.transform = transform
         rand_tys = np.random.choice(len(ty_list), len(ty_list), replace=False)
@@ -177,11 +178,18 @@ class TyDataset(Dataset):
                 
                 # QPE data(a tensor with shape (target_frames X H X W)) (6-24)
                 target_data = np.zeros((self.target_frames, self.F_shape[1], self.F_shape[0]))
+                if self.target_RAD:
+                    data_type = 'RAD'
+                else:
+                    data_type = 'QPE'
                 for j in range(self.target_frames):
                     file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
-                    data_path = os.path.join(self.radar_wrangled_data_folder, 'QPE', year+'.'+ty_name+'.'+file_time+'.pkl')
+                    data_path = os.path.join(self.radar_wrangled_data_folder, data_type, year+'.'+ty_name+'.'+file_time+'.pkl')
                     target_data[j,:,:] = pd.read_pickle(data_path, compression=self.compression).loc[self.F_y[0]:self.F_y[1], self.F_x[0]:self.F_x[1]].to_numpy()
-                    # print(file_time)
+
+                if self.target_RAD:
+                    target_data = 
+
                 # the start time of prediction 
                 pre_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp)), format='%Y%m%d%H%M')
                 # return the idx of sample

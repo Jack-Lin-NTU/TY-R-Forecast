@@ -43,16 +43,18 @@ class DeConvGRUcell(nn.Module):
     '''
     Generate a convolutional GRU cell
     '''
-    def __init__(self, channel_input, channel_output, kernel, stride, padding, batch_norm=False, device=None, value_dtype=None):
+    def __init__(self, channel_input, channel_output, kernel, stride, padding, batch_norm=False):
         super().__init__()
-        self.device = device
-        self.value_dtype = value_dtype
         self.reset_gate = DeCNN2D_cell(channel_input+channel_output, channel_output, kernel, stride, padding, batch_norm)
         self.update_gate = DeCNN2D_cell(channel_input+channel_output, channel_output, kernel, stride, padding, batch_norm)
         self.out_gate = DeCNN2D_cell(channel_input+channel_output, channel_output, kernel, stride, padding, batch_norm, negative_slope=0.2)
     
     def forward(self, x=None, prev_state=None):
         input_ = x
+        
+        # get device and dtype
+        device = self.reset_gate.layer[0].weight.device
+        dtype = self.reset_gate.layer[0].weight.dtype
 
         # data size is [batch, channel, height, width]
         if input_ is None:
@@ -258,9 +260,9 @@ class Forecaster(nn.Module):
         cells = []
         for i in range(n_cells):
             if i == 0:
-                cell = DeConvGRUcell(channel_input, channel_gru[i], gru_k[i], gru_s[i], gru_p[i], batch_norm, device, value_dtype)
+                cell = DeConvGRUcell(channel_input, channel_gru[i], gru_k[i], gru_s[i], gru_p[i], batch_norm)
             else:
-                cell = DeConvGRUcell(channel_upsample[i-1], channel_gru[i], gru_k[i], gru_s[i], gru_p[i], batch_norm, device, value_dtype)
+                cell = DeConvGRUcell(channel_upsample[i-1], channel_gru[i], gru_k[i], gru_s[i], gru_p[i], batch_norm)
 
             name = 'DeConvGRUcell_' + str(i).zfill(2)
             setattr(self, name, cell)

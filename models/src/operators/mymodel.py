@@ -35,7 +35,7 @@ class TyCatcher(nn.Module):
     def forward(self, ty_info, rader_map):
         # device and dtype
         device = self.layers[0].weight.device
-        dtype = self.layers[0].weight.device
+        dtype = self.layers[0].weight.dtype
 
         b, c, _, _ = rader_map.shape
         # feed ty info to get theta
@@ -172,10 +172,10 @@ class Model(nn.Module):
                                     forecaster_n_layers, forecaster_output_cout, forecaster_output_k, forecaster_output_s, forecaster_output_p, 
                                     forecaster_n_output_layers, batch_norm)
 
-    def forward(self, inputs, ty_infos, radar_map):
+    def forward(self, encoder_inputs, ty_infos, radar_map):
         hidden = None
         for i in range(self.n_encoders):
-            input_ = inputs[:,i,:,:,:]
+            input_ = encoder_inputs[:,i,:,:,:]
             hidden = self.encoder(input_, hidden=hidden)
         
         forecast = []

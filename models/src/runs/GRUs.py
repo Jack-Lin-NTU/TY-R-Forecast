@@ -199,7 +199,6 @@ def train(model, optimizer, trainloader, testloader, args):
         running_loss = 0.
         # breakpoint()
         for idx, data in enumerate(trainloader, 0):
-            
             inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
 

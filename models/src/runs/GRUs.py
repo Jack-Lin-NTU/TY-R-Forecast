@@ -228,11 +228,11 @@ def train(model, optimizer, trainloader, testloader, args):
             if args.clip:
                 nn.utils.clip_grad_norm_(model.parameters(), max_norm=args.clip_max_norm)
             optimizer.step()
-
             # print training loss per 40 batches.
             if (idx+1) % 40 == 0:
                 # print the trainging results to the log file.
                 logger.debug('{}|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}'.format(args.model, epoch+1, args.max_epochs, idx+1, total_batches, running_loss))
+                print('max:',torch.max(outputs).item())
                 running_loss = 0.
         
         # save the training results.

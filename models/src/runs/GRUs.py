@@ -34,7 +34,7 @@ def get_dataloader(args, train_num=None):
 
     # dataloader
     train_kwargs = {'num_workers': 4, 'pin_memory': True} if args.able_cuda else {}
-    test_kwargs = {'num_workers': 1, 'pin_memory': True} if args.able_cuda else {}
+    test_kwargs = {'num_workers': 4, 'pin_memory': True} if args.able_cuda else {}
     trainloader = DataLoader(dataset=traindataset, batch_size=args.batch_size, shuffle=True, **train_kwargs)
     testloader = DataLoader(dataset=testdataset, batch_size=args.batch_size, shuffle=False, **test_kwargs)
     
@@ -231,8 +231,7 @@ def train(model, optimizer, trainloader, testloader, args):
             # print training loss per 40 batches.
             if (idx+1) % 40 == 0:
                 # print the trainging results to the log file.
-                logger.debug('{}|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}'.format(args.model, epoch+1, args.max_epochs, idx+1, total_batches, running_loss))
-                print('max:',torch.max(outputs).item())
+                logger.debug('{}|  Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}, Max: {:.3f}'.format(args.model, epoch+1, args.max_epochs, idx+1, total_batches, running_loss, torch.max(outputs).item()))
                 running_loss = 0.
         
         # save the training results.

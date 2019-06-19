@@ -21,8 +21,7 @@ class TyCatcher(nn.Module):
             else:
                 layer = nn.Linear(channel_hidden[i-1], channel_hidden[i])
             
-            # nn.init.kaiming_normal_(layer.weight)
-            nn.init.zeros_(layer.weight)
+            nn.init.kaiming_normal_(layer.weight)
             nn.init.zeros_(layer.bias)
 
             name = 'Layer_' + str(i).zfill(2)
@@ -43,17 +42,15 @@ class TyCatcher(nn.Module):
         for i in range(self.n_layers):
             layer = self.layers[i]
             output = layer(output)
-        # breakpoint()
         output1, output2 = output.view(-1,2,3).chunk(2, dim=2)
         theta1 = torch.tensor([[1, 0],[0, 1]]).to(device=device, dtype=dtype).expand(b,2,2)
         theta2 = torch.zeros(b,2,1).to(device=device, dtype=dtype)
         theta = torch.cat([theta1+0.1*output1, theta2+output2], dim=2)
-        size = torch.Size((b,c,400,400))
+        size = torch.Size((b, c, 400, 400))
         flowfield = F.affine_grid(theta, size)
         sample = F.grid_sample(rader_map, flowfield)
-        self.flowfield = flowfield
-        self.sample = sample
-        return sample
+
+        return sample, theta
 
 class Forecaster(nn.Module):
     def __init__(self, upsample_cin, upsample_cout, upsample_k, upsample_p, upsample_s, n_layers, 
@@ -159,11 +156,12 @@ class Model(nn.Module):
                 forecaster_upsample_cin, forecaster_upsample_cout, forecaster_upsample_k, forecaster_upsample_p, 
                 forecaster_upsample_s, forecaster_n_layers, forecaster_output_cout=1, forecaster_output_k=1, 
                 forecaster_output_s=1, forecaster_output_p=0, forecaster_n_output_layers=1, 
-                batch_norm=False):
+                batch_norm=False, target_RAD=False):
         super().__init__()
         self.n_encoders = n_encoders
         self.n_forecasters = n_forecasters
         self.name = 'STN-CONVGRU'
+        self.target_RAD = target_RAD
 
         self.tycatcher = TyCatcher(TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers)
         self.encoder = Encoder(encoder_input, encoder_downsample, encoder_gru, encoder_downsample_k, encoder_downsample_s, 
@@ -181,25 +179,30 @@ class Model(nn.Module):
             hidden = self.encoder(input_, hidden=hidden)
         
         forecast = []
-        self.flowfields = []
-        self.samples = []
         for i in range(self.n_forecasters):
             tmp_ty_info = ty_infos[:,i,:]
-            input_ = self.tycatcher(tmp_ty_info, radar_map)
-            self.flowfields.append(self.tycatcher.flowfield)
-            self.samples.append(self.tycatcher.sample)
+            input_, _  = self.tycatcher(tmp_ty_info, radar_map)
             hidden = self.encoder(input_, hidden=hidden)
             output_ = self.forecaster(hidden[::-1])
             forecast.append(output_)
 
         forecast = torch.cat(forecast, dim=1)
-        forecast = ((10**(forecast/10))/200)**(5/8)
-
-
-        self.flowfield = torch.cat(self.flowfields, dim=1)
-        self.samples = torch.cat(self.samples, dim=1)
+        if not self.target_RAD:
+            forecast = ((10**(forecast/10))/200)**(5/8)
         
         return forecast
+
+    def samples(self, encoder_inputs, ty_infos, radar_map):
+        flowfields = []
+        samples = []
+        self.theta = []
+        for i in range(self.n_forecasters):
+            tmp_ty_info = ty_infos[:,i,:]
+            input_, theta  = self.tycatcher(tmp_ty_info, radar_map)
+            self.theta.append(theta)
+            samples.append(input_)
+        samples = torch.cat(samples, dim=1)
+        return samples
 
 
 # class my_multi_GRU(nn.Module):

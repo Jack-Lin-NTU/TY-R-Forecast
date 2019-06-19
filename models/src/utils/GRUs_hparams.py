@@ -69,11 +69,15 @@ def CONVGRU_HYPERPARAMs(args):
 
 def MYMODEL_HYPERPARAMs(args):
     c = args.channel_factor
+    if args.catcher_location:
+        TyCatcher_input = 3
+    else:
+        TyCatcher_input = 8
     MYMODEL = edict({
                     'input_frames': args.input_frames,
                     'target_frames': args.target_frames,
                     # hyperparameters for TY Catcher
-                    'TyCatcher_input': 8,
+                    'TyCatcher_input': TyCatcher_input,
                     'TyCatcher_hidden': [20,6],
                     'TyCatcher_n_layers': 2,
                     # hyperparameters for the Encoder

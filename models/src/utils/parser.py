@@ -45,13 +45,13 @@ def get_args():
                     help='The file path of ty-list.csv.')
 
     parser.add_argument('--model', metavar='', type=str, default='trajGRU', help='The GRU model applied here. (default: TRAJGRU)')
+    parser.add_argument('--parallel-compute', action='store_true', help='Parallel computing.')
     parser.add_argument('--able-cuda', action='store_true', help='Able cuda. (default: disable cuda)')
     parser.add_argument('--gpu', metavar='', type=int, default=0, help='GPU device. (default: 0)')
     parser.add_argument('--value-dtype', metavar='', type=str, default='float32', help='The data type of computation. (default: float32)')
     parser.add_argument('--change-value-dtype', action='store_true', help='Change the data type of computation.')
 
     # hyperparameters for training
-    parser.add_argument('--parallel-compute', action='store_true', help='Parallel computing.')
     parser.add_argument('--seed', metavar='', type=int, default=1, help='The setting of random seed. (default: 1)')
     parser.add_argument('--train-num', metavar='', type=int, default=10, help='The number of training events. (default: 10)')
     parser.add_argument('--max-epochs', metavar='', type=int, default=30, help='Max epochs. (default: 30)')
@@ -71,17 +71,11 @@ def get_args():
     parser.add_argument('--input-with-grid', action='store_true', help='Input with grid data.')
     parser.add_argument('--input-with-QPE', action='store_true', help='Input with QPE data.')
     parser.add_argument('--target-RAD', action='store_true', help='Use RAD-transformed data as targets.')
+    parser.add_argument('--denoise-RAD', action='store_true', help='Use denoised RAD data as inputs.')
     parser.add_argument('--channel-factor', metavar='', type=int, default=2, help='Channel factor. (default: 2)')
 
-    # parser.add_argument('--I-x-l', metavar='', type=float, default=120.9625, help='The lowest longitude of input map. (default: 120.9625)')
-    # parser.add_argument('--I-x-h', metavar='', type=float, default=122.075, help='The highest longitude of input map. (default: 122.075)')
-    # parser.add_argument('--I-y-l', metavar='', type=float, default=24.4375, help='The lowest latitude of input map. (default: 24.4375)')
-    # parser.add_argument('--I-y-h', metavar='', type=float, default=25.55, help='The highest latitude of input map. (default: 25.55)')
-
-    # parser.add_argument('--F-x-l', metavar='', type=float, default=121.3375, help='The lowest longitude of target map. (default: 121.3375)')
-    # parser.add_argument('--F-x-h', metavar='', type=float, default=121.7, help='The highest longitude of target map. (default: 121.7)')
-    # parser.add_argument('--F-y-l', metavar='', type=float, default=24.8125, help='The lowest latitude of target map. (default: 24.8125)')
-    # parser.add_argument('--F-y-h', metavar='', type=float, default=25.175, help='The highest latitude of target map. (default: 25.175)')
+    # hyperparameters for STNCONVGRU
+    parser.add_argument('--catcher-location', action='store_true', help='Input only location info of typhoon.')
 
     # tw forecast size (400x400)
     parser.add_argument('--I-x-l', metavar='', type=float, default=118.3, help='The lowest longitude of input map. (default: 118.3)')
@@ -125,19 +119,22 @@ def get_args():
     args.F_shape = (round((args.F_x_h-args.F_x_l)/args.res_degree)+1, round((args.F_y_h-args.F_y_l)/args.res_degree)+1)
     args.O_shape = (round((args.O_x_h-args.O_x_l)/args.res_degree)+1, round((args.O_y_h-args.O_y_l)/args.res_degree)+1)
 
-    # overall info for normalization
-    rad_overall = pd.read_csv(os.path.join(args.radar_folder, 'overall.csv'), index_col='Measures').loc['max':'min',:]
-
+    # statistics of each data
+    rad_overall = pd.read_csv(os.path.join(args.radar_folder, 'overall.csv'), index_col='Measures').loc['max_value':'min_value',:]
     if len(args.weather_list) == 0:
         meteo_overall = None
     else:
         meteo_overall = pd.read_csv(os.path.join(args.weather_folder, 'overall.csv'), index_col='Measures')
-    
     ty_overall = pd.read_csv(os.path.join(args.ty_info_folder, 'overall.csv'), index_col=0).T
+    if args.catcher_location:
+        ty_overall = ty_overall[['Lat','Lon','distance']]
+    else:
+        ty_overall = ty_overall.iloc[:,0:-1]
 
-    args.max_values = pd.concat([rad_overall, meteo_overall, ty_overall], axis=1, sort=False).T['max']
-    args.min_values = pd.concat([rad_overall, meteo_overall, ty_overall], axis=1, sort=False).T['min']
+    args.max_values = pd.concat([rad_overall, meteo_overall, ty_overall], axis=1, sort=False).T['max_value']
+    args.min_values = pd.concat([rad_overall, meteo_overall, ty_overall], axis=1, sort=False).T['min_value']
 
+    # define loss function
     if args.loss_function.upper() == 'BMSE':
         args.loss_function = MSE(max_values=args.max_values['QPE'], min_values=args.min_values['QPE'], balance=True, normalize_target=args.normalize_target)
     elif args.loss_function.upper() == 'BMAE':
@@ -158,11 +155,10 @@ def get_args():
     args.compression = 'bz2'
     args.figure_dpi = 120
 
-    args.RAD_level = [-5, 0, 10, 20, 30, 40, 50, 60, 70]
+    args.RAD_level = [-5, 10, 20, 30, 40, 50, 60, 70, 80, 90]
     args.QPE_level = [-5, 0, 5, 10, 20, 35, 50, 80, 100, 200]
-    args.QPF_level = [-5, 0, 10, 20, 35, 50, 80, 120, 160, 200]
-
-    args.RAD_cmap = ['#FFFFFF','#FFD8D8','#FFB8B8','#FF9090','#FF6060','#FF2020','#CC0000','#A00000','#600000']
+    args.QPF_level = [-5, 0, 5, 10, 20, 35, 50, 80, 100, 200]
+    args.RAD_cmap = ['#FFFFFF','#FFD8D8','#FFB8B8','#FF9090','#FF6060','#FF2020','#CC0000','#A00000','#600000','#300000']
     args.QPE_cmap = ['#FFFFFF','#D2D2FF','#AAAAFF','#8282FF','#6A6AFF','#4242FF','#1A1AFF','#000090','#000050','#000030']
     args.QPF_cmap = ['#FFFFFF','#D2D2FF','#AAAAFF','#8282FF','#6A6AFF','#4242FF','#1A1AFF','#000090','#000050','#000030']
 
@@ -208,7 +204,12 @@ def get_args():
     if args.clip:
         args.result_folder += '_clip'+str(args.clip_max_norm)
         args.params_folder += '_clip'+str(args.clip_max_norm)
-    
 
+    if args.catcher_location:
+        args.result_folder += '_chatchloc'
+        args.params_folder += '_chatchloc'
+
+    # denoised data as inputs
+    if args.denoise_RAD:
+        args.radar_wrangled_data_folder += '_denoise20'
     return args
-

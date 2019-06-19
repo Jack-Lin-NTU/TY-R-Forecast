@@ -51,6 +51,7 @@ class TyDataset(Dataset):
             self.O_shape = args.O_shape
             self.compression = args.compression
             self.target_RAD = args.target_RAD
+            self.catcher_location = args.catcher_location
 
         self.transform = transform
         rand_tys = np.random.choice(len(ty_list), len(ty_list), replace=False)
@@ -164,6 +165,7 @@ class TyDataset(Dataset):
                             tmp += 1
                 
                 # update index of time
+                # breakpoint()
                 idx_tmp += self.input_frames
                 # TY infos (6-24)
                 data_path = os.path.join(self.ty_info_wrangled_data_folder, year+'.'+ty_name+'.csv')
@@ -173,8 +175,12 @@ class TyDataset(Dataset):
 
                 file_time1 = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*idx_tmp), format='%Y%m%d%H%M')
                 file_time2 = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+self.target_frames-1)), format='%Y%m%d%H%M')
-
+                
                 ty_infos = ty_infos.loc[file_time1:file_time2,:].to_numpy()
+                if self.catcher_location:
+                    ty_infos = ty_infos[:,[0,1,-1]]
+                else:
+                    ty_infos = ty_infos[:,0:-1]
                 
                 # QPE data(a tensor with shape (target_frames X H X W)) (6-24)
                 target_data = np.zeros((self.target_frames, self.F_shape[1], self.F_shape[0]))
@@ -187,8 +193,8 @@ class TyDataset(Dataset):
                     data_path = os.path.join(self.radar_wrangled_data_folder, data_type, year+'.'+ty_name+'.'+file_time+'.pkl')
                     target_data[j,:,:] = pd.read_pickle(data_path, compression=self.compression).loc[self.F_y[0]:self.F_y[1], self.F_x[0]:self.F_x[1]].to_numpy()
 
-                if self.target_RAD:
-                    target_data = ((10**(target_data/10))/200)**(5/8)
+                # if self.target_RAD:
+                #     target_data = ((10**(target_data/10))/200)**(5/8)
 
                 # the start time of prediction 
                 pre_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp)), format='%Y%m%d%H%M')
@@ -224,6 +230,7 @@ class Normalize(object):
         self.input_with_QPE = args.input_with_QPE
         self.weather_list = args.weather_list
         self.I_shape = args.I_shape
+        self.catcher_location = args.catcher_location
         
     def __call__(self, sample):
         input_data, target_data, ty_infos, radar_map = sample['inputs'], sample['targets'], sample['ty_infos'], sample['radar_map'] 
@@ -248,8 +255,10 @@ class Normalize(object):
         
         # normalize targets
         if self.normalize_target:
-            target_data = (target_data - self.min_values['QPE']) / (self.max_values['QPE'] - self.min_values['QPE'])
-        
+            if self.target_RAD:
+                target_data = (target_data - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
+            else:
+                target_data = (target_data - self.min_values['QPE']) / (self.max_values['QPE'] - self.min_values['QPE'])
         # normalize radar map
         index = 0
         radar_map[index,:,:] = (radar_map[index, :, :] - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
@@ -267,11 +276,10 @@ class Normalize(object):
             radar_map[index,:,:] = radar_map[index,:,:] / self.I_shape[0]
             index += 1
             radar_map[index,:,:] = radar_map[index,:,:] / self.I_shape[1]
-        
+
         # normalize ty info
         min_values = torch.from_numpy(self.min_values.loc['Lat':].to_numpy())
         max_values = torch.from_numpy(self.max_values.loc['Lat':].to_numpy())
-
         ty_infos = (ty_infos - min_values) / ( max_values - min_values)
 
         # numpy data: x_tsteps X H X W

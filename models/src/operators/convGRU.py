@@ -326,12 +326,13 @@ class Model(nn.Module):
                 forecaster_upsample_k, forecaster_upsample_s, forecaster_upsample_p,
                 forecaster_gru_k, forecaster_gru_s, forecaster_gru_p, forecaster_n_cells,
                 forecaster_output=1, forecaster_output_k=1, forecaster_output_s=1, forecaster_output_p=0, forecaster_output_layers=1,
-                batch_norm=False,):
+                batch_norm=False, target_RAD=False):
 
         super().__init__()
         self.n_encoders = n_encoders
         self.n_forecasters = n_forecasters
         self.name = 'CONVGRU'
+        self.target_RAD = target_RAD
 
         self.encoder = Encoder(channel_input=encoder_input_channel, channel_downsample=encoder_downsample_channels, channel_gru=encoder_gru_channels,
                                 downsample_k=encoder_downsample_k, gru_k=encoder_gru_k,
@@ -364,7 +365,8 @@ class Model(nn.Module):
             forecast.append(output)
 
         forecast = torch.cat(forecast, dim=1)
-        forecast = ((10**(forecast/10))/200)**(5/8)
+        if not self.target_RAD:
+            forecast = ((10**(forecast/10))/200)**(5/8)
         return forecast
 
 

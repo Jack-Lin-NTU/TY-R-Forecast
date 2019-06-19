@@ -51,6 +51,8 @@ class TyCatcher(nn.Module):
         size = torch.Size((b,c,400,400))
         flowfield = F.affine_grid(theta, size)
         sample = F.grid_sample(rader_map, flowfield)
+        self.flowfield = flowfield
+        self.sample = sample
         return sample
 
 class Forecaster(nn.Module):
@@ -179,15 +181,24 @@ class Model(nn.Module):
             hidden = self.encoder(input_, hidden=hidden)
         
         forecast = []
+        self.flowfields = []
+        self.samples = []
         for i in range(self.n_forecasters):
             tmp_ty_info = ty_infos[:,i,:]
             input_ = self.tycatcher(tmp_ty_info, radar_map)
+            self.flowfields.append(self.tycatcher.flowfield)
+            self.samples.append(self.tycatcher.sample)
             hidden = self.encoder(input_, hidden=hidden)
             output_ = self.forecaster(hidden[::-1])
             forecast.append(output_)
 
         forecast = torch.cat(forecast, dim=1)
         forecast = ((10**(forecast/10))/200)**(5/8)
+
+
+        self.flowfield = torch.cat(self.flowfields, dim=1)
+        self.samples = torch.cat(self.samples, dim=1)
+        
         return forecast
 
 

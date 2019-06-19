@@ -67,6 +67,7 @@ if __name__ == "__main__":
             criterion[threshold] = criterion[threshold] + [c.csi(threshold)/len(trainloader), c.hss(threshold)/len(trainloader)]
     criterion.to_csv('/home/jack/ssd/01_ty_research/criterion_{:s}.csv'.format(args.model.upper()))
 
+    breakpoint()
 
     fig = plt.figure(figsize=(16,8), dpi=args.figure_dpi)
     X, Y = np.meshgrid(np.linspace(args.I_x[0],args.I_x[1],args.I_shape[0]),np.linspace(args.I_y[0],args.I_y[1],args.I_shape[1]))    
@@ -128,6 +129,3 @@ if __name__ == "__main__":
         plt.tight_layout()
         fig.savefig(images, dpi=args.figure_dpi, bbox_inches='tight')
         fig.clf()
-
-
-    

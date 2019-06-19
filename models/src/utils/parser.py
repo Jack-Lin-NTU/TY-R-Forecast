@@ -70,7 +70,7 @@ def get_args():
     parser.add_argument('--target-frames', metavar='', type=int, default=18, help='The size of target frames. (default: 18)')
     parser.add_argument('--input-with-grid', action='store_true', help='Input with grid data.')
     parser.add_argument('--input-with-QPE', action='store_true', help='Input with QPE data.')
-    parser.add_argument('--RAD-target', action='store_true', help='Use RAD-transformed data as targets.')
+    parser.add_argument('--target-RAD', action='store_true', help='Use RAD-transformed data as targets.')
     parser.add_argument('--channel-factor', metavar='', type=int, default=2, help='Channel factor. (default: 2)')
 
     # parser.add_argument('--I-x-l', metavar='', type=float, default=120.9625, help='The lowest longitude of input map. (default: 120.9625)')

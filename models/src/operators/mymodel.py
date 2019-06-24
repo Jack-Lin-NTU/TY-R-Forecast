@@ -46,7 +46,7 @@ class TyCatcher(nn.Module):
         theta1 = torch.tensor([[1, 0],[0, 1]]).to(device=device, dtype=dtype).expand(b,2,2)
         theta2 = torch.zeros(b,2,1).to(device=device, dtype=dtype)
         theta = torch.cat([theta1+0.1*output1, theta2+output2], dim=2)
-        size = torch.Size((b, c, 400, 400))
+        size = torch.Size(rader_map.shape)
         flowfield = F.affine_grid(theta, size)
         sample = F.grid_sample(rader_map, flowfield)
 

@@ -76,50 +76,47 @@ def get_args():
     parser.add_argument('--channel-factor', metavar='', type=int, default=2, help='Channel factor. (default: 2)')
     parser.add_argument('--multi-unit', action='store_true', help='Use multi-unit.')
 
-    # hyperparameters for STNCONVGRU
+    # hyperparameters for STN-CONVGRU
     parser.add_argument('--catcher-location', action='store_true', help='Input only location info of typhoon.')
 
     # tw forecast size (400x400)
-    parser.add_argument('--I-x-l', metavar='', type=float, default=118.3, help='The lowest longitude of input map. (default: 118.3)')
-    parser.add_argument('--I-x-h', metavar='', type=float, default=123.2875, help='The highest longitude of input map. (default: 123.2875)')
-    parser.add_argument('--I-y-l', metavar='', type=float, default=21, help='The lowest latitude of input map. (default: 21)')
-    parser.add_argument('--I-y-h', metavar='', type=float, default=25.9875, help='The highest latitude of input map. (default: 25.9875)')
-
-    parser.add_argument('--F-x-l', metavar='', type=float, default=118.3, help='The lowest longitude of target map. (default: 118.3)')
-    parser.add_argument('--F-x-h', metavar='', type=float, default=123.2875, help='The highest longitude of target map. (default: 123.2875)')
-    parser.add_argument('--F-y-l', metavar='', type=float, default=21, help='The lowest latitude of target map. (default: 21)')
-    parser.add_argument('--F-y-h', metavar='', type=float, default=25.9875, help='The highest latitude of target map. (default: 25.9875)')
-
-    parser.add_argument('--O-x-l', metavar='', type=float, default=118, help='The lowest longitude of original map. (default: 118)')
-    parser.add_argument('--O-x-h', metavar='', type=float, default=123.5, help='The highest longitude of original map. (default: 123.5)')
-    parser.add_argument('--O-y-l', metavar='', type=float, default=20, help='The lowest latitude of original map. (default: 20)')
-    parser.add_argument('--O-y-h', metavar='', type=float, default=27, help='The highest latitude of original map. (default: 27)')
+    parser.add_argument('--I-size', metavar='', type=int, default=420, help='The height of inputs (default: 420)')
+    parser.add_argument('--F-size', metavar='', type=int, default=420, help='The height of targets (default: 420)')
 
     parser.add_argument('--weather-list', metavar='', action='append', default=[],
                         help='Weather list. (default: [])')
 
     # Announce the args
     args = parser.parse_args()
-
     # Adjust some settings in the args.
     if args.able_cuda and torch.cuda.is_available():
         args.device = torch.device('cuda:{:02d}'.format(args.gpu))
     else:
         args.device = torch.device('cpu')
-
     args.value_dtype = getattr(torch, args.value_dtype)
 
-    args.res_degree = 0.0125
-    args.I_x = [args.I_x_l, args.I_x_h]
-    args.I_y = [args.I_y_l, args.I_y_h]
-    args.F_x = [args.F_x_l, args.F_x_h]
-    args.F_y = [args.F_y_l, args.F_y_h]
-    args.O_x = [args.O_x_l, args.O_x_h]
-    args.O_y = [args.O_y_l, args.O_y_h]
 
-    args.I_shape = (round((args.I_x_h-args.I_x_l)/args.res_degree)+1, round((args.I_y_h-args.I_y_l)/args.res_degree)+1)
-    args.F_shape = (round((args.F_x_h-args.F_x_l)/args.res_degree)+1, round((args.F_y_h-args.F_y_l)/args.res_degree)+1)
-    args.O_shape = (round((args.O_x_h-args.O_x_l)/args.res_degree)+1, round((args.O_y_h-args.O_y_l)/args.res_degree)+1)
+    # variables for locating maps.
+    args.map_center = [120.75, 23.5]
+    args.res_degree = 0.0125
+    args.O_x = [118, 123.5]
+    args.O_y = [20, 27]
+    args.I_x = [args.map_center[0]-(args.res_degree*args.I_size/2), args.map_center[0]+(args.res_degree*(args.I_size/2-1))]
+    args.I_y = [args.map_center[1]-(args.res_degree*args.I_size/2), args.map_center[1]+(args.res_degree*(args.I_size/2-1))]
+    args.F_x = [args.map_center[0]-(args.res_degree*args.F_size/2), args.map_center[0]+(args.res_degree*(args.F_size/2-1))]
+    args.F_y = [args.map_center[1]-(args.res_degree*args.F_size/2), args.map_center[1]+(args.res_degree*(args.F_size/2-1))]
+
+    args.I_shape = (args.I_size, args.I_size)
+    args.F_shape = (args.F_size, args.F_size)
+    args.O_shape = (441, 561)
+
+    args.I_x_iloc = [int((args.I_x[0]-args.O_x[0])/args.res_degree), 441-int((args.O_x[1]-args.I_x[1])/args.res_degree)+1]
+    args.I_y_iloc = [int((args.I_y[0]-args.O_y[0])/args.res_degree), 441-int((args.O_y[1]-args.I_y[1])/args.res_degree)+1]
+    args.F_x_iloc = [int((args.F_x[0]-args.O_x[0])/args.res_degree), 441-int((args.O_x[1]-args.F_x[1])/args.res_degree)+1]
+    args.F_y_iloc = [int((args.F_y[0]-args.O_y[0])/args.res_degree), 441-int((args.O_y[1]-args.F_y[1])/args.res_degree)+1]
+
+    args.I_x_list = np.around(np.linspace(args.I_x[0], args.I_x[1], args.I_shape[0]), decimals=4)
+    args.I_y_list = np.around(np.linspace(args.I_y[1], args.I_y[0], args.I_shape[1]), decimals=4)
 
     # statistics of each data
     rad_overall = pd.read_csv(os.path.join(args.radar_folder, 'overall.csv'), index_col='Measures').loc['max_value':'min_value',:]
@@ -138,14 +135,6 @@ def get_args():
 
     # define loss function
     args.loss_function = LOSS(args=args)
-       
-    args.I_x_iloc = [int((args.I_x[0]-args.O_x[0])/args.res_degree), int((args.I_x[1]-args.O_x[0])/args.res_degree + 1)]
-    args.I_y_iloc = [int((args.I_y[0]-args.O_y[0])/args.res_degree), int((args.I_y[1]-args.O_y[0])/args.res_degree + 1)]
-    args.F_x_iloc = [int((args.F_x[0]-args.O_x[0])/args.res_degree), int((args.F_x[1]-args.O_x[0])/args.res_degree + 1)]
-    args.F_y_iloc = [int((args.F_y[0]-args.O_y[0])/args.res_degree), int((args.F_y[1]-args.O_y[0])/args.res_degree + 1)]
-
-    args.I_x_list = np.around(np.linspace(args.I_x[0], args.I_x[1], args.I_shape[0]), decimals=4)
-    args.I_y_list = np.around(np.linspace(args.I_y[1], args.I_y[0], args.I_shape[1]), decimals=4)
 
     args.compression = 'bz2'
     args.figure_dpi = 120

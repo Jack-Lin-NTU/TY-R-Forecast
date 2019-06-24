@@ -17,7 +17,7 @@ import torch.optim as optim
 # import our model and dataloader
 from src.utils.parser import get_args
 from src.utils.utils import createfolder, remove_file, Adam16
-from src.utils.loss import Criterion, MSE
+from src.utils.loss import Criterion, LOSS
 from src.runs.GRUs import get_dataloader, get_model, get_optimizer, test
 
 if __name__ == "__main__":
@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     for idx, data in enumerate(testloader, 0):
         inputs, labels = data['inputs'].to(args.device, dtype=args.value_dtype), data['targets'].to(args.device, dtype=args.value_dtype)
-        prediction_time = data['time'][0]
+        prediction_time = data['current_time'][0]
 
         if args.model.upper() == 'MYMODEL':
             ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
@@ -60,38 +60,44 @@ if __name__ == "__main__":
 
         outputs = outputs.detach().to('cpu').numpy()
         labels = labels.to('cpu').numpy()
-        if idx == 50:
+        if idx == 0:
             break
     labels = data['targets'].to('cpu').numpy()[0]
     labels[labels<1] = 0
     samples = model.samples(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map).detach().to('cpu').numpy()[0]
     radar_map = radar_map.to('cpu').numpy()
-    breakpoint()
+    # breakpoint()
     fig = plt.figure(figsize=(16,8), dpi=args.figure_dpi)
-    X, Y = np.meshgrid(np.linspace(args.I_x[0],args.I_x[1],args.I_shape[0]), np.linspace(args.I_y[0],args.I_y[1],args.I_shape[1]))    
+    X, Y = np.meshgrid(np.linspace(args.I_x[0],args.I_x[1],args.I_shape[0]), np.linspace(args.I_y[0],args.I_y[1],args.I_shape[1])) 
+    Xo, Yo = np.meshgrid(np.linspace(args.O_x[0],args.O_x[1],args.O_shape[0]), np.linspace(args.O_y[0],args.O_y[1],args.O_shape[1]))     
     
     m = Basemap(projection='cyl', resolution='h', llcrnrlat=args.O_y[0], urcrnrlat=args.O_y[1], llcrnrlon=args.O_x[0], urcrnrlon=args.O_x[1])
 
     createfolder(args.infers_folder)
     for i in range(18):
-        data = [samples[i], radar_map]
         images = os.path.join(args.infers_folder, args.model+str(i+1)+'.png')
-        for idx in range(2):
-            ax = fig.add_subplot(1, len(data), idx+1)
-            _ = m.readshapefile(args.TW_map_file, name='Taiwan', linewidth=0.25, drawbounds=True, color='k', ax=ax)
-            cs = m.contourf(x=X, y=Y, data=data[idx], colors=args.RAD_cmap, levels=args.RAD_level, ax=ax)
-#             else:
-#                 cs = m.contourf(x=X, y=Y, data=data[idx], colors=args.QPE_cmap, levels=args.QPE_level, ax=ax)
-            ax.set_xlabel(r'longtitude($^o$)',fontdict={'fontsize':10})
-            ax.set_ylabel(r'latitude($^o$)',fontdict={'fontsize':10})
-            _ = ax.set_xticks(ticks = np.linspace(args.I_x[0], args.I_x[1], 5))
-            _ = ax.set_yticks(ticks = np.linspace(args.I_y[0], args.I_y[1], 5))
-            ax.tick_params('both', labelsize=10)
-            cbar = fig.colorbar(cs, ax=ax, shrink=0.8)
-            cbar.ax.tick_params(labelsize=10)
-            # ax.legend(fontsize=10)
-            # ax.set_title(data_type[idx], fontsize=10)
-            # fig.suptitle(prediction_time+dt.timedelta(minutes=i*10))
+        # 1
+        ax = fig.add_subplot(1,2, 1)
+        _ = m.readshapefile(args.TW_map_file, name='Taiwan', linewidth=0.25, drawbounds=True, color='k', ax=ax)
+        cs = m.contourf(x=X, y=Y, data=samples[i], colors=args.RAD_cmap, levels=args.RAD_level, ax=ax)
+        ax.set_xlabel(r'longtitude($^o$)',fontdict={'fontsize':10})
+        ax.set_ylabel(r'latitude($^o$)',fontdict={'fontsize':10})
+        _ = ax.set_xticks(ticks = np.linspace(args.I_x[0], args.I_x[1], 5))
+        _ = ax.set_yticks(ticks = np.linspace(args.I_y[0], args.I_y[1], 5))
+        ax.tick_params('both', labelsize=10)
+        cbar = fig.colorbar(cs, ax=ax, shrink=0.8)
+        cbar.ax.tick_params(labelsize=10)
+        # 2
+        ax = fig.add_subplot(1, 2, 2)
+        _ = m.readshapefile(args.TW_map_file, name='Taiwan', linewidth=0.25, drawbounds=True, color='k', ax=ax)
+        cs = m.contourf(x=Xo, y=Yo, data=radar_map[0,0,:,:], colors=args.RAD_cmap, levels=args.RAD_level, ax=ax)
+        ax.set_xlabel(r'longtitude($^o$)',fontdict={'fontsize':10})
+        ax.set_ylabel(r'latitude($^o$)',fontdict={'fontsize':10})
+        _ = ax.set_xticks(ticks = np.linspace(args.I_x[0], args.I_x[1], 5))
+        _ = ax.set_yticks(ticks = np.linspace(args.I_y[0], args.I_y[1], 5))
+        ax.tick_params('both', labelsize=10)
+        cbar = fig.colorbar(cs, ax=ax, shrink=0.8)
+        cbar.ax.tick_params(labelsize=10) 
 
         plt.tight_layout()
         fig.savefig(images, dpi=args.figure_dpi, bbox_inches='tight')

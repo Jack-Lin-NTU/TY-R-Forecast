@@ -10,13 +10,14 @@ import torch
 import torch.optim as optim
 
 # import our model and dataloader
-from src.utils.parser import get_args
+from src.utils.parser import get_args,print_args
 from src.utils.utils import createfolder
 from src.runs.GRUs import get_dataloader, get_model, get_optimizer, train, test
 
 def main():
     args = get_args()
-    # breakpoint()
+    print_args(args)
+    breakpoint()
     # set cuda device at first
     torch.cuda.set_device(args.gpu)
     pd.set_option('precision', 4)
@@ -26,12 +27,12 @@ def main():
     torch.cuda.manual_seed(args.seed)
 
     # get trainloader and testloader
-    trainloader, testloader = get_dataloader(args=args)
+    trainloader, testloader = get_dataloader(args=args, train_num=args.train_num)
     # get the model
     model = get_model(args=args)
     
     # get optimizer
-    optimizer = get_optimizer( args=args, model=model)
+    optimizer = get_optimizer(args=args, model=model)
     
     # train process
     time1 = time.time()

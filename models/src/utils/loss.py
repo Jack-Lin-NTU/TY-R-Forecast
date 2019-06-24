@@ -2,54 +2,80 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+def R2DBZ(x):
+    return 10*np.log10(x**(8/5)*200)
 
-class MSE(nn.Module):
-    def __init__(self, max_values, min_values, balance=True, normalize_target=False):
-        super(MSE, self).__init__()
-        if balance:
-            self.weights = [1, 2, 5, 10, 30, 100]
-        else:
-            self.weights = [1]*5
-            
-        if normalize_target:
-            self.value_list = [0, 2/max_values, 5/max_values, 10/max_values, 30/max_values, 1]
-        else:
-            self.value_list = [0, 2, 5, 10, 30, 60, 500]
+def mse(x,y):
+    return torch.sum((x-y)**2)
+
+def mae(x,y):
+    return torch.sum(torch.abs(x-y))
+
+class LOSS():
+    def __init__(self, args):
+        super().__init__()
+        self.weights = np.array([1., 2., 5., 10., 30., 100.])
+        self.value_list = np.array([0., 2., 5., 10., 30., 60., 200.])
+        max_values = args.max_values['QPE']
+
+        if args.target_RAD:
+            max_values = args.max_values['RAD']
+            self.value_list[1:] = R2DBZ(self.value_list[1:])
+
+        if args.normalize_target:
+            self.value_list = self.value_list / max_values
         
-    def forward(self, outputs, targets):
+        if args.loss_function.upper() == 'BMSE':
+            self.loss = mse
+        if args.loss_function.upper() == 'BMAE':
+            self.loss = mae
+        if args.loss_function.upper() == 'MSE':
+            self.loss = mse
+            self.weights = np.ones_like(self.weights)
+        if args.loss_function.upper() == 'MAE':
+            self.loss = mae
+            self.weights = np.ones_like(self.weights)
+
+    def __call__ (self, outputs, targets):
         loss = 0.
-        for i in range(len(self.value_list)-1):
+        b = outputs.shape[0]
+        for i in range(len(self.weights)):
             mask = (targets>=self.value_list[i]) & (targets<self.value_list[i+1])
-            tmp = self.weights[i] * F.mse_loss(outputs[mask], targets[mask])
-            if torch.isnan(tmp):
-                continue
-            else:
-                loss += tmp
+            loss += self.weights[i] * self.loss(outputs[mask], targets[mask]) / b
         return loss
 
-class MAE(nn.Module):
-    def __init__(self, max_values, min_values, balance=True, normalize_target=False):
-        super(MAE, self).__init__()
-        if balance:
-            self.weights = [1, 2, 5, 10, 30, 100]
-        else:
-            self.weights = [1]*5
-        if normalize_target:
-            self.value_list = [0, 2/max_values, 5/max_values, 10/max_values, 30/max_values, 1]
-        else:
-            self.value_list = [0, 2, 5, 10, 30, 60, 500]
-        
-    def forward(self, outputs, targets):
-        loss = 0.
-        for i in range(len(self.value_list)-1):
-            mask = (targets>=self.value_list[i]) & (targets<self.value_list[i+1])
-            tmp = self.weights[i] * F.l1_loss(outputs[mask], targets[mask])
-            if torch.isnan(tmp):
-                continue
-            else:
-                loss += tmp
-        return loss
+class LOSS_pytorch():
+    def __init__(self, args):
+        super().__init__()
+        self.weights = np.array([1., 2., 5., 10., 30., 100.])
+        self.value_list = np.array([0., 2., 5., 10., 30., 60., 200.])
+        max_values = args.max_values['QPE']
 
+        if args.target_RAD:
+            max_values = args.max_values['RAD']
+            self.value_list[1:] = R2DBZ(self.value_list[1:])
+
+        if args.normalize_target:
+            self.value_list = self.value_list / max_values
+        
+        if args.loss_function.upper() == 'BMSE':
+            self.loss = mse
+        if args.loss_function.upper() == 'BMAE':
+            self.loss = mae
+        if args.loss_function.upper() == 'MSE':
+            self.loss = mse
+            self.weights = np.ones_like(self.weights)
+        if args.loss_function.upper() == 'MAE':
+            self.loss = mae
+            self.weights = np.ones_like(self.weights)
+
+    def __call__ (self, outputs, targets):
+        loss = 0.
+        b = outputs.shape[0]
+        for i in range(len(self.weights)):
+            mask = (targets>=self.value_list[i]) & (targets<self.value_list[i+1])
+            loss += self.weights[i] * self.loss(outputs[mask], targets[mask]) / b
+        return loss
 
 class Criterion():
     def __init__(self, prediction, truth):

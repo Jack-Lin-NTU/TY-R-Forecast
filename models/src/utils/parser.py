@@ -6,8 +6,8 @@ import argparse
 import torch
 import torch.optim as optim
 
-from.utils import make_path
-from.loss import MAE, MSE
+from.utils import make_path, createfolder
+from.loss import LOSS
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -62,6 +62,7 @@ def get_args():
     parser.add_argument('--clip', action='store_true', help='Clip the weightings in the model.')
     parser.add_argument('--clip-max-norm', metavar='', type=float, default=10, help='Max norm value for clipping weightings. (default: 1)')
     parser.add_argument('--batch-norm', action='store_true', help='Do batch normalization.')
+    parser.add_argument('--normalize-input', action='store_true', help='Normalize inputs.')
     parser.add_argument('--normalize-target', action='store_true', help='Normalize targets.')
 
     parser.add_argument('--optimizer', metavar='', type=str, default='Adam', help='The optimizer. (default: Adam)')
@@ -73,6 +74,7 @@ def get_args():
     parser.add_argument('--target-RAD', action='store_true', help='Use RAD-transformed data as targets.')
     parser.add_argument('--denoise-RAD', action='store_true', help='Use denoised RAD data as inputs.')
     parser.add_argument('--channel-factor', metavar='', type=int, default=2, help='Channel factor. (default: 2)')
+    parser.add_argument('--multi-unit', action='store_true', help='Use multi-unit.')
 
     # hyperparameters for STNCONVGRU
     parser.add_argument('--catcher-location', action='store_true', help='Input only location info of typhoon.')
@@ -135,15 +137,8 @@ def get_args():
     args.min_values = pd.concat([rad_overall, meteo_overall, ty_overall], axis=1, sort=False).T['min_value']
 
     # define loss function
-    if args.loss_function.upper() == 'BMSE':
-        args.loss_function = MSE(max_values=args.max_values['QPE'], min_values=args.min_values['QPE'], balance=True, normalize_target=args.normalize_target)
-    elif args.loss_function.upper() == 'BMAE':
-        args.loss_function = MAE(max_values=args.max_values['QPE'], min_values=args.min_values['QPE'], balance=True, normalize_target=args.normalize_target)
-    elif args.loss_function.upper() == 'MSE':
-        args.loss_function = MSE(max_values=args.max_values['QPE'], min_values=args.min_values['QPE'], balance=False, normalize_target=args.normalize_target)
-    elif args.loss_function.upper() == 'MAE':
-        args.loss_function = MAE(max_values=args.max_values['QPE'], min_values=args.min_values['QPE'], balance=True, normalize_target=args.normalize_target)
-
+    args.loss_function = LOSS(args=args)
+       
     args.I_x_iloc = [int((args.I_x[0]-args.O_x[0])/args.res_degree), int((args.I_x[1]-args.O_x[0])/args.res_degree + 1)]
     args.I_y_iloc = [int((args.I_y[0]-args.O_y[0])/args.res_degree), int((args.I_y[1]-args.O_y[0])/args.res_degree + 1)]
     args.F_x_iloc = [int((args.F_x[0]-args.O_x[0])/args.res_degree), int((args.F_x[1]-args.O_x[0])/args.res_degree + 1)]
@@ -155,10 +150,10 @@ def get_args():
     args.compression = 'bz2'
     args.figure_dpi = 120
 
-    args.RAD_level = [-5, 10, 20, 30, 40, 50, 60, 70, 80, 90]
+    args.RAD_level = [-5, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
     args.QPE_level = [-5, 0, 5, 10, 20, 35, 50, 80, 100, 200]
     args.QPF_level = [-5, 0, 5, 10, 20, 35, 50, 80, 100, 200]
-    args.RAD_cmap = ['#FFFFFF','#FFD8D8','#FFB8B8','#FF9090','#FF6060','#FF2020','#CC0000','#A00000','#600000','#300000']
+    args.RAD_cmap = ['#FFFFFF','#FFD8D8','#FFB8B8','#FF9090','#FF6060','#FF2020','#CC0000','#A00000','#600000','#450000','#300000']
     args.QPE_cmap = ['#FFFFFF','#D2D2FF','#AAAAFF','#8282FF','#6A6AFF','#4242FF','#1A1AFF','#000090','#000050','#000030']
     args.QPF_cmap = ['#FFFFFF','#D2D2FF','#AAAAFF','#8282FF','#6A6AFF','#4242FF','#1A1AFF','#000090','#000050','#000030']
 
@@ -212,4 +207,28 @@ def get_args():
     # denoised data as inputs
     if args.denoise_RAD:
         args.radar_wrangled_data_folder += '_denoise20'
+
+    createfolder(args.result_folder)
+    createfolder(args.params_folder)
     return args
+
+def print_args(args):
+    with open(os.path.join(args.result_folder, 'hyperparams.txt'), 'w') as f:
+        f.write('Device: {}\n'.format(args.device))
+        f.write('Model: {}\n'.format(args.model))
+        f.write('Optimizer: {}\n'.format(args.optimizer))
+        f.write('Lr: {}\n'.format(args.lr))
+        f.write('Lr schedule: {}\n'.format(args.lr_scheduler))
+        f.write('Max epochs: {}\n'.format(args.max_epochs))
+        f.write('Batch size: {}\n'.format(args.batch_size))
+        f.write('Clip: {}\n'.format(args.clip))
+        f.write('Clipping norm: {}\n'.format(args.clip_max_norm))
+        f.write('Batch normalize: {}\n'.format(args.batch_norm))
+        f.write('Normalize Target: {}\n'.format(args.normalize_target))
+        f.write('Normalize Input: {}\n'.format(args.normalize_input))
+        f.write('Denoised RAD: {}\n'.format(args.denoise_RAD))
+        f.write('Input channels: {}\n'.format(args.input_channels))
+        f.write('Input frames: {}\n'.format(args.input_frames))
+        f.write('Input with QPE: {}\n'.format(args.input_with_QPE))
+        f.write('Input with grid: {}\n'.format(args.input_with_grid))
+        f.write('Multi-units: {}\n'.format(args.multi_unit))

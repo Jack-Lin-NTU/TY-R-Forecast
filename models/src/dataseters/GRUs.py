@@ -54,7 +54,9 @@ class TyDataset(Dataset):
             self.catcher_location = args.catcher_location
 
         self.transform = transform
+
         rand_tys = np.random.choice(len(ty_list), len(ty_list), replace=False)
+        
         if train:
             if train_num is None:
                 self.events_num = rand_tys[0:int(len(self.ty_list)/4*3)]
@@ -116,16 +118,16 @@ class TyDataset(Dataset):
 
                 for j in range(self.input_frames):
                     # Radar
-                    tmp = 0
+                    channel = 0
                     file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
                     data_path = os.path.join(self.radar_wrangled_data_folder, 'RAD', year+'.'+ty_name+'.'+file_time+'.pkl')
-                    input_data[j,tmp,:,:] = pd.read_pickle(data_path, compression=self.compression).loc[self.I_y[0]:self.I_y[1], self.I_x[0]:self.I_x[1]].to_numpy()
-                    tmp += 1
+                    input_data[j,channel,:,:] = pd.read_pickle(data_path, compression=self.compression).loc[self.I_y[0]:self.I_y[1], self.I_x[0]:self.I_x[1]].to_numpy()
+                    channel += 1
                     
                     if self.input_with_QPE:
                         data_path = os.path.join(self.radar_wrangled_data_folder, 'QPE', year+'.'+ty_name+'.'+file_time+'.pkl')
-                        input_data[j,tmp,:,:] = pd.read_pickle(data_path, compression=self.compression).loc[self.I_y[0]:self.I_y[1], self.I_x[0]:self.I_x[1]].to_numpy()
-                        tmp += 1
+                        input_data[j,channel,:,:] = pd.read_pickle(data_path, compression=self.compression).loc[self.I_y[0]:self.I_y[1], self.I_x[0]:self.I_x[1]].to_numpy()
+                        channel += 1
 
                     # for k in self.weather_list:
                     #     data_path = os.path.join(self.weather_wrangled_data_folder, k, (year+'.'+ty_name+'.'+file_time+'.pkl'))
@@ -134,23 +136,23 @@ class TyDataset(Dataset):
 
                     if self.input_with_grid:
                         gird_x, gird_y = np.meshgrid(np.arange(0, self.I_shape[0]), np.arange(0, self.I_shape[1]))
-                        input_data[j,tmp,:,:] = gird_x
-                        tmp += 1
-                        input_data[j,tmp,:,:] = gird_y
-                        tmp += 1
+                        input_data[j,channel,:,:] = gird_x
+                        channel += 1
+                        input_data[j,channel,:,:] = gird_y
+                        channel += 1
 
                     # RADARMAP (last input image)
                     if j == self.input_frames-1:
-                        tmp = 0
+                        channel = 0
                         file_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+j)), format='%Y%m%d%H%M')
 
                         data_path = os.path.join(self.radar_wrangled_data_folder, 'RAD', year+'.'+ty_name+'.'+file_time+'.pkl')
-                        radar_map[tmp,:,:] = pd.read_pickle(data_path, compression=self.compression).to_numpy()
+                        radar_map[channel,:,:] = pd.read_pickle(data_path, compression=self.compression).to_numpy()
 
                         if self.input_with_QPE:
                                 data_path = os.path.join(self.radar_wrangled_data_folder, 'QPE', year+'.'+ty_name+'.'+file_time+'.pkl')
-                                radar_map[tmp,:,:] = pd.read_pickle(data_path, compression=self.compression).to_numpy()
-                                tmp += 1
+                                radar_map[channel,:,:] = pd.read_pickle(data_path, compression=self.compression).to_numpy()
+                                channel += 1
 
                         # for k in self.weather_list:
                         #     data_path = os.path.join(self.weather_wrangled_data_folder, k, (year+'.'+ty_name+'.'+file_time+'.pkl'))
@@ -159,10 +161,10 @@ class TyDataset(Dataset):
 
                         if self.input_with_grid:
                             gird_x, gird_y = np.meshgrid(np.arange(0, self.O_shape[0]), np.arange(0, self.O_shape[1]))
-                            radar_map[tmp,:,:] = gird_x
-                            tmp += 1
-                            radar_map[tmp,:,:] = gird_y
-                            tmp += 1
+                            radar_map[channel,:,:] = gird_x
+                            channel += 1
+                            radar_map[channel,:,:] = gird_y
+                            channel += 1
                 
                 # update index of time
                 # breakpoint()
@@ -197,9 +199,9 @@ class TyDataset(Dataset):
                 #     target_data = ((10**(target_data/10))/200)**(5/8)
 
                 # the start time of prediction 
-                pre_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp)), format='%Y%m%d%H%M')
+                current_time = dt.datetime.strftime(self.idx_list.loc[i,'The starting time']+dt.timedelta(minutes=10*(idx_tmp+self.input_frames)), format='%Y%m%d%H%M')
                 # return the idx of sample
-                self.sample = {'inputs': input_data, 'targets': target_data, 'ty_infos': ty_infos, 'radar_map': radar_map, 'time': pre_time}
+                self.sample = {'inputs': input_data, 'targets': target_data, 'ty_infos': ty_infos, 'radar_map': radar_map, 'current_time': current_time}
                 
                 if self.transform:
                     self.sample = self.transform(self.sample)
@@ -214,7 +216,7 @@ class ToTensor(object):
                 'targets': torch.from_numpy(sample['targets']), 
                 'ty_infos': torch.from_numpy(sample['ty_infos']),
                 'radar_map': torch.from_numpy(sample['radar_map']),
-                'time': sample['time']}
+                'current_time': sample['current_time']}
 
 class Normalize(object):
     '''
@@ -284,4 +286,4 @@ class Normalize(object):
 
         # numpy data: x_tsteps X H X W
         # torch data: x_tsteps X H X W
-        return {'inputs': input_data, 'targets': target_data, 'ty_infos': ty_infos, 'radar_map': radar_map, 'time': sample['time']}
+        return {'inputs': input_data, 'targets': target_data, 'ty_infos': ty_infos, 'radar_map': radar_map, 'current_time': sample['current_time']}

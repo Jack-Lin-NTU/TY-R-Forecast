@@ -89,7 +89,7 @@ def RAD_video(args, ty='2012.SAOLA'):
             # ax.legend(fontsize=10)
             ax.set_title('RAD\n{}'.format(file[-16:-4]), fontsize=12)
 
-            plt.tight_layout()
+            # plt.tight_layout()
             writer.grab_frame()
             fig.clf()
 

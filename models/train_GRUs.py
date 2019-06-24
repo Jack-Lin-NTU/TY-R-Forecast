@@ -17,7 +17,6 @@ from src.runs.GRUs import get_dataloader, get_model, get_optimizer, train, test
 def main():
     args = get_args()
     print_args(args)
-    # breakpoint()
     # set cuda device at first
     torch.cuda.set_device(args.gpu)
     pd.set_option('precision', 4)
@@ -31,6 +30,7 @@ def main():
     # get the model
     model = get_model(args=args)
     
+    # breakpoint()
     # get optimizer
     optimizer = get_optimizer(args=args, model=model)
     

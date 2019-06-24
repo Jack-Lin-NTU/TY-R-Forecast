@@ -232,6 +232,7 @@ class Normalize(object):
         self.input_with_QPE = args.input_with_QPE
         self.weather_list = args.weather_list
         self.I_shape = args.I_shape
+        self.target_RAD = args.target_RAD
         self.catcher_location = args.catcher_location
         
     def __call__(self, sample):

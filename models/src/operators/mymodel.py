@@ -6,7 +6,7 @@ from .cnn2D import CNN2D_cell, DeCNN2D_cell
 from .convGRU import Encoder
 
 class TyCatcher(nn.Module):
-    def __init__(self, channel_input, channel_hidden, n_layers):
+    def __init__(self, channel_input, channel_hidden, n_layers, x_iloc, y_iloc):
         super().__init__()
 
         if type(channel_hidden) != list:
@@ -30,7 +30,9 @@ class TyCatcher(nn.Module):
 
         self.n_layers = n_layers
         self.layers = layers
-    
+        self.x_iloc = x_iloc
+        self.y_iloc = y_iloc
+
     def forward(self, ty_info, rader_map):
         # device and dtype
         device = self.layers[0].weight.device
@@ -42,13 +44,14 @@ class TyCatcher(nn.Module):
         for i in range(self.n_layers):
             layer = self.layers[i]
             output = layer(output)
+        
         output1, output2 = output.view(-1,2,3).chunk(2, dim=2)
         theta1 = torch.tensor([[1, 0],[0, 1]]).to(device=device, dtype=dtype).expand(b,2,2)
         theta2 = torch.zeros(b,2,1).to(device=device, dtype=dtype)
         theta = torch.cat([theta1+0.1*output1, theta2+output2], dim=2)
         size = torch.Size(rader_map.shape)
         flowfield = F.affine_grid(theta, size)
-        sample = F.grid_sample(rader_map, flowfield)
+        sample = F.grid_sample(rader_map, flowfield)[:,:,self.y_iloc[0]:self.y_iloc[1],self.x_iloc[0]:self.x_iloc[1]]
 
         return sample, theta
 
@@ -156,14 +159,14 @@ class Model(nn.Module):
                 forecaster_upsample_cin, forecaster_upsample_cout, forecaster_upsample_k, forecaster_upsample_p, 
                 forecaster_upsample_s, forecaster_n_layers, forecaster_output_cout=1, forecaster_output_k=1, 
                 forecaster_output_s=1, forecaster_output_p=0, forecaster_n_output_layers=1, 
-                batch_norm=False, target_RAD=False):
+                batch_norm=False, target_RAD=False, x_iloc=None, y_iloc=None):
         super().__init__()
         self.n_encoders = n_encoders
         self.n_forecasters = n_forecasters
         self.name = 'STN-CONVGRU'
         self.target_RAD = target_RAD
 
-        self.tycatcher = TyCatcher(TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers)
+        self.tycatcher = TyCatcher(TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers, x_iloc, y_iloc)
         self.encoder = Encoder(encoder_input, encoder_downsample, encoder_gru, encoder_downsample_k, encoder_downsample_s, 
                                 encoder_downsample_p, encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_layers,
                                 batch_norm)

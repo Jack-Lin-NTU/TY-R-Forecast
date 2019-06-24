@@ -55,7 +55,6 @@ class DeConvGRUcell(nn.Module):
         # get device and dtype
         device = self.reset_gate.layer[0].weight.device
         dtype = self.reset_gate.layer[0].weight.dtype
-
         # data size is [batch, channel, height, width]
         if input_ is None:
             stacked_inputs = prev_state

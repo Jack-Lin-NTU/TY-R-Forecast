@@ -110,10 +110,11 @@ def get_args():
     args.F_shape = (args.F_size, args.F_size)
     args.O_shape = (441, 561)
 
-    args.I_x_iloc = [int((args.I_x[0]-args.O_x[0])/args.res_degree), 441-int((args.O_x[1]-args.I_x[1])/args.res_degree)+1]
-    args.I_y_iloc = [int((args.I_y[0]-args.O_y[0])/args.res_degree), 441-int((args.O_y[1]-args.I_y[1])/args.res_degree)+1]
-    args.F_x_iloc = [int((args.F_x[0]-args.O_x[0])/args.res_degree), 441-int((args.O_x[1]-args.F_x[1])/args.res_degree)+1]
-    args.F_y_iloc = [int((args.F_y[0]-args.O_y[0])/args.res_degree), 441-int((args.O_y[1]-args.F_y[1])/args.res_degree)+1]
+    args.I_x_iloc = [int((args.I_x[0]-args.O_x[0])/args.res_degree), 441-int((args.O_x[1]-args.I_x[1])/args.res_degree)]
+    args.F_x_iloc = [int((args.F_x[0]-args.O_x[0])/args.res_degree), 441-int((args.O_x[1]-args.F_x[1])/args.res_degree)]
+
+    args.I_y_iloc = [int((args.I_y[0]-args.O_y[0])/args.res_degree), int(561-(args.O_y[1]-args.I_y[1])/args.res_degree)]
+    args.F_y_iloc = [int((args.F_y[0]-args.O_y[0])/args.res_degree), int(561-(args.O_y[1]-args.F_y[1])/args.res_degree)]
 
     args.I_x_list = np.around(np.linspace(args.I_x[0], args.I_x[1], args.I_shape[0]), decimals=4)
     args.I_y_list = np.around(np.linspace(args.I_y[1], args.I_y[0], args.I_shape[1]), decimals=4)

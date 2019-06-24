@@ -96,7 +96,7 @@ def get_model(args):
                         MYMODEL.forecaster_upsample_cin, MYMODEL.forecaster_upsample_cout, MYMODEL.forecaster_upsample_k, MYMODEL.forecaster_upsample_p, 
                         MYMODEL.forecaster_upsample_s, MYMODEL.forecaster_n_layers, MYMODEL.forecaster_output_cout, MYMODEL.forecaster_output_k, 
                         MYMODEL.forecaster_output_s, MYMODEL.forecaster_output_p, MYMODEL.forecaster_n_output_layers, 
-                        batch_norm=args.batch_norm).to(args.device, dtype=args.value_dtype)
+                        batch_norm=args.batch_norm, x_iloc=args.I_x_iloc, y_iloc=args.I_y_iloc).to(args.device, dtype=args.value_dtype)
             
             # if args.parallel_compute:
             #     model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
@@ -200,6 +200,7 @@ def train(model, optimizer, trainloader, testloader, args):
         train_loss = 0.
         running_loss = 0.
         half_loss = [0., 0.]
+        max_output = 0.
         # breakpoint()
         for idx, data in enumerate(trainloader, 0):
             inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
@@ -223,6 +224,7 @@ def train(model, optimizer, trainloader, testloader, args):
             
             # calculate loss function
             loss = args.loss_function(outputs, labels)
+            print('{}, {:.3f}'.format(loss.item(), torch.max(outputs).item()))
             train_loss += loss.item()/total_batches
             running_loss += loss.item()/40
             half_loss[0] += args.loss_function(outputs[:,0:int(args.target_frames/2),:,:], labels[:,0:int(args.target_frames/2),:,:]).item()/total_batches
@@ -233,12 +235,17 @@ def train(model, optimizer, trainloader, testloader, args):
             if args.clip:
                 nn.utils.clip_grad_norm_(model.parameters(), max_norm=args.clip_max_norm)
             optimizer.step()
+
+            if max_output < torch.max(outputs).item():
+                max_output = torch.max(outputs).item()
+
             # print training loss per 40 batches.
             if (idx+1) % 40 == 0:
                 # print the trainging results to the log file.
                 logger.debug('{}|  Epoch [{}/{}], Step [{}/{}], Loss: {:.0f}, Max: {:.1f}'.
                 format(args.model, epoch+1, args.max_epochs, idx+1, total_batches, half_loss[0], half_loss[1], running_loss, torch.max(outputs).item()))
                 running_loss = 0.
+                max_output = 0.
         
         # save the training results.
         result_df.iloc[epoch,0] = train_loss

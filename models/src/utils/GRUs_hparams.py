@@ -94,7 +94,7 @@ def MYMODEL_HYPERPARAMs(args):
                     # hyperparameters for the Forecaster
                     'forecaster_upsample_cin': [96*c,96*c,32*c],
                     'forecaster_upsample_cout': [96*c,96*c,4*c],
-                    'forecaster_upsample_k': [3,4,7],
+                    'forecaster_upsample_k': [4,5,7],
                     'forecaster_upsample_s': [2,3,5],
                     'forecaster_upsample_p': 1,
                     'forecaster_n_layers': 3,

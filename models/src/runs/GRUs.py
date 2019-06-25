@@ -156,9 +156,9 @@ def data_parallel(module, inputs, device_ids, output_device=None):
     outputs = nn.parallel.parallel_apply(replicas, inputs)
     return nn.parallel.gather(outputs, output_device)
 
-def train(model, optimizer, trainloader,stloader, args):
+def train(model, optimizer, trainloader, testloader, args):
     '''
-    This function is to train the model.                               device=device, value_dtype=value_dtype, batch_size=batch_size
+    This function is to train the model.
     '''
     # set file path for saveing some info.
 
@@ -177,8 +177,7 @@ def train(model, optimizer, trainloader,stloader, args):
     total_batches = len(trainloader)
     
     # To create a pd.DataFrame to store training, validating loss, and learning rate.
-    result_df = pd.DataFrame([], index=p
-                               device=device, value_dtype=value_dtype, batch_size=batch_sized.Index(range(1, args.max_epochs+1), name='epoch'), columns=['train_loss', 'val_loss', 'lr'])
+    result_df = pd.DataFrame([], index=pd.Index(range(1, args.max_epochs+1), name='epoch'), columns=['train_loss', 'val_loss', 'lr'])
 
     for epoch in range(args.max_epochs):
         # turn on train mode

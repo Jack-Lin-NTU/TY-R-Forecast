@@ -26,22 +26,21 @@ class LOSS():
             self.value_list = self.value_list / max_values
         
         if args.loss_function.upper() == 'BMSE':
-            self.loss = mse
+            self.loss = F.mse_loss
         if args.loss_function.upper() == 'BMAE':
-            self.loss = mae
+            self.loss = F.l1_loss
         if args.loss_function.upper() == 'MSE':
-            self.loss = mse
+            self.loss = F.mse_loss
             self.weights = np.ones_like(self.weights)
         if args.loss_function.upper() == 'MAE':
-            self.loss = mae
+            self.loss = F.l1_loss
             self.weights = np.ones_like(self.weights)
 
     def __call__ (self, outputs, targets):
         loss = 0.
-        b = outputs.shape[0]
         for i in range(len(self.weights)):
             mask = (targets>=self.value_list[i]) & (targets<self.value_list[i+1])
-            loss += self.weights[i] * self.loss(outputs[mask], targets[mask]) / b
+            loss += self.weights[i] * self.loss(outputs[mask], targets[mask], reduction='mean')
         return loss
 
 class LOSS_pytorch():

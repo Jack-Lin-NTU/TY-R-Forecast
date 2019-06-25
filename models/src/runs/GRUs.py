@@ -34,8 +34,8 @@ def get_dataloader(args, train_num=None):
     testdataset = TyDataset(args=args, train=False, train_num=train_num, transform=transform)
 
     # dataloader
-    train_kwargs = {'num_workers': 4, 'pin_memory': True} if args.able_cuda else {}
-    test_kwargs = {'num_workers': 4, 'pin_memory': True} if args.able_cuda else {}
+    train_kwargs = {'num_workers': 6, 'pin_memory': True} if args.able_cuda else {}
+    test_kwargs = {'num_workers': 6, 'pin_memory': True} if args.able_cuda else {}
     trainloader = DataLoader(dataset=traindataset, batch_size=args.batch_size, shuffle=True, **train_kwargs)
     testloader = DataLoader(dataset=testdataset, batch_size=args.batch_size, shuffle=False, **test_kwargs)
     

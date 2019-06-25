@@ -198,8 +198,9 @@ def train(model, optimizer, trainloader, testloader, args):
         
         # initilaize loss
         train_loss = 0.
+        traing_half_loss = [0., 0.]
         running_loss = 0.
-        half_loss = [0., 0.]
+        running_half_loss = [0., 0.]
         max_output = 0.
         # breakpoint()
         for idx, data in enumerate(trainloader, 0):
@@ -224,11 +225,15 @@ def train(model, optimizer, trainloader, testloader, args):
             
             # calculate loss function
             loss = args.loss_function(outputs, labels)
-            print('{}, {:.3f}'.format(loss.item(), torch.max(outputs).item()))
+            half_loss = args.loss_function(outputs[:,0:int(args.target_frames/2),:,:], labels[:,0:int(args.target_frames/2),:,:]).item(), args.loss_function(outputs[:,int(args.target_frames/2):,:,:], labels[:, int(args.target_frames/2):,:,:]).item()
+            # print('{}, {:.3f}'.format(loss.item(), torch.max(outputs).item()))
             train_loss += loss.item()/total_batches
             running_loss += loss.item()/40
-            half_loss[0] += args.loss_function(outputs[:,0:int(args.target_frames/2),:,:], labels[:,0:int(args.target_frames/2),:,:]).item()/total_batches
-            half_loss[1] += args.loss_function(outputs[:,int(args.target_frames/2):,:,:], labels[:,int(args.target_frames/2):,:,:]).item()//total_batches
+            running_half_loss[0] += half_loss[0]/40
+            running_half_loss[1] += half_loss[1]/40
+            traing_half_loss[0] += half_loss[0]/total_batches
+            traing_half_loss[1] += half_loss[1]/total_batches
+
             # optimize model
             loss.backward()
             # 'clip_grad_norm' helps prevent the exploding gradient problem in grus or LSTMs.
@@ -242,14 +247,14 @@ def train(model, optimizer, trainloader, testloader, args):
             # print training loss per 40 batches.
             if (idx+1) % 40 == 0:
                 # print the trainging results to the log file.
-                logger.debug('{}|  Epoch [{}/{}], Step [{}/{}], Loss: {:.0f}, Max: {:.1f}'.
-                format(args.model, epoch+1, args.max_epochs, idx+1, total_batches, half_loss[0], half_loss[1], running_loss, torch.max(outputs).item()))
+                logger.debug('{}|  Epoch [{}/{}], Step [{}/{}], Half_loss:[{:.0f}, {:.0f}], Loss: {:.0f}, Max: {:.1f}'.
+                format(args.model, epoch+1, args.max_epochs, idx+1, total_batches, running_half_loss[0], running_half_loss[1], running_loss, torch.max(outputs).item()))
                 running_loss = 0.
                 max_output = 0.
-        
+
         # save the training results.
         result_df.iloc[epoch,0] = train_loss
-        logger.debug('{}|  Epoch [{}/{}], Half_loss:[{:.0f}, {:.0f}], Train Loss: {:.0f}'.format(args.model, epoch+1, args.max_epochs, half_loss[0], half_loss[1], train_loss))
+        logger.debug('{}|  Epoch [{}/{}], Half_loss:[{:.0f}, {:.0f}], Train Loss: {:.0f}'.format(args.model, epoch+1, args.max_epochs, traing_half_loss[0], traing_half_loss[1], train_loss))
 
         # Save the test loss per epoch
         test_loss, half_loss = test(model, testloader=testloader, args=args)

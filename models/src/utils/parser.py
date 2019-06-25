@@ -164,6 +164,14 @@ def get_args():
         args.result_folder = os.path.join(args.result_folder, 'RAD_weather')
         args.params_folder = os.path.join(args.params_folder, 'RAD_weather')
     
+    if args.normalize_input:
+        args.result_folder += '_ninput'
+        args.params_folder += '_ninput'
+    
+    if args.normalize_target:
+        args.result_folder += '_ntarget'
+        args.params_folder += '_ntarget'
+    
     if args.input_with_grid:
         args.result_folder += '_grid'
         args.params_folder += '_grid'

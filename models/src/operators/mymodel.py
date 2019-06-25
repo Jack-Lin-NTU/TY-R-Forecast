@@ -190,6 +190,7 @@ class Model(nn.Module):
             forecast.append(output_)
 
         forecast = torch.cat(forecast, dim=1)
+
         if not self.target_RAD:
             forecast = ((10**(forecast/10))/200)**(5/8)
         
@@ -208,57 +209,70 @@ class Model(nn.Module):
         return samples
 
 
-# class my_multi_GRU(nn.Module):
-#     def __init__(self, n_encoders, n_forecasters, TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers, 
-#                 encoder_input, encoder_downsample, encoder_gru, encoder_downsample_k, encoder_downsample_s, 
-#                 encoder_downsample_p, encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_layers, 
-#                 forecaster_upsample_cin, forecaster_upsample_cout, forecaster_upsample_k, forecaster_upsample_p, 
-#                 forecaster_upsample_s, forecaster_n_layers, forecaster_output_cout=1, forecaster_output_k=1, 
-#                 forecaster_output_s=1, forecaster_output_p=0, forecaster_n_output_layers=1, 
-#                 batch_norm=False, device=None, value_dtype=None):
-#         super().__init__()
-#         self.device = device
-#         self.value_dtype = value_dtype
-#         self.n_encoders = n_encoders
-#         self.n_forecasters = n_forecasters
+class Multi_unit_Model(nn.Module):
+    def __init__(self, n_encoders, n_forecasters, TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers, 
+                encoder_input, encoder_downsample, encoder_gru, encoder_downsample_k, encoder_downsample_s, 
+                encoder_downsample_p, encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_layers, 
+                forecaster_upsample_cin, forecaster_upsample_cout, forecaster_upsample_k, forecaster_upsample_p, 
+                forecaster_upsample_s, forecaster_n_layers, forecaster_output_cout=1, forecaster_output_k=1, 
+                forecaster_output_s=1, forecaster_output_p=0, forecaster_n_output_layers=1, 
+                batch_norm=False):
+        super().__init__()
+        self.device = device
+        self.value_dtype = value_dtype
+        self.n_encoders = n_encoders
+        self.n_forecasters = n_forecasters
 
-#         self.tycatcher = TyCatcher(TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers, device, value_dtype)
-#         encoders = []
-#         for i in range(n_encoders+n_forecasters):
-#             model = Encoder(encoder_input, encoder_downsample, encoder_gru, encoder_downsample_k, encoder_downsample_s, 
-#                             encoder_downsample_p, encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_layers,
-#                             batch_norm, device, value_dtype)
-#             name = 'Encoder_' + str(i).zfill(2)
-#             setattr(self, name, model)
-#             encoders.append(getattr(self, name))
+        self.tycatcher = TyCatcher(TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers, device, value_dtype)
+        encoders = []
+        for i in range(n_encoders+n_forecasters):
+            model = Encoder(encoder_input, encoder_downsample, encoder_gru, encoder_downsample_k, encoder_downsample_s, 
+                            encoder_downsample_p, encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_layers,
+                            batch_norm)
+            name = 'Encoder_' + str(i).zfill(2)
+            setattr(self, name, model)
+            encoders.append(getattr(self, name))
 
-#         forecasters = []
-#         for i in range(n_forecasters):
-#             model = Forecaster(forecaster_upsample_cin, forecaster_upsample_cout, forecaster_upsample_k, forecaster_upsample_p, forecaster_upsample_s, 
-#                                 forecaster_n_layers, forecaster_output_cout, forecaster_output_k, forecaster_output_s, forecaster_output_p, 
-#                                 forecaster_n_output_layers, batch_norm, device, value_dtype)
-#             name = 'Forecaster_' + str(i).zfill(2)
-#             setattr(self, name, model)
-#             forecasters.append(getattr(self, name))
+        forecasters = []
+        for i in range(n_forecasters):
+            model = Forecaster(forecaster_upsample_cin, forecaster_upsample_cout, forecaster_upsample_k, forecaster_upsample_p, forecaster_upsample_s, 
+                                forecaster_n_layers, forecaster_output_cout, forecaster_output_k, forecaster_output_s, forecaster_output_p, 
+                                forecaster_n_output_layers, batch_norm)
+            name = 'Forecaster_' + str(i).zfill(2)
+            setattr(self, name, model)
+            forecasters.append(getattr(self, name))
         
-#         self.encoders = encoders
-#         self.forecasters = forecasters
+        self.encoders = encoders
+        self.forecasters = forecasters
 
-#     def forward(self, encoder_inputs, ty_infos, radar_map):
-#         for i in range(self.n_encoders):
-#             input_ = encoder_inputs[:,i,:,:,:]
-#             if i == 0:
-#                 prev_state = self.encoders[i](input_, hidden=None)
-#             else:
-#                 prev_state = self.encoders[i](input_, hidden=prev_state)
+    def forward(self, encoder_inputs, ty_infos, radar_map):
+        for i in range(self.n_encoders):
+            input_ = encoder_inputs[:,i,:,:,:]
+            if i == 0:
+                prev_state = self.encoders[i](input_, hidden=None)
+            else:
+                prev_state = self.encoders[i](input_, hidden=prev_state)
         
-#         outputs = []
-#         for i in range(self.n_forecasters):
-#             tmp_ty_info = ty_infos[:, i,:]
-#             input_ = self.tycatcher(tmp_ty_info, radar_map)
-#             prev_state = self.encoders[i+self.n_encoders](input_, hidden=prev_state)
-#             output_ = self.forecasters[i](prev_state[::-1])
+        outputs = []
+        for i in range(self.n_forecasters):
+            tmp_ty_info = ty_infos[:,i,:]
+            input_ = self.tycatcher(tmp_ty_info, radar_map)
+            prev_state = self.encoders[i+self.n_encoders](input_, hidden=prev_state)
+            output_ = self.forecasters[i](prev_state[::-1])
 
-#             outputs.append(output_)
-#         outputs = torch.cat(outputs, dim=1)
-#         return outputs
+            outputs.append(output_)
+        outputs = torch.cat(outputs, dim=1)
+        return outputs
+    
+    def samples(self, encoder_inputs, ty_infos, radar_map):
+        flowfields = []
+        samples = []
+        self.theta = []
+        for i in range(self.n_forecasters):
+            tmp_ty_info = ty_infos[:,i,:]
+            input_, theta  = self.tycatcher(tmp_ty_info, radar_map)
+            self.theta.append(theta)
+            samples.append(input_)
+        samples = torch.cat(samples, dim=1)
+        return samples
+Multi_unit_Model

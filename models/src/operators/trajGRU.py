@@ -504,72 +504,70 @@ class Model(nn.Module):
         return forecast
 
 
-# class Multi_unit_Model(nn.Module):
-#     '''
-#         Argumensts:
-#             This class is used to construt multi-unit TrajGRU model based on given parameters.
-#         '''
-#     def __init__(self, n_encoders, n_forecasters, gru_link_size,
-#                 encoder_input_channel, encoder_downsample_channels, encoder_gru_channels,
-#                 encoder_downsample_k, encoder_downsample_s, encoder_downsample_p,
-#                 encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_cells,
-#                 forecaster_input_channel, forecaster_upsample_channels, forecaster_gru_channels,
-#                 forecaster_upsample_k, forecaster_upsample_s, forecaster_upsample_p,
-#                 forecaster_gru_k, forecaster_gru_s, forecaster_gru_p, forecaster_n_cells,
-#                 forecaster_output=1, forecaster_output_k=1, forecaster_output_s=1, forecaster_output_p=0, forecaster_output_layers=1,
-#                 batch_norm=False, device=None, value_dtype=None, batch_size=None):
+class Multi_unit_Model(nn.Module):
+    '''
+        Argumensts:
+            This class is used to construt multi-unit TrajGRU model based on given parameters.
+        '''
+    def __init__(self, n_encoders, n_forecasters, gru_link_size,
+                encoder_input_channel, encoder_downsample_channels, encoder_gru_channels,
+                encoder_downsample_k, encoder_downsample_s, encoder_downsample_p,
+                encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_cells,
+                forecaster_input_channel, forecaster_upsample_channels, forecaster_gru_channels,
+                forecaster_upsample_k, forecaster_upsample_s, forecaster_upsample_p,
+                forecaster_gru_k, forecaster_gru_s, forecaster_gru_p, forecaster_n_cells,
+                forecaster_output=1, forecaster_output_k=1, forecaster_output_s=1, forecaster_output_p=0, forecaster_output_layers=1,
+                batch_norm=False):
 
-#         super().__init__()
-#         self.n_encoders = n_encoders
-#         self.n_forecasters = n_forecasters
-#         self.name = 'Multi_unit_TRAJGRU'
+        super().__init__()
+        self.n_encoders = n_encoders
+        self.n_forecasters = n_forecasters
+        self.name = 'Multi_unit_TRAJGRU'
 
-#         models = []
-#         # encoders
-#         for i in range(self.n_encoders):
-#             model = Encoder(channel_input=encoder_input_channel, channel_downsample=encoder_downsample_channels,
-#                             channel_gru=encoder_gru_channels, downsample_k=encoder_downsample_k, downsample_s=encoder_downsample_s, 
-#                             downsample_p=encoder_downsample_p, gru_link_size=gru_link_size, gru_k=encoder_gru_k, gru_s=encoder_gru_s, 
-#                             gru_p=encoder_gru_p, n_cells=encoder_n_cells, batch_norm=batch_norm, device=device, value_dtype=value_dtype,
-#                             batch_size=batch_size)
-#             name = 'Encoder_' + str(i).zfill(2)
-#             setattr(self, name, model)
-#             models.append(getattr(self, name))
+        models = []
+        # encoders
+        for i in range(self.n_encoders):
+            model = Encoder(channel_input=encoder_input_channel, channel_downsample=encoder_downsample_channels,
+                            channel_gru=encoder_gru_channels, downsample_k=encoder_downsample_k, downsample_s=encoder_downsample_s, 
+                            downsample_p=encoder_downsample_p, gru_link_size=gru_link_size, gru_k=encoder_gru_k, gru_s=encoder_gru_s, 
+                            gru_p=encoder_gru_p, n_cells=encoder_n_cells, batch_norm=batch_norm)
+            name = 'Encoder_' + str(i).zfill(2)
+            setattr(self, name, model)
+            models.append(getattr(self, name))
 
-#         # forecasters
-#         for i in range(self.n_forecasters):
-#             model = Forecaster(channel_input=forecaster_input_channel, channel_upsample=forecaster_upsample_channels, 
-#                                channel_gru=forecaster_gru_channels, upsample_k=forecaster_upsample_k, upsample_s=forecaster_upsample_s, 
-#                                upsample_p=forecaster_upsample_p, gru_link_size=gru_link_size, gru_k=forecaster_gru_k, 
-#                                gru_s=forecaster_gru_s, gru_p=forecaster_gru_p, n_cells=forecaster_n_cells,
-#                                channel_output=forecaster_output, output_k=forecaster_output_k, output_s=forecaster_output_s,
-#                                output_p=forecaster_output_p, n_output_layers=forecaster_output_layers, batch_norm=batch_norm, 
-#                                device=device, value_dtype=value_dtype, batch_size=batch_size)
-#             name = 'Forecaster_' + str(i).zfill(2)
-#             setattr(self, name, model)
-#             models.append(getattr(self, name))
+        # forecasters
+        for i in range(self.n_forecasters):
+            model = Forecaster(channel_input=forecaster_input_channel, channel_upsample=forecaster_upsample_channels, 
+                               channel_gru=forecaster_gru_channels, upsample_k=forecaster_upsample_k, upsample_s=forecaster_upsample_s, 
+                               upsample_p=forecaster_upsample_p, gru_link_size=gru_link_size, gru_k=forecaster_gru_k, 
+                               gru_s=forecaster_gru_s, gru_p=forecaster_gru_p, n_cells=forecaster_n_cells,
+                               channel_output=forecaster_output, output_k=forecaster_output_k, output_s=forecaster_output_s,
+                               output_p=forecaster_output_p, n_output_layers=forecaster_output_layers, batch_norm=batch_norm)
+            name = 'Forecaster_' + str(i).zfill(2)
+            setattr(self, name, model)
+            models.append(getattr(self, name))
 
-#         self.models = models
+        self.models = models
 
-#     def forward(self, x):
-#         input_ = x
-#         if input_.size()[1] != self.n_encoders:
-#             assert input_.size()[1] == self.n_encoders, '"x" must have the same as n_encoders'
+    def forward(self, x):
+        input_ = x
+        if input_.size()[1] != self.n_encoders:
+            assert input_.size()[1] == self.n_encoders, '"x" must have the same as n_encoders'
 
-#         forecast = []
+        forecast = []
 
-#         for i in range(self.n_encoders):
-#             if i == 0:
-#                 hidden=None
-#             model = self.models[i]
-#             hidden = model(x = input_[:,i,:,:,:], hidden=hidden)
+        for i in range(self.n_encoders):
+            if i == 0:
+                hidden=None
+            model = self.models[i]
+            hidden = model(x = input_[:,i,:,:,:], hidden=hidden)
 
-#         hidden = hidden[::-1]
+        hidden = hidden[::-1]
 
-#         for i in range(self.n_forecasters):
-#             model = self.models[self.n_encoders+i]
-#             hidden, output = model(hidden=hidden)
-#             forecast.append(output)
+        for i in range(self.n_forecasters):
+            model = self.models[self.n_encoders+i]
+            hidden, output = model(hidden=hidden)
+            forecast.append(output)
 
-#         forecast = torch.cat(forecast, dim=1)
-#         return forecast
+        forecast = torch.cat(forecast, dim=1)
+        return forecast

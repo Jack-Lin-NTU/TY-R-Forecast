@@ -44,7 +44,7 @@ def get_dataloader(args, train_num=None):
 def get_model(args):
     if args.model.upper() == 'TRAJGRU':
         if args.multi_unit:
-            from src.operators.trajGRU import  multi_unit
+            from src.operators.trajGRU import  Multi_unit_Model as Model
         else:
             from src.operators.trajGRU import  Model
         print('Model:', args.model.upper())
@@ -156,9 +156,9 @@ def data_parallel(module, inputs, device_ids, output_device=None):
     outputs = nn.parallel.parallel_apply(replicas, inputs)
     return nn.parallel.gather(outputs, output_device)
 
-def train(model, optimizer, trainloader, testloader, args):
+def train(model, optimizer, trainloader,stloader, args):
     '''
-    This function is to train the model.
+    This function is to train the model.                               device=device, value_dtype=value_dtype, batch_size=batch_size
     '''
     # set file path for saveing some info.
 
@@ -177,7 +177,8 @@ def train(model, optimizer, trainloader, testloader, args):
     total_batches = len(trainloader)
     
     # To create a pd.DataFrame to store training, validating loss, and learning rate.
-    result_df = pd.DataFrame([], index=pd.Index(range(1, args.max_epochs+1), name='epoch'), columns=['train_loss', 'val_loss', 'lr'])
+    result_df = pd.DataFrame([], index=p
+                               device=device, value_dtype=value_dtype, batch_size=batch_sized.Index(range(1, args.max_epochs+1), name='epoch'), columns=['train_loss', 'val_loss', 'lr'])
 
     for epoch in range(args.max_epochs):
         # turn on train mode
@@ -249,7 +250,6 @@ def train(model, optimizer, trainloader, testloader, args):
                 running_loss = 0.
                 running_half_loss = [0., 0.]
                 max_output = 0.
-                break
 
         # save the training results.
         result_df.iloc[epoch,0] = train_loss

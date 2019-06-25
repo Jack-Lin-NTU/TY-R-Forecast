@@ -131,9 +131,9 @@ class DeTrajGRUcell(nn.Module):
 
         self.flow_warp = flow_warp(channel_input, channel_output, link_size, batch_norm)
         
-        self.reset_gate_warp  = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, zeros_weight=True)
-        self.update_gate_warp  = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, zeros_weight=True)
-        self.out_gate_warp = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, zeros_weight=True)
+        self.reset_gate_warp  = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
+        self.update_gate_warp  = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
+        self.out_gate_warp = DeCNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
 
     def forward(self, x=None, prev_state=None):
         input_ = x

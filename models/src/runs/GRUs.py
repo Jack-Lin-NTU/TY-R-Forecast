@@ -42,65 +42,63 @@ def get_dataloader(args, train_num=None):
     return trainloader, testloader
 
 def get_model(args):
-    if args.multi_unit:
-        pass
-    else:
-        if args.model.upper() == 'TRAJGRU':
+    if args.model.upper() == 'TRAJGRU':
+        if args.multi_unit:
+            from src.operators.trajGRU import  multi_unit
+        else:
             from src.operators.trajGRU import  Model
-            print('Model:', args.model.upper())
-            TRAJGRU = TRAJGRU_HYPERPARAMs(args=args)
-            model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, gru_link_size=TRAJGRU.gru_link_size,
-                    encoder_input_channel=TRAJGRU.encoder_input_channel, encoder_downsample_channels=TRAJGRU.encoder_downsample_channels,
-                    encoder_gru_channels=TRAJGRU.encoder_gru_channels, encoder_downsample_k=TRAJGRU.encoder_downsample_k,
-                    encoder_downsample_s=TRAJGRU.encoder_downsample_s, encoder_downsample_p=TRAJGRU.encoder_downsample_p, 
-                    encoder_gru_k=TRAJGRU.encoder_gru_k, encoder_gru_s=TRAJGRU.encoder_gru_s, encoder_gru_p=TRAJGRU.encoder_gru_p, 
-                    encoder_n_cells=TRAJGRU.encoder_n_cells, forecaster_input_channel=TRAJGRU.forecaster_input_channel, 
-                    forecaster_upsample_channels=TRAJGRU.forecaster_upsample_channels, forecaster_gru_channels=TRAJGRU.forecaster_gru_channels,
-                    forecaster_upsample_k=TRAJGRU.forecaster_upsample_k, forecaster_upsample_s=TRAJGRU.forecaster_upsample_s, 
-                    forecaster_upsample_p=TRAJGRU.forecaster_upsample_p, forecaster_gru_k=TRAJGRU.forecaster_gru_k, forecaster_gru_s=TRAJGRU.forecaster_gru_s,
-                    forecaster_gru_p=TRAJGRU.forecaster_gru_p, forecaster_n_cells=TRAJGRU.forecaster_n_cells, forecaster_output=TRAJGRU.forecaster_output_channels, 
-                    forecaster_output_k=TRAJGRU.forecaster_output_k, forecaster_output_s=TRAJGRU.forecaster_output_s, 
-                    forecaster_output_p=TRAJGRU.forecaster_output_p, forecaster_output_layers=TRAJGRU.forecaster_output_layers, 
-                    batch_norm=args.batch_norm).to(args.device, dtype=args.value_dtype)
-            # model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
-            # model = model.to(args.device, dtype=args.value_dtype)
+        print('Model:', args.model.upper())
+        TRAJGRU = TRAJGRU_HYPERPARAMs(args=args)
+        model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, gru_link_size=TRAJGRU.gru_link_size,
+                encoder_input_channel=TRAJGRU.encoder_input_channel, encoder_downsample_channels=TRAJGRU.encoder_downsample_channels,
+                encoder_gru_channels=TRAJGRU.encoder_gru_channels, encoder_downsample_k=TRAJGRU.encoder_downsample_k,
+                encoder_downsample_s=TRAJGRU.encoder_downsample_s, encoder_downsample_p=TRAJGRU.encoder_downsample_p, 
+                encoder_gru_k=TRAJGRU.encoder_gru_k, encoder_gru_s=TRAJGRU.encoder_gru_s, encoder_gru_p=TRAJGRU.encoder_gru_p, 
+                encoder_n_cells=TRAJGRU.encoder_n_cells, forecaster_input_channel=TRAJGRU.forecaster_input_channel, 
+                forecaster_upsample_channels=TRAJGRU.forecaster_upsample_channels, forecaster_gru_channels=TRAJGRU.forecaster_gru_channels,
+                forecaster_upsample_k=TRAJGRU.forecaster_upsample_k, forecaster_upsample_s=TRAJGRU.forecaster_upsample_s, 
+                forecaster_upsample_p=TRAJGRU.forecaster_upsample_p, forecaster_gru_k=TRAJGRU.forecaster_gru_k, forecaster_gru_s=TRAJGRU.forecaster_gru_s,
+                forecaster_gru_p=TRAJGRU.forecaster_gru_p, forecaster_n_cells=TRAJGRU.forecaster_n_cells, forecaster_output=TRAJGRU.forecaster_output_channels, 
+                forecaster_output_k=TRAJGRU.forecaster_output_k, forecaster_output_s=TRAJGRU.forecaster_output_s, 
+                forecaster_output_p=TRAJGRU.forecaster_output_p, forecaster_output_layers=TRAJGRU.forecaster_output_layers, 
+                batch_norm=args.batch_norm).to(args.device, dtype=args.value_dtype)
 
-        elif args.model.upper() == 'CONVGRU':
-            from src.operators.convGRU import Model
-            print('Model:', args.model.upper())
-            CONVGRU = CONVGRU_HYPERPARAMs(args=args)
-            model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames,
-                    encoder_input_channel=CONVGRU.encoder_input_channel, encoder_downsample_channels=CONVGRU.encoder_downsample_channels,
-                    encoder_gru_channels=CONVGRU.encoder_gru_channels, encoder_downsample_k=CONVGRU.encoder_downsample_k,
-                    encoder_downsample_s=CONVGRU.encoder_downsample_s, encoder_downsample_p=CONVGRU.encoder_downsample_p, 
-                    encoder_gru_k=CONVGRU.encoder_gru_k,encoder_gru_s=CONVGRU.encoder_gru_s, encoder_gru_p=CONVGRU.encoder_gru_p, 
-                    encoder_n_cells=CONVGRU.encoder_n_cells, forecaster_input_channel=CONVGRU.forecaster_input_channel, 
-                    forecaster_upsample_channels=CONVGRU.forecaster_upsample_channels, forecaster_gru_channels=CONVGRU.forecaster_gru_channels,
-                    forecaster_upsample_k=CONVGRU.forecaster_upsample_k, forecaster_upsample_s=CONVGRU.forecaster_upsample_s, 
-                    forecaster_upsample_p=CONVGRU.forecaster_upsample_p, forecaster_gru_k=CONVGRU.forecaster_gru_k, forecaster_gru_s=CONVGRU.forecaster_gru_s,
-                    forecaster_gru_p=CONVGRU.forecaster_gru_p, forecaster_n_cells=CONVGRU.forecaster_n_cells, forecaster_output=CONVGRU.forecaster_output_channels, 
-                    forecaster_output_k=CONVGRU.forecaster_output_k, forecaster_output_s=CONVGRU.forecaster_output_s, 
-                    forecaster_output_p=CONVGRU.forecaster_output_p, forecaster_output_layers=CONVGRU.forecaster_output_layers, 
-                    batch_norm=args.batch_norm).to(args.device, dtype=args.value_dtype)
-            
-            # if args.parallel_compute:
-            #     model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
+    elif args.model.upper() == 'CONVGRU':
+        if args.multi_unit:
+            from src.operators.convGRU import  Multi_unit_Model as Model
+        else:
+            from src.operators.convGRU import  Model
+        print('Model:', args.model.upper())
+        CONVGRU = CONVGRU_HYPERPARAMs(args=args)
+        model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames,
+                encoder_input_channel=CONVGRU.encoder_input_channel, encoder_downsample_channels=CONVGRU.encoder_downsample_channels,
+                encoder_gru_channels=CONVGRU.encoder_gru_channels, encoder_downsample_k=CONVGRU.encoder_downsample_k,
+                encoder_downsample_s=CONVGRU.encoder_downsample_s, encoder_downsample_p=CONVGRU.encoder_downsample_p, 
+                encoder_gru_k=CONVGRU.encoder_gru_k,encoder_gru_s=CONVGRU.encoder_gru_s, encoder_gru_p=CONVGRU.encoder_gru_p, 
+                encoder_n_cells=CONVGRU.encoder_n_cells, forecaster_input_channel=CONVGRU.forecaster_input_channel, 
+                forecaster_upsample_channels=CONVGRU.forecaster_upsample_channels, forecaster_gru_channels=CONVGRU.forecaster_gru_channels,
+                forecaster_upsample_k=CONVGRU.forecaster_upsample_k, forecaster_upsample_s=CONVGRU.forecaster_upsample_s, 
+                forecaster_upsample_p=CONVGRU.forecaster_upsample_p, forecaster_gru_k=CONVGRU.forecaster_gru_k, forecaster_gru_s=CONVGRU.forecaster_gru_s,
+                forecaster_gru_p=CONVGRU.forecaster_gru_p, forecaster_n_cells=CONVGRU.forecaster_n_cells, forecaster_output=CONVGRU.forecaster_output_channels, 
+                forecaster_output_k=CONVGRU.forecaster_output_k, forecaster_output_s=CONVGRU.forecaster_output_s, 
+                forecaster_output_p=CONVGRU.forecaster_output_p, forecaster_output_layers=CONVGRU.forecaster_output_layers, 
+                batch_norm=args.batch_norm).to(args.device, dtype=args.value_dtype)
         
-        elif args.model.upper() == 'MYMODEL':
-            from src.operators.mymodel import Model
-            print('Model:', args.model.upper())
-            MYMODEL = MYMODEL_HYPERPARAMs(args)
-            model = Model(MYMODEL.input_frames, MYMODEL.target_frames, MYMODEL.TyCatcher_input, MYMODEL.TyCatcher_hidden, MYMODEL.TyCatcher_n_layers, 
-                        MYMODEL.encoder_input, MYMODEL.encoder_downsample, MYMODEL.encoder_gru, MYMODEL.encoder_downsample_k, MYMODEL.encoder_downsample_s, 
-                        MYMODEL.encoder_downsample_p, MYMODEL.encoder_gru_k, MYMODEL.encoder_gru_s, MYMODEL.encoder_gru_p, MYMODEL.encoder_n_cells, 
-                        MYMODEL.forecaster_upsample_cin, MYMODEL.forecaster_upsample_cout, MYMODEL.forecaster_upsample_k, MYMODEL.forecaster_upsample_p, 
-                        MYMODEL.forecaster_upsample_s, MYMODEL.forecaster_n_layers, MYMODEL.forecaster_output_cout, MYMODEL.forecaster_output_k, 
-                        MYMODEL.forecaster_output_s, MYMODEL.forecaster_output_p, MYMODEL.forecaster_n_output_layers, 
-                        batch_norm=args.batch_norm, x_iloc=args.I_x_iloc, y_iloc=args.I_y_iloc).to(args.device, dtype=args.value_dtype)
-            
-            # if args.parallel_compute:
-            #     model = nn.DataParallel(model, device_ids=[torch.device('cuda:0'), torch.device('cuda:1')])
-        
+    elif args.model.upper() == 'MYMODEL':
+        if args.multi_unit:
+            from src.operators.mymodel import  Multi_unit_Model as Model
+        else:
+            from src.operators.mymodel import  Model
+        print('Model:', args.model.upper())
+        MYMODEL = MYMODEL_HYPERPARAMs(args)
+        model = Model(MYMODEL.input_frames, MYMODEL.target_frames, MYMODEL.TyCatcher_input, MYMODEL.TyCatcher_hidden, MYMODEL.TyCatcher_n_layers, 
+                    MYMODEL.encoder_input, MYMODEL.encoder_downsample, MYMODEL.encoder_gru, MYMODEL.encoder_downsample_k, MYMODEL.encoder_downsample_s, 
+                    MYMODEL.encoder_downsample_p, MYMODEL.encoder_gru_k, MYMODEL.encoder_gru_s, MYMODEL.encoder_gru_p, MYMODEL.encoder_n_cells, 
+                    MYMODEL.forecaster_upsample_cin, MYMODEL.forecaster_upsample_cout, MYMODEL.forecaster_upsample_k, MYMODEL.forecaster_upsample_p, 
+                    MYMODEL.forecaster_upsample_s, MYMODEL.forecaster_n_layers, MYMODEL.forecaster_output_cout, MYMODEL.forecaster_output_k, 
+                    MYMODEL.forecaster_output_s, MYMODEL.forecaster_output_p, MYMODEL.forecaster_n_output_layers, 
+                    batch_norm=args.batch_norm, x_iloc=args.I_x_iloc, y_iloc=args.I_y_iloc).to(args.device, dtype=args.value_dtype)
+
     return model
 
 def get_optimizer(args, model):
@@ -226,7 +224,6 @@ def train(model, optimizer, trainloader, testloader, args):
             # calculate loss function
             loss = args.loss_function(outputs, labels)
             half_loss = args.loss_function(outputs[:,0:int(args.target_frames/2),:,:], labels[:,0:int(args.target_frames/2),:,:]).item(), args.loss_function(outputs[:,int(args.target_frames/2):,:,:], labels[:, int(args.target_frames/2):,:,:]).item()
-            # print('{}, {:.3f}'.format(loss.item(), torch.max(outputs).item()))
             train_loss += loss.item()/total_batches
             running_loss += loss.item()/40
             running_half_loss[0] += half_loss[0]/40
@@ -248,9 +245,11 @@ def train(model, optimizer, trainloader, testloader, args):
             if (idx+1) % 40 == 0:
                 # print the trainging results to the log file.
                 logger.debug('{}|  Epoch [{}/{}], Step [{}/{}], Half_loss:[{:.0f}, {:.0f}], Loss: {:.0f}, Max: {:.1f}'.
-                format(args.model, epoch+1, args.max_epochs, idx+1, total_batches, running_half_loss[0], running_half_loss[1], running_loss, torch.max(outputs).item()))
+                format(args.model, epoch+1, args.max_epochs, idx+1, total_batches, running_half_loss[0], running_half_loss[1], running_loss, max_output))
                 running_loss = 0.
+                running_half_loss = [0., 0.]
                 max_output = 0.
+                break
 
         # save the training results.
         result_df.iloc[epoch,0] = train_loss
@@ -304,13 +303,13 @@ def test(model, testloader, args):
     loss_function: loss function
     device: the device where the training process takes.
     '''
+    # breakpoint()
     # set evaluating process
-    model.eval()
-    loss = 0
-    half_loss = [0., 0.]
-
     with torch.no_grad():
-        for _, data in enumerate(testloader, 0):
+        model.eval()
+        loss = 0
+        half_loss = np.array([0., 0.], dtype=np.float64)
+        for data in testloader:
             inputs, labels = data['inputs'].to(args.device, dtype=args.value_dtype), data['targets'].to(args.device, dtype=args.value_dtype)
             if args.model.upper() == 'MYMODEL':
                 ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
@@ -318,12 +317,14 @@ def test(model, testloader, args):
                 outputs = model(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map)
             else:
                 outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
-
             if args.normalize_target:
-                outputs = (outputs - args.min_values['QPE']) / (args.max_values['QPE'] - args.min_values['QPE'])
-            loss += args.loss_function(outputs, labels).item()/len(testloader)
-            half_loss[0] += args.loss_function(outputs[:,0:int(args.target_frames/2),:,:], labels[:,0:int(args.target_frames/2),:,:]).item()/len(testloader)
-            half_loss[1] += args.loss_function(outputs[:,int(args.target_frames/2):,:,:], labels[:,int(args.target_frames/2):,:,:]).item()/len(testloader)
+                if args.target_RAD:
+                    outputs = (outputs - args.min_values['RAD']) / (args.max_values['RAD'] - args.min_values['RAD'])
+                else:
+                    outputs = (outputs - args.min_values['QPE']) / (args.max_values['QPE'] - args.min_values['QPE'])
 
+            loss += (args.loss_function(outputs, labels)/len(testloader)).item()
+            half_loss[0] += (args.loss_function(outputs[:,0:int(args.target_frames/2),:,:], labels[:,0:int(args.target_frames/2),:,:])/len(testloader)).item()
+            half_loss[1] += (args.loss_function(outputs[:,int(args.target_frames/2):,:,:], labels[:,int(args.target_frames/2):,:,:])/len(testloader)).item()
     return loss, half_loss
 

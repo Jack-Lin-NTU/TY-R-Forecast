@@ -30,7 +30,6 @@ def main():
     # get the model
     model = get_model(args=args)
     
-    # breakpoint()
     # get optimizer
     optimizer = get_optimizer(args=args, model=model)
     

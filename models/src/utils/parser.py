@@ -70,7 +70,7 @@ def get_args():
     parser.add_argument('--input-frames', metavar='', type=int, default=6, help='The size of input frames. (default: 6)')
     parser.add_argument('--target-frames', metavar='', type=int, default=18, help='The size of target frames. (default: 18)')
     parser.add_argument('--input-with-grid', action='store_true', help='Input with grid data.')
-    parser.add_argument('--input-with-QPE', action='store_true', help='Input with QPE data.')
+    # parser.add_argument('--input-with-QPE', action='store_true', help='Input with QPE data.')
     parser.add_argument('--target-RAD', action='store_true', help='Use RAD-transformed data as targets.')
     parser.add_argument('--denoise-RAD', action='store_true', help='Use denoised RAD data as inputs.')
     parser.add_argument('--channel-factor', metavar='', type=int, default=2, help='Channel factor. (default: 2)')
@@ -147,7 +147,7 @@ def get_args():
     args.QPE_cmap = ['#FFFFFF','#D2D2FF','#AAAAFF','#8282FF','#6A6AFF','#4242FF','#1A1AFF','#000090','#000050','#000030']
     args.QPF_cmap = ['#FFFFFF','#D2D2FF','#AAAAFF','#8282FF','#6A6AFF','#4242FF','#1A1AFF','#000090','#000050','#000030']
 
-    args.input_channels = 1 + args.input_with_QPE*1 + len(args.weather_list) + args.input_with_grid*2
+    args.input_channels = 1 + args.input_with_grid*2
 
     args.TW_map_file = make_path(os.path.join('07_gis_data','03_TW_shapefile','gadm36_TWN_2'), working_folder)
 
@@ -163,7 +163,11 @@ def get_args():
     else:
         args.result_folder = os.path.join(args.result_folder, 'RAD_weather')
         args.params_folder = os.path.join(args.params_folder, 'RAD_weather')
-    
+
+    if args.multi_unit:
+        args.result_folder += '_munit'
+        args.params_folder += '_munit'
+
     if args.normalize_input:
         args.result_folder += '_ninput'
         args.params_folder += '_ninput'
@@ -176,9 +180,6 @@ def get_args():
         args.result_folder += '_grid'
         args.params_folder += '_grid'
 
-    if args.input_with_QPE:
-        args.result_folder += '_QPE'
-        args.params_folder += '_QPE'
     
     if args.lr_scheduler:
         args.result_folder += '_scheduler'
@@ -227,6 +228,5 @@ def print_args(args):
         f.write('Denoised RAD: {}\n'.format(args.denoise_RAD))
         f.write('Input channels: {}\n'.format(args.input_channels))
         f.write('Input frames: {}\n'.format(args.input_frames))
-        f.write('Input with QPE: {}\n'.format(args.input_with_QPE))
         f.write('Input with grid: {}\n'.format(args.input_with_grid))
         f.write('Multi-units: {}\n'.format(args.multi_unit))

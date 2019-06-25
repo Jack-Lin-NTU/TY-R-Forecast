@@ -14,8 +14,8 @@ def mae(x,y):
 class LOSS():
     def __init__(self, args):
         super().__init__()
-        self.weights = np.array([1., 2., 5., 10., 30., 100.])
-        self.value_list = np.array([0., 2., 5., 10., 30., 60., 200.])
+        self.weights = np.array([1., 2., 5., 10., 30.])
+        self.value_list = np.array([0., 2., 5., 10., 40., 200.])
         max_values = args.max_values['QPE']
 
         if args.target_RAD:
@@ -40,7 +40,12 @@ class LOSS():
         loss = 0.
         for i in range(len(self.weights)):
             mask = (targets>=self.value_list[i]) & (targets<self.value_list[i+1])
-            loss += self.weights[i] * self.loss(outputs[mask], targets[mask], reduction='mean')
+            tmp = self.weights[i] * self.loss(outputs[mask], targets[mask], reduction='mean')
+            # make sure the loss is not nan value
+            if torch.isnan(tmp):
+                continue
+            else:
+                loss += tmp 
         return loss
 
 class LOSS_pytorch():

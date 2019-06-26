@@ -216,19 +216,17 @@ class Multi_unit_Model(nn.Module):
                 forecaster_upsample_cin, forecaster_upsample_cout, forecaster_upsample_k, forecaster_upsample_p, 
                 forecaster_upsample_s, forecaster_n_layers, forecaster_output_cout=1, forecaster_output_k=1, 
                 forecaster_output_s=1, forecaster_output_p=0, forecaster_n_output_layers=1, 
-                batch_norm=False):
+                batch_norm=False, target_RAD=False, x_iloc=None, y_iloc=None):
         super().__init__()
-        self.device = device
-        self.value_dtype = value_dtype
         self.n_encoders = n_encoders
         self.n_forecasters = n_forecasters
+        self.target_RAD = target_RAD
 
-        self.tycatcher = TyCatcher(TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers, device, value_dtype)
+        self.tycatcher = TyCatcher(TyCatcher_input, TyCatcher_hidden, TyCatcher_n_layers, x_iloc, y_iloc)
         encoders = []
         for i in range(n_encoders+n_forecasters):
             model = Encoder(encoder_input, encoder_downsample, encoder_gru, encoder_downsample_k, encoder_downsample_s, 
-                            encoder_downsample_p, encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_layers,
-                            batch_norm)
+                            encoder_downsample_p, encoder_gru_k, encoder_gru_s, encoder_gru_p, encoder_n_layers, batch_norm)
             name = 'Encoder_' + str(i).zfill(2)
             setattr(self, name, model)
             encoders.append(getattr(self, name))
@@ -246,23 +244,28 @@ class Multi_unit_Model(nn.Module):
         self.forecasters = forecasters
 
     def forward(self, encoder_inputs, ty_infos, radar_map):
+        hidden = None
         for i in range(self.n_encoders):
+            encoder = self.encoders[i]
             input_ = encoder_inputs[:,i,:,:,:]
-            if i == 0:
-                prev_state = self.encoders[i](input_, hidden=None)
-            else:
-                prev_state = self.encoders[i](input_, hidden=prev_state)
+            hidden = encoder(input_, hidden=hidden)
         
-        outputs = []
+        forecast = []
         for i in range(self.n_forecasters):
+            encoder = self.encoders[i+self.n_encoders]
+            forecaster = self.forecasters[i]
             tmp_ty_info = ty_infos[:,i,:]
-            input_ = self.tycatcher(tmp_ty_info, radar_map)
-            prev_state = self.encoders[i+self.n_encoders](input_, hidden=prev_state)
-            output_ = self.forecasters[i](prev_state[::-1])
+            input_, _  = self.tycatcher(tmp_ty_info, radar_map)
+            hidden = encoder(input_, hidden=hidden)
+            output_ = forecaster(hidden[::-1])
+            forecast.append(output_)
 
-            outputs.append(output_)
-        outputs = torch.cat(outputs, dim=1)
-        return outputs
+        forecast = torch.cat(forecast, dim=1)
+
+        if not self.target_RAD:
+            forecast = ((10**(forecast/10))/200)**(5/8)
+
+        return forecast
     
     def samples(self, encoder_inputs, ty_infos, radar_map):
         flowfields = []
@@ -275,4 +278,3 @@ class Multi_unit_Model(nn.Module):
             samples.append(input_)
         samples = torch.cat(samples, dim=1)
         return samples
-Multi_unit_Model

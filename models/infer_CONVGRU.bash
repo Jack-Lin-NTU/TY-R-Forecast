@@ -1,3 +1,4 @@
 clear
-python infer_GRUs.py --model CONVGRU --able-cuda --lr-scheduler --clip --clip-max-norm 0.01 --seed 1 \
---gpu 0 --lr 0.00005 --weight-decay 0 --max-epochs 200 --batch-size 1 --train-num 10 --optimizer Adam --value-dtype float32
+python infer_GRUs.py --model CONVGRU --multi-unit --able-cuda --target-RAD --normalize-input \
+--gpu 0 --lr 0.0001 --lr-scheduler --clip --clip-max-norm 0.001 --weight-decay 0 \
+--max-epochs 100 --batch-size 5 --train-num 10 --optimizer Adam --value-dtype float32

@@ -34,8 +34,8 @@ def get_dataloader(args, train_num=None):
     testdataset = TyDataset(args=args, train=False, train_num=train_num, transform=transform)
 
     # dataloader
-    train_kwargs = {'num_workers': 6, 'pin_memory': True} if args.able_cuda else {}
-    test_kwargs = {'num_workers': 6, 'pin_memory': True} if args.able_cuda else {}
+    train_kwargs = {'num_workers': 4, 'pin_memory': True} if args.able_cuda else {}
+    test_kwargs = {'num_workers': 4, 'pin_memory': True} if args.able_cuda else {}
     trainloader = DataLoader(dataset=traindataset, batch_size=args.batch_size, shuffle=True, **train_kwargs)
     testloader = DataLoader(dataset=testdataset, batch_size=args.batch_size, shuffle=False, **test_kwargs)
     
@@ -61,7 +61,7 @@ def get_model(args):
                 forecaster_gru_p=TRAJGRU.forecaster_gru_p, forecaster_n_cells=TRAJGRU.forecaster_n_cells, forecaster_output=TRAJGRU.forecaster_output_channels, 
                 forecaster_output_k=TRAJGRU.forecaster_output_k, forecaster_output_s=TRAJGRU.forecaster_output_s, 
                 forecaster_output_p=TRAJGRU.forecaster_output_p, forecaster_output_layers=TRAJGRU.forecaster_output_layers, 
-                batch_norm=args.batch_norm).to(args.device, dtype=args.value_dtype)
+                batch_norm=args.batch_norm, target_RAD=args.target_RAD).to(args.device, dtype=args.value_dtype)
 
     elif args.model.upper() == 'CONVGRU':
         if args.multi_unit:
@@ -82,7 +82,7 @@ def get_model(args):
                 forecaster_gru_p=CONVGRU.forecaster_gru_p, forecaster_n_cells=CONVGRU.forecaster_n_cells, forecaster_output=CONVGRU.forecaster_output_channels, 
                 forecaster_output_k=CONVGRU.forecaster_output_k, forecaster_output_s=CONVGRU.forecaster_output_s, 
                 forecaster_output_p=CONVGRU.forecaster_output_p, forecaster_output_layers=CONVGRU.forecaster_output_layers, 
-                batch_norm=args.batch_norm).to(args.device, dtype=args.value_dtype)
+                batch_norm=args.batch_norm, target_RAD=args.target_RAD).to(args.device, dtype=args.value_dtype)
         
     elif args.model.upper() == 'MYMODEL':
         if args.multi_unit:
@@ -97,7 +97,7 @@ def get_model(args):
                     MYMODEL.forecaster_upsample_cin, MYMODEL.forecaster_upsample_cout, MYMODEL.forecaster_upsample_k, MYMODEL.forecaster_upsample_p, 
                     MYMODEL.forecaster_upsample_s, MYMODEL.forecaster_n_layers, MYMODEL.forecaster_output_cout, MYMODEL.forecaster_output_k, 
                     MYMODEL.forecaster_output_s, MYMODEL.forecaster_output_p, MYMODEL.forecaster_n_output_layers, 
-                    batch_norm=args.batch_norm, x_iloc=args.I_x_iloc, y_iloc=args.I_y_iloc).to(args.device, dtype=args.value_dtype)
+                    batch_norm=args.batch_norm, target_RAD=args.target_RAD, x_iloc=args.I_x_iloc, y_iloc=args.I_y_iloc).to(args.device, dtype=args.value_dtype)
 
     return model
 

@@ -60,7 +60,7 @@ class TyDataset(Dataset):
         
         if train:
             if train_num is None:
-                self.events_num = rand_tys[0:int(len(ty_list)/4*3)]
+                events_num = rand_tys[0:int(len(ty_list)/4*3)]
             else:
                 assert train_num <= len(ty_list), 'The train_num shoud be less than total number of ty events.'
                 events_num = rand_tys[0:train_num]

@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     # set optimizer
     optimizer = get_optimizer(args=args, model=model)
-    param_pt = os.path.join(args.params_folder, 'params_10.pt')
+    param_pt = os.path.join(args.params_folder, 'params_30.pt')
     checkpoint = torch.load(param_pt, map_location=args.device)
 
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
         outputs = outputs.detach().to('cpu').numpy()
         labels = labels.to('cpu').numpy()
-        if idx == 0:
+        if idx == 3:
             break
     labels = data['targets'].to('cpu').numpy()[0]
     labels[labels<1] = 0
@@ -77,9 +77,9 @@ if __name__ == "__main__":
     for i in range(18):
         images = os.path.join(args.infers_folder, args.model+str(i+1)+'.png')
         # 1
-        ax = fig.add_subplot(1,2, 1)
+        ax = fig.add_subplot(1,2,1)
         _ = m.readshapefile(args.TW_map_file, name='Taiwan', linewidth=0.25, drawbounds=True, color='k', ax=ax)
-        cs = m.contourf(x=X, y=Y, data=samples[i], colors=args.RAD_cmap, levels=args.RAD_level, ax=ax)
+        cs = m.contourf(x=X, y=Y, data=samples[-(i+1)], colors=args.RAD_cmap, levels=args.RAD_level, ax=ax)
         ax.set_xlabel(r'longtitude($^o$)',fontdict={'fontsize':10})
         ax.set_ylabel(r'latitude($^o$)',fontdict={'fontsize':10})
         _ = ax.set_xticks(ticks = np.linspace(args.I_x[0], args.I_x[1], 5))
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         # 2
         ax = fig.add_subplot(1, 2, 2)
         _ = m.readshapefile(args.TW_map_file, name='Taiwan', linewidth=0.25, drawbounds=True, color='k', ax=ax)
-        cs = m.contourf(x=Xo, y=Yo, data=radar_map[0,0,:,:], colors=args.RAD_cmap, levels=args.RAD_level, ax=ax)
+        cs = m.contourf(x=X, y=Y, data=labels[i,:,:], colors=args.RAD_cmap, levels=args.RAD_level, ax=ax)
         ax.set_xlabel(r'longtitude($^o$)',fontdict={'fontsize':10})
         ax.set_ylabel(r'latitude($^o$)',fontdict={'fontsize':10})
         _ = ax.set_xticks(ticks = np.linspace(args.I_x[0], args.I_x[1], 5))
@@ -98,7 +98,6 @@ if __name__ == "__main__":
         ax.tick_params('both', labelsize=10)
         cbar = fig.colorbar(cs, ax=ax, shrink=0.8)
         cbar.ax.tick_params(labelsize=10) 
-
-        plt.tight_layout()
+        plt.title(i)
         fig.savefig(images, dpi=args.figure_dpi, bbox_inches='tight')
         fig.clf()

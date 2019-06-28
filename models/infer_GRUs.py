@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     # set optimizer
     optimizer = get_optimizer(args=args, model=model)
-    param_pt = os.path.join(args.params_folder, 'params_30.pt')
+    param_pt = os.path.join(args.params_folder, 'params_100.pt')
     checkpoint = torch.load(param_pt, map_location=args.device)
 
     model.load_state_dict(checkpoint['model_state_dict'])

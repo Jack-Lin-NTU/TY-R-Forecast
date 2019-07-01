@@ -23,7 +23,6 @@ class flow_warp(nn.Module):
 
         # initialize the weightings in each layers.
 
-        # nn.init.kaiming_normal_(displacement_layers[0].weight, a=0.2, mode='fan_in', nonlinearity='leaky_relu')
         nn.init.zeros_(displacement_layers[0].weight)
         nn.init.zeros_(displacement_layers[0].bias)
         nn.init.zeros_(displacement_layers[2].weight)

@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     # set optimizer
     optimizer = get_optimizer(args=args, model=model)
-    param_pt = os.path.join(args.params_folder, 'params_100.pt')
+    param_pt = os.path.join(args.params_folder, 'params_30.pt')
     checkpoint = torch.load(param_pt, map_location=args.device)
 
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -172,7 +172,7 @@ if __name__ == "__main__":
         for idx in range(2):
             ax = fig.add_subplot(1, len(data_type), idx+1)
             _ = m.readshapefile(args.TW_map_file, name='Taiwan', linewidth=0.25, drawbounds=True, color='k', ax=ax)
-            cs = m.contourf(x=X, y=Y, data=data[idx], colors=args.QPE_cmap, levels=args.QPE_level, ax=ax)
+            cs = m.contourf(x=X, y=Y, data=data[idx], colors=args.RAD_cmap, levels=args.RAD_level, ax=ax)
             ax.set_xlabel(r'longtitude($^o$)',fontdict={'fontsize':10})
             ax.set_ylabel(r'latitude($^o$)',fontdict={'fontsize':10})
             _ = ax.set_xticks(ticks = np.linspace(args.I_x[0], args.I_x[1], 5))

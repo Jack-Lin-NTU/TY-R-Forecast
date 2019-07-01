@@ -1,4 +1,4 @@
 clear
 python infer_GRUs.py --model TRAJGRU --able-cuda --target-RAD --normalize-input \
---gpu 3 --lr 0.0001 --lr-scheduler --clip --clip-max-norm 5 --weight-decay 0 \
---max-epochs 100 --batch-size 1 --train-num 10 --optimizer Adam --value-dtype float32
+--gpu 0 --lr 0.00005 --clip --clip-max-norm 1 --weight-decay 0.025 \
+--max-epochs 30 --batch-size 4 --train-num 10 --optimizer Adam --value-dtype float32

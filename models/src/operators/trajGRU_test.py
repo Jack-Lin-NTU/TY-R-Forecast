@@ -4,127 +4,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .cnn2D import CNN2D_cell, DeCNN2D_cell
-
-class flow_warp(nn.Module):
-    '''
-    Arguments:
-        The subcnn model and the M warp function 
-    '''
-    def __init__(self, channel_input, channel_output, link_size, batch_norm=False):
-        super().__init__()
-        self.channel_input = channel_input
-        self.channel_output = channel_output
-        self.link_size = link_size
-        # 2 cnn layers
-        displacement_layers = []
-        displacement_layers.append(nn.Conv2d(channel_input+channel_output, 32, 5, 1, 2))
-        displacement_layers.append(nn.LeakyReLU(negative_slope=0.2))
-        displacement_layers.append(nn.Conv2d(32, link_size*2, 5, 1, 2))
-
-        # initialize the weightings in each layers.
-
-        nn.init.zeros_(displacement_layers[0].weight)
-        nn.init.zeros_(displacement_layers[0].bias)
-        nn.init.zeros_(displacement_layers[2].weight)
-        nn.init.zeros_(displacement_layers[2].bias)
-        self.displacement_layers = nn.Sequential(*displacement_layers)
-
-    def grid_sample(self, x, flow):
-        '''
-        Function for sampling pixels based on given grid data.
-        '''
-        # get device and dtype
-        device = self.displacement_layers[0].weight.device
-        dtype = self.displacement_layers[0].weight.dtype
-        
-        input_ = x
-        b, _, h, w = flow.shape
-        y_, x_ = torch.meshgrid(torch.arange(h, device=device, dtype=dtype), torch.arange(w, device=device,dtype=dtype))
-        y_, x_ = (y_*2/h-1).expand(b,-1,-1), (x_*2/w-1).expand(b,-1,-1)
-
-        u, v = flow[:,0:self.link_size,:,:], flow[:,self.link_size:,:,:]
-        samples = []
-        for i in range(self.link_size):
-            new_x = x_ + u[:,i,:,:]
-            new_y = y_ + v[:,i,:,:]
-            grids = torch.stack([new_x, new_y], dim=3)
-            samples.append(F.grid_sample(input_, grids, padding_mode='border'))
-        return torch.cat(samples, dim=1)
-
-    def forward(self, x=None, prev_state=None):
-        # get batch and spatial sizes
-        # print('Prev:', prev_state.shape)
-        input_ = x
-
-        if input_ is None:
-            stacked_inputs = prev_state
-        else:
-            stacked_inputs = torch.cat([input_, prev_state], dim=1)
-        
-        output = self.displacement_layers(stacked_inputs)
-        output = self.grid_sample(x=prev_state, flow=output)
-        return output
-
-class TrajGRUcell(nn.Module):
-    """
-    Arguments: 
-        This class is to generate a convolutional Traj_GRU cell.
-    """
-    def __init__(self, channel_input, channel_output, link_size, kernel=3, stride=1, padding=1, batch_norm=False):
-        super().__init__()
-
-        self.channel_input = channel_input
-        self.channel_output = channel_output
-        self.link_size = link_size
-
-        if channel_input != 0:
-            self.reset_gate = CNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm)
-            self.update_gate = CNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm)
-            self.out_gate = CNN2D_cell(channel_input, channel_output, kernel, stride, padding, batch_norm, negative_slope=0.2)
-
-        self.flow_warp = flow_warp(channel_input, channel_output, link_size, batch_norm)
-
-        self.reset_gate_warp  = CNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
-        self.update_gate_warp  = CNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm)
-        self.out_gate_warp = CNN2D_cell(channel_output*link_size, channel_output, 1, 1, 0, batch_norm, negative_slope=0.2)
-    
-    def forward(self, x=None, prev_state=None):
-        input_ = x
-        # get batch and spatial sizes
-        if input_ is not None:
-            b, _, h, w = input_.data.shape
-        else:
-            b, _, h, w = prev_state.data.shape
-
-        state_size = [b, self.channel_output, h, w]
-
-        # get device and dtype
-        device = self.reset_gate_warp.layer[0].weight.device
-        dtype = self.reset_gate_warp.layer[0].weight.dtype
-
-        # generate empty prev_state, if None is provided
-        if prev_state is None:
-            prev_state = torch.zeros(state_size).to(device=device, dtype=dtype)
-
-        M = self.flow_warp(input_, prev_state)
-        
-        if self.channel_input != 0:
-            # data size is [batch, channel, height, width]
-            reset = torch.sigmoid(self.reset_gate(input_)+self.reset_gate_warp(M))
-            update = torch.sigmoid(self.update_gate(input_)+self.update_gate_warp(M))
-            out_inputs = F.leaky_relu(self.out_gate(input_)+reset*self.out_gate_warp(M), negative_slope=0.2)
-            new_state = out_inputs*(1-update) + update*prev_state
-        else:
-            reset = torch.sigmoid(self.reset_gate_warp(M))
-            update = torch.sigmoid(self.update_gate_warp(M))
-            out_inputs = F.leaky_relu(reset*self.out_gate_warp(M), negative_slope=0.2)
-            new_state = out_inputs*(1-update) + update*prev_state
-
-        return new_state
+from .trajGRU import flow_warp, TrajGRUcell, DeTrajGRUcell
 
 class Encoder(nn.Module):
-    def __init__(self, channel_input, channel_downsample, channel_gru, downsample_k, downsample_s, downsample_p,
-                 gru_link_size, gru_k, gru_s, gru_p, n_cells, batch_norm=False):
+    def __init__(self, channel_input, channel_gru, gru_link_size, gru_k, gru_s, gru_p, n_cells, batch_norm=False):
         '''
         Argumensts:
         Generates a multi-layer convolutional GRU, which is called encoder.
@@ -190,6 +73,7 @@ class Encoder(nn.Module):
 
         ## set encoder
         cells = []
+        imgsize = [400,400]
         for i in range(n_cells):
             ## Downsample cell
             if i == 0:
@@ -202,7 +86,9 @@ class Encoder(nn.Module):
             name = 'Downsample_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
-
+            
+            imgsize[0] = int((imgsize[0]-downsample_k[i]+2*downsample_p[i])/downsample_s[i]) + 1
+            imgsize[1] = imgsize[0]
             ## gru cell
             cell = TrajGRUcell(channel_input=channel_downsample[i], channel_output=channel_gru[i], link_size=gru_link_size[i],
                                kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i])
@@ -328,16 +214,17 @@ class Forecaster(nn.Module):
 
         ## set forecaster
         cells = []
+        imgsize = [14,14]
         for i in range(n_cells):
-            # Traj gru
+            # deTraj gru
             if i == 0:
-                cell = TrajGRUcell(channel_input=channel_input, channel_output=channel_gru[i], link_size=gru_link_size[i],
-                                    kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i])
+                cell = DeTrajGRUcell(channel_input=channel_input, channel_output=channel_gru[i], link_size=gru_link_size[i],
+                                     kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i])
             else:
-                cell = TrajGRUcell(channel_input=channel_upsample[i-1], channel_output=channel_gru[i], link_size=gru_link_size[i],
-                                    kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i])
+                cell = DeTrajGRUcell(channel_input=channel_upsample[i-1], channel_output=channel_gru[i], link_size=gru_link_size[i],
+                                     kernel=gru_k[i], stride=gru_s[i], padding=gru_p[i])
 
-            name = 'TrajGRUcell_' + str(i).zfill(2)
+            name = 'DeTrajGRUcell_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
             # decon  
@@ -345,6 +232,9 @@ class Forecaster(nn.Module):
             name = 'Upsample_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
+
+            imgsize[0] = (imgsize[0]-1)*upsample_s[i] + upsample_k[i] - 2*upsample_p[i]
+            imgsize[1] = imgsize[0]
 
         # output layer
         for i in range(self.n_output_layers):

@@ -16,7 +16,7 @@ from torchvision import transforms, utils
 # import our model and dataloader
 from src.utils.utils import createfolder, remove_file, Adam16
 from src.utils.loss import Criterion
-from src.utils.GRUs_hparams import TRAJGRU_HYPERPARAMs, CONVGRU_HYPERPARAMs, MYMODEL_HYPERPARAMs
+from src.utils.GRUs_hparams import TRAJGRU_HYPERPARAMs, CONVGRU_HYPERPARAMs, MYMODEL_HYPERPARAMs, TEST_HYPERPARAMs
 
 def get_dataloader(args, train_num=None):
     '''
@@ -98,6 +98,25 @@ def get_model(args):
                     MYMODEL.forecaster_upsample_s, MYMODEL.forecaster_n_layers, MYMODEL.forecaster_output_cout, MYMODEL.forecaster_output_k, 
                     MYMODEL.forecaster_output_s, MYMODEL.forecaster_output_p, MYMODEL.forecaster_n_output_layers, 
                     batch_norm=args.batch_norm, target_RAD=args.target_RAD, x_iloc=args.I_x_iloc, y_iloc=args.I_y_iloc).to(args.device, dtype=args.value_dtype)
+    
+    elif args.model.upper() == 'TEST_TRAJGRU':
+        from src.operators.trajGRU import  Model
+        print('Model:', args.model.upper())
+        TRAJGRU = TRAJGRU_HYPERPARAMs(args=args)
+        model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, gru_link_size=TRAJGRU.gru_link_size,
+                encoder_input_channel=TRAJGRU.encoder_input_channel, encoder_downsample_channels=TRAJGRU.encoder_downsample_channels,
+                encoder_gru_channels=TRAJGRU.encoder_gru_channels, encoder_downsample_k=TRAJGRU.encoder_downsample_k,
+                encoder_downsample_s=TRAJGRU.encoder_downsample_s, encoder_downsample_p=TRAJGRU.encoder_downsample_p, 
+                encoder_gru_k=TRAJGRU.encoder_gru_k, encoder_gru_s=TRAJGRU.encoder_gru_s, encoder_gru_p=TRAJGRU.encoder_gru_p, 
+                encoder_n_cells=TRAJGRU.encoder_n_cells, forecaster_input_channel=TRAJGRU.forecaster_input_channel, 
+                forecaster_upsample_channels=TRAJGRU.forecaster_upsample_channels, forecaster_gru_channels=TRAJGRU.forecaster_gru_channels,
+                forecaster_upsample_k=TRAJGRU.forecaster_upsample_k, forecaster_upsample_s=TRAJGRU.forecaster_upsample_s, 
+                forecaster_upsample_p=TRAJGRU.forecaster_upsample_p, forecaster_gru_k=TRAJGRU.forecaster_gru_k, forecaster_gru_s=TRAJGRU.forecaster_gru_s,
+                forecaster_gru_p=TRAJGRU.forecaster_gru_p, forecaster_n_cells=TRAJGRU.forecaster_n_cells, forecaster_output=TRAJGRU.forecaster_output_channels, 
+                forecaster_output_k=TRAJGRU.forecaster_output_k, forecaster_output_s=TRAJGRU.forecaster_output_s, 
+                forecaster_output_p=TRAJGRU.forecaster_output_p, forecaster_output_layers=TRAJGRU.forecaster_output_layers, 
+                batch_norm=args.batch_norm, target_RAD=args.target_RAD).to(args.device, dtype=args.value_dtype)
+
 
     return model
 

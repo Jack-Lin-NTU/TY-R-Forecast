@@ -13,7 +13,7 @@ class CNN2D_cell(nn.Module):
             layer_sublist.append(nn.BatchNorm2d(channel_output))
         layer_sublist.append(nn.ReLU())
 
-        nn.init.kaiming_normal_(layer_sublist[0].weight, a=negative_slope, mode='fan_in', nonlinearity='leaky_relu')
+        nn.init.kaiming_normal_(layer_sublist[0].weight, a=negative_slope, mode='fan_out', nonlinearity='leaky_relu')
         # nn.init.constant_(layer_sublist[0].weight, 0.1)
         nn.init.zeros_(layer_sublist[0].bias)
         self.layer = nn.Sequential(*layer_sublist)

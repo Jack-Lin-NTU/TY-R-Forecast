@@ -237,7 +237,7 @@ class Encoder(nn.Module):
 class Forecaster(nn.Module):
     def __init__(self, channel_input, channel_upsample, channel_gru, upsample_k, upsample_p, upsample_s,
                  gru_link_size, gru_k, gru_s, gru_p, n_cells, channel_output=1, output_k=1, output_s = 1, 
-                 output_p=0, n_output_layers=1, batch_norm=False, batch_size=None):
+                 output_p=0, n_output_layers=1, batch_norm=False):
         '''
         Argumensts:
         Generates a multi-layer deconvolutional GRU, which is called forecaster.
@@ -511,6 +511,7 @@ class Multi_unit_Model(nn.Module):
 
     def forward(self, x):
         input_ = x
+
         if input_.size()[1] != self.n_encoders:
             assert input_.size()[1] == self.n_encoders, '"x" must have the same as n_encoders'
 

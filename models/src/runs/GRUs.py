@@ -16,7 +16,7 @@ from torchvision import transforms, utils
 # import our model and dataloader
 from src.utils.utils import createfolder, remove_file, Adam16
 from src.utils.loss import Criterion
-from src.utils.GRUs_hparams import TRAJGRU_HYPERPARAMs, CONVGRU_HYPERPARAMs, MYMODEL_HYPERPARAMs, TEST_HYPERPARAMs
+from src.utils.GRUs_hparams import TRAJGRU_HYPERPARAMs, CONVGRU_HYPERPARAMs, MYMODEL_HYPERPARAMs, TEST_HYPERPARAMs, FLOWGRU_HYPERPARAMs
 
 def get_dataloader(args, train_num=None):
     '''
@@ -48,40 +48,40 @@ def get_model(args):
         else:
             from src.operators.trajGRU import  Model
         print('Model:', args.model.upper())
-        TRAJGRU = TRAJGRU_HYPERPARAMs(args=args)
-        model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, gru_link_size=TRAJGRU.gru_link_size,
-                encoder_input_channel=TRAJGRU.encoder_input_channel, encoder_downsample_channels=TRAJGRU.encoder_downsample_channels,
-                encoder_gru_channels=TRAJGRU.encoder_gru_channels, encoder_downsample_k=TRAJGRU.encoder_downsample_k,
-                encoder_downsample_s=TRAJGRU.encoder_downsample_s, encoder_downsample_p=TRAJGRU.encoder_downsample_p, 
-                encoder_gru_k=TRAJGRU.encoder_gru_k, encoder_gru_s=TRAJGRU.encoder_gru_s, encoder_gru_p=TRAJGRU.encoder_gru_p, 
-                encoder_n_cells=TRAJGRU.encoder_n_cells, forecaster_input_channel=TRAJGRU.forecaster_input_channel, 
-                forecaster_upsample_channels=TRAJGRU.forecaster_upsample_channels, forecaster_gru_channels=TRAJGRU.forecaster_gru_channels,
-                forecaster_upsample_k=TRAJGRU.forecaster_upsample_k, forecaster_upsample_s=TRAJGRU.forecaster_upsample_s, 
-                forecaster_upsample_p=TRAJGRU.forecaster_upsample_p, forecaster_gru_k=TRAJGRU.forecaster_gru_k, forecaster_gru_s=TRAJGRU.forecaster_gru_s,
-                forecaster_gru_p=TRAJGRU.forecaster_gru_p, forecaster_n_cells=TRAJGRU.forecaster_n_cells, forecaster_output=TRAJGRU.forecaster_output_channels, 
-                forecaster_output_k=TRAJGRU.forecaster_output_k, forecaster_output_s=TRAJGRU.forecaster_output_s, 
-                forecaster_output_p=TRAJGRU.forecaster_output_p, forecaster_output_layers=TRAJGRU.forecaster_output_layers, 
+        PARAMs = TRAJGRU_HYPERPARAMs(args=args)
+        model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, gru_link_size=PARAMs.gru_link_size,
+                encoder_input_channel=PARAMs.encoder_input_channel, encoder_downsample_channels=PARAMs.encoder_downsample_channels,
+                encoder_gru_channels=PARAMs.encoder_gru_channels, encoder_downsample_k=PARAMs.encoder_downsample_k,
+                encoder_downsample_s=PARAMs.encoder_downsample_s, encoder_downsample_p=PARAMs.encoder_downsample_p, 
+                encoder_gru_k=PARAMs.encoder_gru_k, encoder_gru_s=PARAMs.encoder_gru_s, encoder_gru_p=PARAMs.encoder_gru_p, 
+                encoder_n_cells=PARAMs.encoder_n_cells, forecaster_input_channel=PARAMs.forecaster_input_channel, 
+                forecaster_upsample_channels=PARAMs.forecaster_upsample_channels, forecaster_gru_channels=PARAMs.forecaster_gru_channels,
+                forecaster_upsample_k=PARAMs.forecaster_upsample_k, forecaster_upsample_s=PARAMs.forecaster_upsample_s, 
+                forecaster_upsample_p=PARAMs.forecaster_upsample_p, forecaster_gru_k=PARAMs.forecaster_gru_k, forecaster_gru_s=PARAMs.forecaster_gru_s,
+                forecaster_gru_p=PARAMs.forecaster_gru_p, forecaster_n_cells=PARAMs.forecaster_n_cells, forecaster_output=PARAMs.forecaster_output_channels, 
+                forecaster_output_k=PARAMs.forecaster_output_k, forecaster_output_s=PARAMs.forecaster_output_s, 
+                forecaster_output_p=PARAMs.forecaster_output_p, forecaster_output_layers=PARAMs.forecaster_output_layers, 
                 batch_norm=args.batch_norm, target_RAD=args.target_RAD).to(args.device, dtype=args.value_dtype)
 
     elif args.model.upper() == 'CONVGRU':
         if args.multi_unit:
             from src.operators.convGRU import  Multi_unit_Model as Model
         else:
-            from src.operators.convGRU import  Model
+            from src.operators.convGRU2 import  Model
         print('Model:', args.model.upper())
-        CONVGRU = CONVGRU_HYPERPARAMs(args=args)
+        PARAMs = CONVGRU_HYPERPARAMs(args=args)
         model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames,
-                encoder_input_channel=CONVGRU.encoder_input_channel, encoder_downsample_channels=CONVGRU.encoder_downsample_channels,
-                encoder_gru_channels=CONVGRU.encoder_gru_channels, encoder_downsample_k=CONVGRU.encoder_downsample_k,
-                encoder_downsample_s=CONVGRU.encoder_downsample_s, encoder_downsample_p=CONVGRU.encoder_downsample_p, 
-                encoder_gru_k=CONVGRU.encoder_gru_k,encoder_gru_s=CONVGRU.encoder_gru_s, encoder_gru_p=CONVGRU.encoder_gru_p, 
-                encoder_n_cells=CONVGRU.encoder_n_cells, forecaster_input_channel=CONVGRU.forecaster_input_channel, 
-                forecaster_upsample_channels=CONVGRU.forecaster_upsample_channels, forecaster_gru_channels=CONVGRU.forecaster_gru_channels,
-                forecaster_upsample_k=CONVGRU.forecaster_upsample_k, forecaster_upsample_s=CONVGRU.forecaster_upsample_s, 
-                forecaster_upsample_p=CONVGRU.forecaster_upsample_p, forecaster_gru_k=CONVGRU.forecaster_gru_k, forecaster_gru_s=CONVGRU.forecaster_gru_s,
-                forecaster_gru_p=CONVGRU.forecaster_gru_p, forecaster_n_cells=CONVGRU.forecaster_n_cells, forecaster_output=CONVGRU.forecaster_output_channels, 
-                forecaster_output_k=CONVGRU.forecaster_output_k, forecaster_output_s=CONVGRU.forecaster_output_s, 
-                forecaster_output_p=CONVGRU.forecaster_output_p, forecaster_output_layers=CONVGRU.forecaster_output_layers, 
+                encoder_input_channel=PARAMs.encoder_input_channel, encoder_downsample_channels=PARAMs.encoder_downsample_channels,
+                encoder_gru_channels=PARAMs.encoder_gru_channels, encoder_downsample_k=PARAMs.encoder_downsample_k,
+                encoder_downsample_s=PARAMs.encoder_downsample_s, encoder_downsample_p=PARAMs.encoder_downsample_p, 
+                encoder_gru_k=PARAMs.encoder_gru_k,encoder_gru_s=PARAMs.encoder_gru_s, encoder_gru_p=PARAMs.encoder_gru_p, 
+                encoder_n_cells=PARAMs.encoder_n_cells, forecaster_input_channel=PARAMs.forecaster_input_channel, 
+                forecaster_upsample_channels=PARAMs.forecaster_upsample_channels, forecaster_gru_channels=PARAMs.forecaster_gru_channels,
+                forecaster_upsample_k=PARAMs.forecaster_upsample_k, forecaster_upsample_s=PARAMs.forecaster_upsample_s, 
+                forecaster_upsample_p=PARAMs.forecaster_upsample_p, forecaster_gru_k=PARAMs.forecaster_gru_k, forecaster_gru_s=PARAMs.forecaster_gru_s,
+                forecaster_gru_p=PARAMs.forecaster_gru_p, forecaster_n_cells=PARAMs.forecaster_n_cells, forecaster_output=PARAMs.forecaster_output_channels, 
+                forecaster_output_k=PARAMs.forecaster_output_k, forecaster_output_s=PARAMs.forecaster_output_s, 
+                forecaster_output_p=PARAMs.forecaster_output_p, forecaster_output_layers=PARAMs.forecaster_output_layers, 
                 batch_norm=args.batch_norm, target_RAD=args.target_RAD).to(args.device, dtype=args.value_dtype)
         
     elif args.model.upper() == 'MYMODEL':
@@ -99,24 +99,32 @@ def get_model(args):
                     MYMODEL.forecaster_output_s, MYMODEL.forecaster_output_p, MYMODEL.forecaster_n_output_layers, 
                     batch_norm=args.batch_norm, target_RAD=args.target_RAD, x_iloc=args.I_x_iloc, y_iloc=args.I_y_iloc).to(args.device, dtype=args.value_dtype)
     
-    elif args.model.upper() == 'TEST_TRAJGRU':
+    elif args.model.upper() == 'TRAJGRU_TEST':
         from src.operators.trajGRU import  Model
         print('Model:', args.model.upper())
-        TRAJGRU = TRAJGRU_HYPERPARAMs(args=args)
-        model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, gru_link_size=TRAJGRU.gru_link_size,
-                encoder_input_channel=TRAJGRU.encoder_input_channel, encoder_downsample_channels=TRAJGRU.encoder_downsample_channels,
-                encoder_gru_channels=TRAJGRU.encoder_gru_channels, encoder_downsample_k=TRAJGRU.encoder_downsample_k,
-                encoder_downsample_s=TRAJGRU.encoder_downsample_s, encoder_downsample_p=TRAJGRU.encoder_downsample_p, 
-                encoder_gru_k=TRAJGRU.encoder_gru_k, encoder_gru_s=TRAJGRU.encoder_gru_s, encoder_gru_p=TRAJGRU.encoder_gru_p, 
-                encoder_n_cells=TRAJGRU.encoder_n_cells, forecaster_input_channel=TRAJGRU.forecaster_input_channel, 
-                forecaster_upsample_channels=TRAJGRU.forecaster_upsample_channels, forecaster_gru_channels=TRAJGRU.forecaster_gru_channels,
-                forecaster_upsample_k=TRAJGRU.forecaster_upsample_k, forecaster_upsample_s=TRAJGRU.forecaster_upsample_s, 
-                forecaster_upsample_p=TRAJGRU.forecaster_upsample_p, forecaster_gru_k=TRAJGRU.forecaster_gru_k, forecaster_gru_s=TRAJGRU.forecaster_gru_s,
-                forecaster_gru_p=TRAJGRU.forecaster_gru_p, forecaster_n_cells=TRAJGRU.forecaster_n_cells, forecaster_output=TRAJGRU.forecaster_output_channels, 
-                forecaster_output_k=TRAJGRU.forecaster_output_k, forecaster_output_s=TRAJGRU.forecaster_output_s, 
-                forecaster_output_p=TRAJGRU.forecaster_output_p, forecaster_output_layers=TRAJGRU.forecaster_output_layers, 
+        PARAMs = TEST_HYPERPARAMs(args=args)
+        model = Model(n_encoders=args.input_frames, n_forecasters=args.target_frames, gru_link_size=PARAMs.gru_link_size,
+                encoder_input_channel=PARAMs.encoder_input_channel, encoder_downsample_channels=PARAMs.encoder_downsample_channels,
+                encoder_gru_channels=PARAMs.encoder_gru_channels, encoder_downsample_k=PARAMs.encoder_downsample_k,
+                encoder_downsample_s=PARAMs.encoder_downsample_s, encoder_downsample_p=PARAMs.encoder_downsample_p, 
+                encoder_gru_k=PARAMs.encoder_gru_k, encoder_gru_s=PARAMs.encoder_gru_s, encoder_gru_p=PARAMs.encoder_gru_p, 
+                encoder_n_cells=PARAMs.encoder_n_cells, forecaster_input_channel=PARAMs.forecaster_input_channel, 
+                forecaster_upsample_channels=PARAMs.forecaster_upsample_channels, forecaster_gru_channels=PARAMs.forecaster_gru_channels,
+                forecaster_upsample_k=PARAMs.forecaster_upsample_k, forecaster_upsample_s=PARAMs.forecaster_upsample_s, 
+                forecaster_upsample_p=PARAMs.forecaster_upsample_p, forecaster_gru_k=PARAMs.forecaster_gru_k, forecaster_gru_s=PARAMs.forecaster_gru_s,
+                forecaster_gru_p=PARAMs.forecaster_gru_p, forecaster_n_cells=PARAMs.forecaster_n_cells, forecaster_output=PARAMs.forecaster_output_channels, 
+                forecaster_output_k=PARAMs.forecaster_output_k, forecaster_output_s=PARAMs.forecaster_output_s, 
+                forecaster_output_p=PARAMs.forecaster_output_p, forecaster_output_layers=PARAMs.forecaster_output_layers, 
                 batch_norm=args.batch_norm, target_RAD=args.target_RAD).to(args.device, dtype=args.value_dtype)
 
+    elif args.model.upper() == 'FLOWGRU':
+        from src.operators.flowGRU import  Model
+        print('Model:', args.model.upper())
+        PARAMs = FLOWGRU_HYPERPARAMs(args=args)
+        model = Model(input_frames=args.input_frames, target_frames=args.target_frames,
+                    encoder_cin=PARAMs.encoder_cin, encoder_d_c=PARAMs.encoder_d_c, encoder_d_k=PARAMs.encoder_d_k, encoder_d_s=PARAMs.encoder_d_s, encoder_d_p=PARAMs.encoder_d_p,
+                    encoder_gru_c=PARAMs.encoder_gru_c, encoder_gru_k=PARAMs.encoder_gru_k, encoder_gru_s=PARAMs.encoder_gru_s, encoder_gru_p=PARAMs.encoder_gru_p,
+                    forecaster_u_cin=PARAMs.forecaster_u_cin, forecaster_u_cout=PARAMs.forecaster_u_cout, forecaster_u_k=PARAMs.forecaster_u_k, forecaster_u_s=PARAMs.forecaster_u_s, forecaster_u_p=PARAMs.forecaster_u_p,c_out=PARAMs.c_out, batch_norm=args.batch_norm, target_RAD=args.target_RAD).to(args.device, dtype=args.value_dtype)
 
     return model
 
@@ -127,7 +135,7 @@ def get_optimizer(args, model):
     else:
         optimizer = getattr(optim, args.optimizer)
         if args.optimizer == 'Adam':
-            optimizer = optimizer(model.parameters(), lr=args.lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
+            optimizer = optimizer(model.parameters(), lr=args.lr, betas=(0.99, 0.999), weight_decay=args.weight_decay)
         elif args.optimizer == 'SGD':
             optimizer = optimizer(model.parameters(), lr=args.lr, momentum=0.6, weight_decay=args.weight_decay)
         else:
@@ -191,7 +199,7 @@ def train(model, optimizer, trainloader, testloader, args):
     logger = get_train_logger(log_file)
     # Set scheduler
     if args.lr_scheduler:
-        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=np.linspace(int(args.max_epochs/10), args.max_epochs, 10, dtype=int), gamma=0.7)
+        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=np.linspace(int(args.max_epochs/10)+3, args.max_epochs, 3, dtype=int), gamma=0.3)
     
     total_batches = len(trainloader)
     
@@ -223,13 +231,16 @@ def train(model, optimizer, trainloader, testloader, args):
         for idx, data in enumerate(trainloader, 0):
             inputs = data['inputs'].to(device=args.device, dtype=args.value_dtype)  # inputs.shape = [batch_size, input_frames, input_channel, H, W]
             labels = data['targets'].to(device=args.device, dtype=args.value_dtype)  # labels.shape = [batch_size, target_frames, H, W]
-            
-            if args.model.upper() == 'MYMODEL':
-                ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
-                radar_map = data['radar_map'].to(device=args.device, dtype=args.value_dtype)
-                outputs = model(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map)
+            # if args.model.upper() == 'MYMODEL':
+            #     ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
+            #     radar_map = data['radar_map'].to(device=args.device, dtype=args.value_dtype)
+            #     outputs = model(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map)
+            if args.model.upper() == 'FLOWGRU':
+                height = data['height'].to(device=args.device, dtype=args.value_dtype)
+                outputs = model(x=inputs, height=height)
             else:
                 outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
+            
 
             # print('Batch {:03d}: {:.4f}'.format(idx, outputs.max().item()))
             optimizer.zero_grad()
@@ -329,12 +340,18 @@ def test(model, testloader, args):
         half_loss = np.array([0., 0.], dtype=np.float64)
         for data in testloader:
             inputs, labels = data['inputs'].to(args.device, dtype=args.value_dtype), data['targets'].to(args.device, dtype=args.value_dtype)
-            if args.model.upper() == 'MYMODEL':
-                ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
-                radar_map = data['radar_map'].to(device=args.device, dtype=args.value_dtype)
-                outputs = model(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map)
+            # if args.model.upper() == 'MYMODEL':
+            #     ty_infos = data['ty_infos'].to(device=args.device, dtype=args.value_dtype)
+            #     radar_map = data['radar_map'].to(device=args.device, dtype=args.value_dtype)
+            #     outputs = model(encoder_inputs=inputs, ty_infos=ty_infos, radar_map=radar_map)
+            # else:
+            #     outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
+
+            if args.model.upper() == 'FLOWGRU':
+                height = data['height'].to(device=args.device, dtype=args.value_dtype)
+                outputs = model(x=inputs, height=height)
             else:
-                outputs = model(inputs)                           # outputs.shape = [batch_size, target_frames, H, W]
+                outputs = model(inputs)    
             if args.normalize_target:
                 if args.target_RAD:
                     outputs = (outputs - args.min_values['RAD']) / (args.max_values['RAD'] - args.min_values['RAD'])

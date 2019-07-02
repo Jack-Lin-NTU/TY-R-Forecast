@@ -27,6 +27,7 @@ def main():
 
     # get trainloader and testloader
     trainloader, testloader = get_dataloader(args=args, train_num=args.train_num)
+    
     # get the model
     model = get_model(args=args)
     

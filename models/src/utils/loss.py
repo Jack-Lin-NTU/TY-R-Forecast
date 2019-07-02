@@ -14,13 +14,14 @@ def mae(x,y):
 class LOSS():
     def __init__(self, args):
         super().__init__()
-        self.weights = np.array([1., 2., 5., 10., 30.])
+        self.weights = np.array([1., 2., 5., 10., 20.])
         self.value_list = np.array([0., 2., 5., 10., 40., 200.])
         max_values = args.max_values['QPE']
 
         if args.target_RAD:
             max_values = args.max_values['RAD']
             self.value_list[1:] = R2DBZ(self.value_list[1:])
+        # breakpoint()
 
         if args.normalize_target:
             self.value_list = self.value_list / max_values

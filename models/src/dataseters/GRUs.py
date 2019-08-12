@@ -175,6 +175,8 @@ class TyDataset(Dataset):
 
                 height = pd.read_pickle(os.path.join(self.radar_folder, 'height.pkl'), compression='bz2').loc[self.I_y[0]:self.I_y[1], self.I_x[0]:self.I_x[1]].to_numpy()
 
+                height = (height-np.min(height))/(np.max(height)-np.min(height))
+
                 self.sample = {'inputs': input_data, 'targets': target_data, 'ty_infos': ty_infos, 'radar_map': radar_map, 'current_time': current_time, 'height': height}
                 
                 if self.transform:
@@ -211,11 +213,9 @@ class Normalize(object):
         
     def __call__(self, sample):
         input_data, target_data, ty_infos, radar_map = sample['inputs'], sample['targets'], sample['ty_infos'], sample['radar_map'] 
-        height = sample['height']
         # normalize inputs
         index = 0
         input_data[:,index,:,:] = (input_data[:,index, :, :] - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
-        height = (height-np.min(height))/(np.max(height)-np.min(height))
         
         if self.input_with_grid:
             index += 1
@@ -246,4 +246,4 @@ class Normalize(object):
         ty_infos = (ty_infos - min_values) / ( max_values - min_values)
         # numpy data: x_tsteps X H X W
         # torch data: x_tsteps X H X W
-        return {'inputs': input_data, 'height': height, 'targets': target_data, 'ty_infos': ty_infos, 'radar_map': radar_map, 'current_time': sample['current_time']}
+        return {'inputs': input_data, 'height': height, 'targets': target_data, 'ty_infos': ty_infos, 'radar_map': sample['radar_map'], 'current_time': sample['current_time']}

@@ -37,9 +37,9 @@ class Encoder(nn.Module):
         cells = []
         for i in range(self.n_cells):
             if i == 0:
-                cell = CNN2D_cell(channel_input, downsample_c[i], downsample_k[i], downsample_s[i], downsample_p[i], batch_norm, initial_zeros=True)
+                cell = CNN2D_cell(channel_input, downsample_c[i], downsample_k[i], downsample_s[i], downsample_p[i], batch_norm, initial_value=0)
             else:
-                cell = CNN2D_cell(gru_c[i-1], downsample_c[i], downsample_k[i], downsample_s[i], downsample_p[i], batch_norm, initial_zeros=True)
+                cell = CNN2D_cell(gru_c[i-1], downsample_c[i], downsample_k[i], downsample_s[i], downsample_p[i], batch_norm, initial_value=0)
 
             name = 'Downsample_' + str(i).zfill(2)
             setattr(self, name, cell)
@@ -93,10 +93,11 @@ class Forecaster(nn.Module):
         layers = []
         for i in range(self.n_layers):
             if i == 0:
-                layers.append(DeCNN2D_cell(upsample_cin[i], upsample_cout[i], k[i], s[i], p[i], batch_norm=batch_norm, initial_zeros=True))
+                layers.append(DeCNN2D_cell(upsample_cin[i], upsample_cout[i], k[i], s[i], p[i], batch_norm=batch_norm, initial_value=0))
             else:
-                layers.append(DeCNN2D_cell(upsample_cin[i]+upsample_cout[i-1], upsample_cout[i], k[i], s[i], p[i], batch_norm=batch_norm, initial_zeros=True))
+                layers.append(DeCNN2D_cell(upsample_cin[i]+upsample_cout[i-1], upsample_cout[i], k[i], s[i], p[i], batch_norm=batch_norm, initial_value=0))
         self.layers = nn.Sequential(*layers)
+        self.output_layer = CNN2D_cell(int(upsample_cout[i]/2), 1, 1, 1, 0, batch_norm=batch_norm, initial_value=2/upsample_cout[i])
 
     def grid_sample(self, x, flow):
         '''
@@ -128,7 +129,7 @@ class Forecaster(nn.Module):
                 stack_input = torch.cat([hidden_flow[i], output],dim=1)
             output = layer(stack_input)
         output = self.grid_sample(x=map, flow=output)
-        output = torch.mean(output,dim=1).unsqueeze(1)
+        output = self.output_layer(output)
         return output
 
 class Model(nn.Module):

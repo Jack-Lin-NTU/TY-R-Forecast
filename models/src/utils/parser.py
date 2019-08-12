@@ -21,7 +21,7 @@ def get_args():
                         help='The path of working folder.(default: ~/ssd/01_ty_research)')
     parser.add_argument('--radar-folder', metavar='', type=str, default=radar_folder,
                         help='The folder path of radar data (relative or absolute).')
-    parser.add_argument('--radar-wrangled-data-folder', metavar='', type=str, default=make_path('02_wrangled_files', radar_folder),
+    parser.add_argument('--radar-wrangled-data-folder', metavar='', type=str, default=make_path('02_wrangled_files_smooth', radar_folder),
                         help='The folder path of  radar data (relative or absolute).')
 
     parser.add_argument('--weather-folder', metavar='', type=str, default=make_path('02_weather_data', working_folder),

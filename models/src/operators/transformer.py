@@ -37,7 +37,6 @@ class Generator(nn.Module):
     
 
 
-
 ## Encoder and Decoder
 class SublayerConnection(nn.Module):
     ''' A residual connection followed by a layer norm. Note for code implicitiy the norm is first as opposed to last. '''
@@ -49,7 +48,6 @@ class SublayerConnection(nn.Module):
     def forward(self, x, sublayer):
         ''' Apply residual connection to any sublayer with the same size. '''
         return x + self.dropout(sublayer(self.norm(x)))
-
 
 class Encoder(nn.Module):
     ''' Core encoder: a stack of N layers. '''
@@ -63,7 +61,6 @@ class Encoder(nn.Module):
         for layer in self.layers:
             x = layer(x, mask)
         return self.norm(x)
-
 
 class EncoderLayer(nn.Module):
     ''' EncoderLayer is made up of self-attention and feed forward. '''
@@ -79,7 +76,6 @@ class EncoderLayer(nn.Module):
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, mask))
         return self.sublayer[1](x, self.feed_forward)
 
-
 class Decoder(nn.Module):
     ''' Core decoder: A stack of N layers with masking. '''
     def __init__(self, layer, N):
@@ -92,7 +88,6 @@ class Decoder(nn.Module):
             x = layer(x, memory, src_mask, tgt_mask)
         return self.norm(x)
     
-
 class DecoderLayer(nn.Module):
     ''' DecoderLayer is made of self-attn, src-attn, and feed forward. '''
     def __init__(self, size, self_attn, src_attn, feed_forward, dropout):
@@ -113,4 +108,14 @@ class DecoderLayer(nn.Module):
 
 ## Attention function
 def attention(query, key, value, mask=None, dropout=None):
-    
+    query = query.flatten()
+    key = key.flatten()
+    value = value.flatten()
+    d_k = query.shape[-1]
+    score = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
+    if mask is not None:
+        score = score.masked_fill(mask==0, 1e-9)
+    p_attn = F.softmax(score, dim=-1)
+    if dropout is not None:
+        p_attn = dropout(p_attn)
+    return torch.matmul(p_attn, value), p_attn

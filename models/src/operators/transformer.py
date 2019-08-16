@@ -108,14 +108,49 @@ class DecoderLayer(nn.Module):
 
 ## Attention function
 def attention(query, key, value, mask=None, dropout=None):
-    query = query.flatten()
-    key = key.flatten()
-    value = value.flatten()
+    n_batch, T, H, W = query.shape
+    # n_batch x T x (H x W)
+    query = query.flatten(start_dim=-2)
+    key = key.flatten(start_dim=-2)
+    value = value.flatten(start_dim=-2)
+    # (H x W)
     d_k = query.shape[-1]
+    # n_batch x T x T
     score = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
     if mask is not None:
         score = score.masked_fill(mask==0, 1e-9)
     p_attn = F.softmax(score, dim=-1)
     if dropout is not None:
         p_attn = dropout(p_attn)
-    return torch.matmul(p_attn, value), p_attn
+    return torch.matmul(p_attn, value).view(n_batch,T,H,W), p_attn
+
+
+class MultiHeadedAttention(nn.Module):
+    def __init__(self, h, d_channel, d_model, dropout=0.1):
+        ''' Take in model size and number of heads. '''
+        super(MultiHeadedAttention, self).__init__()
+        assert d_model % h == 0
+        # We assume d_v always equals d_k
+        self.d_k = d_model // h
+        self.h = h
+        self.convs = clones(nn.Conv2d(d_channel, 1, kernel_size=3, stride=1, padding=1), 4)
+        self.attn = None
+        self.dropout = nn.Dropout(p=dropout)
+        
+    def forward(self, query, key, value, mask=None):
+        if mask is not None:
+            # Same mask applied to all h heads.
+            mask = mask.unsqueeze(1)
+        n_batch = query.shape[0]
+        
+        # Shape of query: n_batch x T x H x W (n_batch x T x d_model)
+        # 1) Do all the linear projections in batch from d_model => h x d_k 
+        query, key, value = [l(x).flatten(start_dim=-2).view(n_batch, -1, self.h, self.d_k).transpose(1, 2) \
+                            for l, x in zip(self.convs, (query, key, value))]
+        
+        # 2) Apply attention on all the projected vectors in batch. 
+        x, self.attn = attention(query, key, value, mask=mask, dropout=self.dropout)
+        
+        # 3) "Concat" using a view and apply a final linear. 
+        x = x.transpose(1, 2).reshape(nbatches, -1, self.h * self.d_k)
+        return self.linears[-1](x)

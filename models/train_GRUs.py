@@ -10,7 +10,7 @@ import torch
 import torch.optim as optim
 
 # import our model and dataloader
-from src.utils.parser import get_args,print_args
+from src.utils.parser import get_args, print_args
 from src.utils.utils import createfolder
 from src.runs.GRUs import get_dataloader, get_model, get_optimizer, train, test
 

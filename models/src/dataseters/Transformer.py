@@ -10,7 +10,7 @@ class TyDataset(Dataset):
     '''
     Typhoon dataset
     '''
-    def __init__(self, args=None, train=True, transform=None):
+    def __init__(self, train=True, args=None, transform=None):
         '''
         Args:
             train(boolean): Return training dataset or validating dataset.
@@ -95,8 +95,8 @@ class TyDataset(Dataset):
                 tmp_idx = int(idx - self.idx_df.loc[i, 'The frist idx'])
 
                 # save current time
-                # current_time = dt.datetime.strftime(self.idx_df.loc[i,'The s_time of first window'] + \
-                #                 dt.timedelta(minutes=10*(tmp_idx+self.I_nframes-1)), format='%Y%m%d%H%M')
+                current_time = dt.datetime.strftime(self.idx_df.loc[i,'The s_time of first window'] + \
+                                dt.timedelta(minutes=10*(tmp_idx+self.I_nframes-1)), format='%Y%m%d%H%M')
                 
                 # typhoon's name
                 ty_name = str(self.idx_df.loc[i, 'The s_time of first window'].year)+'.'+i
@@ -106,7 +106,7 @@ class TyDataset(Dataset):
                 # Target data(a tensor with shape (F_nframes X H X W)) (0-5)
                 target_data = np.zeros((self.F_nframes, self.I_shape[1], self.I_shape[0]))
                 # Radar Map(a tensor with shape (C X H X W)) last input image
-                # current_map = np.zeros((self.input_channels, self.O_shape[1], self.O_shape[0]))
+                current_map = np.zeros((self.input_channels, self.O_shape[1], self.O_shape[0]))
 
                 # Read input data
                 for j in range(self.I_nframes):
@@ -122,17 +122,18 @@ class TyDataset(Dataset):
                         c += 2
 
                 # current radar map
-                # c = 0
-                # file_time = dt.datetime.strftime(self.idx_df.loc[i,'The s_time of first window']+dt.timedelta(minutes=10*(tmp_idx+self.I_nframes-1)), format='%Y%m%d%H%M')
-                # data_path = os.path.join(self.radar_wrangled_data_folder, 'RAD', ty_name+'.'+file_time+'.pkl')
-                # current_map[c,:,:] = pd.read_pickle(data_path, compression=self.compression).to_numpy()
-                # c += 1
-                # if self.input_with_grid:
-                #     current_map[c,:,:], current_map[c+1,:,:] = np.meshgrid(np.arange(0, self.O_shape[0]), np.arange(0, self.O_shape[1]))
-                #     c += 2
+                c = 0
+                file_time = dt.datetime.strftime(self.idx_df.loc[i,'The s_time of first window']+dt.timedelta(minutes=10*(tmp_idx+self.I_nframes-1)), format='%Y%m%d%H%M')
+                data_path = os.path.join(self.radar_wrangled_data_folder, 'RAD', ty_name+'.'+file_time+'.pkl')
+                current_map[c,:,:] = pd.read_pickle(data_path, compression=self.compression).to_numpy()
+                c += 1
+
+                if self.input_with_grid:
+                    current_map[c,:,:], current_map[c+1,:,:] = np.meshgrid(np.arange(0, self.O_shape[0]), np.arange(0, self.O_shape[1]))
+                    c += 2
                 
                 # update index of time
-                tmp_idx += self.I_nframes-1
+                tmp_idx += self.I_nframes
 
                 # TYs-infos (6-24)
                 data_path = os.path.join(self.ty_info_wrangled_data_folder, ty_name+'.csv')
@@ -140,13 +141,10 @@ class TyDataset(Dataset):
                 ty_infos.Time = pd.to_datetime(ty_infos.Time)
                 ty_infos = ty_infos.set_index('Time')
 
-                file_time1 = dt.datetime.strftime(self.idx_df.loc[i,'The s_time of first window'] + \
-                                dt.timedelta(minutes=10*(tmp_idx-self.I_nframes+1)), format='%Y%m%d%H%M')
-                file_time2 = dt.datetime.strftime(self.idx_df.loc[i,'The s_time of first window'] + \
-                                dt.timedelta(minutes=10*(tmp_idx+self.F_nframes)), format='%Y%m%d%H%M')
+                file_time1 = dt.datetime.strftime(self.idx_df.loc[i,'The s_time of first window'], format='%Y%m%d%H%M')
+                file_time2 = dt.datetime.strftime(self.idx_df.loc[i,'The s_time of last window'], format='%Y%m%d%H%M')
                 
                 ty_infos = ty_infos.loc[file_time1:file_time2,:].to_numpy()
-
                 if self.loc_catcher:
                     ty_infos = ty_infos[:,[0,1,-1]]
                 else:
@@ -164,7 +162,7 @@ class TyDataset(Dataset):
 
                 height = (height-np.min(height))/(np.max(height)-np.min(height))
 
-                self.sample = {'inputs': input_data, 'targets': target_data, 'ty_infos': ty_infos, 'height': height}
+                self.sample = {'inputs': input_data, 'targets': target_data, 'ty_infos': ty_infos, 'current_map': current_map, 'current_time': current_time, 'height': height}
                 
                 if self.transform:
                     self.sample = self.transform(self.sample)
@@ -177,8 +175,10 @@ class ToTensor(object):
     def __call__(self, sample):
         return {'inputs': torch.from_numpy(sample['inputs']),
                 'height': torch.from_numpy(sample['height']), 
-                'targets': torch.from_numpy(sample['targets']),
+                'targets': torch.from_numpy(sample['targets']), 
                 'ty_infos': torch.from_numpy(sample['ty_infos']),
+                'current_map': torch.from_numpy(sample['current_map']),
+                'current_time': sample['current_time']
                 }
 
 class Normalize(object):
@@ -196,7 +196,7 @@ class Normalize(object):
         self.I_shape = args.I_shape
         
     def __call__(self, sample):
-        input_data, target_data, ty_infos = sample['inputs'], sample['targets'], sample['ty_infos'] 
+        input_data, target_data, ty_infos, current_map = sample['inputs'], sample['targets'], sample['ty_infos'], sample['current_map'] 
         # normalize inputs
         index = 0
         input_data[:,index,:,:] = (input_data[:,index, :, :] - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
@@ -212,13 +212,13 @@ class Normalize(object):
             target_data = (target_data - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
 
         # normalize current map
-        # index = 0
-        # current_map[index,:,:] = (current_map[index, :, :] - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
-        # if self.input_with_grid:    
-        #     index += 1
-        #     current_map[index,:,:] = current_map[index,:,:] / self.I_shape[0]
-        #     index += 1
-        #     current_map[index,:,:] = current_map[index,:,:] / self.I_shape[1]
+        index = 0
+        current_map[index,:,:] = (current_map[index, :, :] - self.min_values['RAD']) / (self.max_values['RAD'] - self.min_values['RAD'])
+        if self.input_with_grid:    
+            index += 1
+            current_map[index,:,:] = current_map[index,:,:] / self.I_shape[0]
+            index += 1
+            current_map[index,:,:] = current_map[index,:,:] / self.I_shape[1]
 
         # normalize ty info
         min_values = torch.from_numpy(self.min_values.loc['Lat':].to_numpy())
@@ -226,4 +226,4 @@ class Normalize(object):
         ty_infos = (ty_infos - min_values) / ( max_values - min_values)
         # numpy data: x_tsteps X H X W
         # torch data: x_tsteps X H X W
-        return {'inputs': input_data, 'height': height, 'targets': target_data, 'ty_infos': ty_infos}
+        return {'inputs': input_data, 'height': height, 'targets': target_data, 'ty_infos': ty_infos, 'current_map': sample['current_map'], 'current_time': sample['current_time']}

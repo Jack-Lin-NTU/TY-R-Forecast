@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation 
 from mpl_toolkits.basemap import Basemap
 from .utils import createfolder
+plt.rcParams['font.family']='Arial'
 
 def plot_input(args, x, current_time, save=False):
     # set the size of basemap
@@ -15,11 +16,10 @@ def plot_input(args, x, current_time, save=False):
 
     X, Y = np.meshgrid(np.linspace(args.I_x[0],args.I_x[1],args.I_shape[0]), np.linspace(args.I_y[0],args.I_y[1],args.I_shape[1]))
     
-    fig = plt.figure(figsize=(8*(args.input_frames/2),8), dpi=args.figure_dpi)
+    fig = plt.figure(figsize=(4*(args.I_nframes/2),8), dpi=args.figure_dpi)
 
-    for i in range(args.input_frames):
-        print(i)
-        ax = fig.add_subplot((args.input_frames//3), 3, i+1)
+    for i in range(args.I_nframes):
+        ax = fig.add_subplot((args.I_nframes//3), 3, i+1)
         data = x[i,0,:,:]
         _ = m.readshapefile(args.TW_map_file, name='Taiwan', linewidth=0.25, drawbounds=True, color='k', ax=ax)
         cs = m.contourf(x=X, y=Y, data=data, colors=args.RAD_cmap, levels=args.RAD_level, ax=ax)
@@ -30,10 +30,7 @@ def plot_input(args, x, current_time, save=False):
         ax.tick_params('both', labelsize=10)
         cbar = fig.colorbar(cs, ax=ax, shrink=0.8)
         cbar.ax.tick_params(labelsize=10)
-    
-    
-    fig.suptitle('input_{}.png'.format(current_time))
-
+    fig.suptitle(current_time, y=1.03, fontsize=16)
     if save:
         fig.savefig(os.path.join(figures_folder, 'input_{}.png'.format(current_time)), dpi=args.figure_dpi, bbox_inches='tight')
     else:
@@ -49,11 +46,11 @@ def plot_target(args, x, current_time, save=False):
 
     X, Y = np.meshgrid(np.linspace(args.I_x[0],args.I_x[1],args.I_shape[0]), np.linspace(args.I_y[0],args.I_y[1],args.I_shape[1]))
     
-    fig = plt.figure(figsize=(8*(args.target_frames/2),8), dpi=args.figure_dpi)
+    fig = plt.figure(figsize=(8*(args.F_nframes/2),8), dpi=args.figure_dpi)
 
-    for i in range(args.target_frames):
+    for i in range(args.F_nframes):
         print(i)
-        ax = fig.add_subplot((args.target_frames//3), 3, i+1)
+        ax = fig.add_subplot((args.F_nframes//3), 3, i+1)
         data = x[i,:,:]
         _ = m.readshapefile(args.TW_map_file, name='Taiwan', linewidth=0.25, drawbounds=True, color='k', ax=ax)
         cs = m.contourf(x=X, y=Y, data=data, colors=args.RAD_cmap, levels=args.RAD_level, ax=ax)

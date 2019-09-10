@@ -42,10 +42,10 @@ def train_epoch(model, dataloader, optimizer, args):
 
 		optimizer.step()
 
-		tmp_loss += loss.item()/200
+		tmp_loss += loss.item()/(total_idx//3)
 		total_loss += loss.item()/total_idx
 
-		if (idx+1) % 200 == 0:
+		if (idx+1) % (total_idx//3) == 0:
 			print('Training Process: {:d}/{:d}, Loss = {:.2f}'.format(idx+1, total_idx, tmp_loss))
 			tmp_loss = 0
 
@@ -78,7 +78,7 @@ def eval_epoch(model, dataloader, args):
 			loss = loss_function(pred, tgt.squeeze(2))
 			total_loss += loss.item()/total_idx
 
-	print('Validating Process: {:d}/{:d}, Loss = {:.2f}'.format(idx+1, total_idx, total_loss))
+	print('Validating Process: {:d}, Loss = {:.2f}'.format(total_idx, total_loss))
 
 	time_e =time.time()
 	time_step = (time_e-time_s)/60
@@ -92,8 +92,8 @@ if __name__ == '__main__':
 	settings.initial_args.gpu = 3
 	settings.initial_args.I_size = 120
 	settings.initial_args.F_size = 120
-	settings.initial_args.batch_size = 12
-	settings.initial_args.max_epochs = 30
+	settings.initial_args.batch_size = 24
+	settings.initial_args.max_epochs = 100
 	settings.initial_args.model = 'convGRU'
 	args = settings.get_args()
 
@@ -129,7 +129,7 @@ if __name__ == '__main__':
                 P.forecaster_upsample_k, P.forecaster_upsample_s, P.forecaster_upsample_p,
                 P.forecaster_gru_k, P.forecaster_gru_s, P.forecaster_gru_p, P.forecaster_n_cells,
                 P.forecaster_output_channels, P.forecaster_output_k, P.forecaster_output_s, P.forecaster_output_p, P.forecaster_output_layers, batch_norm=True, target_RAD=False).to(device=args.device, dtype=args.value_dtype)
-	breakpoint()
+
 	optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 	lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=1.25)
 
@@ -143,7 +143,7 @@ if __name__ == '__main__':
 		loss_df.iloc[epoch,1] = eval_epoch(model, valiloader, args)
 
 		if (epoch+1) > 10:
-			lr_scheduler.gamma = 0.95
+			lr_scheduler.gamma = 0.96
 		lr_scheduler.step()
 
 		if (epoch+1) % 10 == 0:

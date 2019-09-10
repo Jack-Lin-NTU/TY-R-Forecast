@@ -37,6 +37,8 @@ def TRAJGRU_HYPERPARAMs(args):
 def CONVGRU_HYPERPARAMs(args):
     c = args.channel_factor
     CONVGRU = edict({
+                    'n_encoders': args.I_nframes,
+                    'n_forecasters': args.F_nframes,
                     'channel_factor': c,
                     'encoder_input_channel': args.input_channels,
                     'encoder_downsample_channels': [4*c, 32*c, 96*c],

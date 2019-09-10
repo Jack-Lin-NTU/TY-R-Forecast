@@ -324,7 +324,7 @@ class Model(nn.Module):
                 forecaster_input_channel, forecaster_upsample_channels, forecaster_gru_channels,
                 forecaster_upsample_k, forecaster_upsample_s, forecaster_upsample_p,
                 forecaster_gru_k, forecaster_gru_s, forecaster_gru_p, forecaster_n_cells,
-                forecaster_output=1, forecaster_output_k=1, forecaster_output_s=1, forecaster_output_p=0, forecaster_output_layers=1,
+                forecaster_output=1, forecaster_output_k=1, forecaster_output_s=1, forecaster_output_p=0, forecaster_output_layers=1, 
                 batch_norm=False, target_RAD=False):
 
         super().__init__()
@@ -367,7 +367,6 @@ class Model(nn.Module):
         if not self.target_RAD:
             forecast = ((10**(forecast/10))/200)**(5/8)
         return forecast
-
 
 class Multi_unit_Model(nn.Module):
     def __init__(self, n_encoders, n_forecasters,

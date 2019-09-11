@@ -267,16 +267,16 @@ class Forecaster(nn.Module):
             setattr(self, name, cell)
             cells.append(getattr(self, name))
 
-            cell = CNN2D_cell(channel_gru[i], channel_upsample[i], upsample_k[i], upsample_s[i], upsample_p[i], batch_norm)
+            cell = DeCNN2D_cell(channel_gru[i], channel_upsample[i], upsample_k[i], upsample_s[i], upsample_p[i], batch_norm)
             name = 'Upsample_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
 
         for i in range(n_output_layers):
             if i == 0:
-                cell = CNN2D_cell(channel_upsample[-1], channel_output[i], output_k[i], output_s[i], output_p[i], batch_norm)
+                cell = DeCNN2D_cell(channel_upsample[-1], channel_output[i], output_k[i], output_s[i], output_p[i], batch_norm)
             else:
-                cell = CNN2D_cell(channel_output[i-1], channel_output[i], output_k[i], output_s[i], output_p[i], batch_norm)
+                cell = DeCNN2D_cell(channel_output[i-1], channel_output[i], output_k[i], output_s[i], output_p[i], batch_norm)
             name = 'OutputLayer_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))

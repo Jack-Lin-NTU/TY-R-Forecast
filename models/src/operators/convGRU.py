@@ -267,7 +267,7 @@ class Forecaster(nn.Module):
             setattr(self, name, cell)
             cells.append(getattr(self, name))
 
-            cell = DeCNN2D_cell(channel_gru[i], channel_upsample[i], upsample_k[i], upsample_s[i], upsample_p[i], batch_norm)
+            cell = CNN2D_cell(channel_gru[i], channel_upsample[i], upsample_k[i], upsample_s[i], upsample_p[i], batch_norm)
             name = 'Upsample_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))

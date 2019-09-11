@@ -92,7 +92,7 @@ if __name__ == '__main__':
 	settings.initial_args.gpu = 1
 	settings.initial_args.I_size = 120
 	settings.initial_args.F_size = 120
-	settings.initial_args.batch_size = 32
+	settings.initial_args.batch_size = 16
 	settings.initial_args.max_epochs = 100
 	settings.initial_args.model = 'convGRU'
 	args = settings.get_args()

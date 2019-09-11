@@ -145,4 +145,4 @@ if __name__ == '__main__':
 			save_model(epoch, optimizer, model, args)
 
 	loss_df_path = os.path.join(args.result_folder, 'loss.csv')
-	loss_df.to_csv(loss_df_path)
+	loss_df.csv(loss_df_path)

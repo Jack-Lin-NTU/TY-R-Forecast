@@ -5,7 +5,6 @@ import torch
 import pandas as pd
 from torch.optim import Optimizer
 
-
 class Adam16(Optimizer):
     '''
     This version of Adam keeps an fp32 copy of the paramargseters and 
@@ -108,3 +107,14 @@ def remove_file(file):
 def print_dict(d):
     for key, value in d.items():
         print('{}: {}'.format(key, value))
+
+
+def save_model(epoch, optimizer, model, args):
+    params_pt = os.path.join(args.params_folder, 'params_{}.pt'.format(epoch+1))
+    remove_file(params_pt)
+    # save the params per 10 epochs.
+    torch.save({'epoch': epoch+1,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict()},
+                params_pt
+                )

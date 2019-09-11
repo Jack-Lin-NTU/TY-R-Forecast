@@ -12,7 +12,6 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 from src.utils.easyparser import *
-from src.utils.visulize import plot_input
 from src.utils.loss import Loss
 from src.utils.utils import save_model
 from src.dataseters.GRUs import TyDataset, ToTensor, Normalize
@@ -59,7 +58,12 @@ def train_epoch(model, dataloader, optimizer, args):
 	
 	return total_loss
 
+<<<<<<< HEAD
 def eval_epoch(model, dataloader, optimizer, args):
+=======
+def eval_epoch(model, dataloader, args):
+	time_s = time.time()
+>>>>>>> 70d62b76e577abd76e1ca359c601e615f35b94ed
 	model.eval()
 
 	tmp_loss = 0
@@ -70,6 +74,7 @@ def eval_epoch(model, dataloader, optimizer, args):
 
 	total_idx = len(dataloader)
 
+<<<<<<< HEAD
 	for idx, data in enumerate(dataloader,0):
 		src = data['inputs'].to(device=device,dtype=dtype)
 		tgt = data['targets'].to(device=device,dtype=dtype).unsqueeze(2)
@@ -79,6 +84,18 @@ def eval_epoch(model, dataloader, optimizer, args):
 		
 		loss = loss_function(pred, tgt.squeeze(2))
 		total_loss += loss.item()/total_idx
+=======
+	with torch.no_grad():
+		for idx, data in enumerate(dataloader,0):
+			src = data['inputs'].to(device=device,dtype=dtype)
+			tgt = data['targets'].to(device=device,dtype=dtype).unsqueeze(2)
+			src_mask = torch.ones(1, src.shape[1]).to(device=device,dtype=dtype)
+			tgt_mask = subsequent_mask(tgt.shape[1]).to(device=device,dtype=dtype)
+			pred = model(src, tgt, src_mask, tgt_mask)
+			
+			loss = loss_function(pred, tgt.squeeze(2))
+			total_loss += loss.item()/total_idx
+>>>>>>> 70d62b76e577abd76e1ca359c601e615f35b94ed
 		
 	print('Validating Process: {:d}/{:d}, Loss = {:.2f}'.format(idx+1, total_idx, total_loss))
 			
@@ -91,10 +108,11 @@ def eval_epoch(model, dataloader, optimizer, args):
 if __name__ == '__main__':
 	settings = parser()
 	# print(settings.initial_args)
-	settings.initial_args.gpu = 0
+	settings.initial_args.gpu = 1
 	settings.initial_args.I_size = 120
 	settings.initial_args.F_size = 120
 	settings.initial_args.batch_size = 5
+	settings.initial_args.max_epochs = 30
 	args = settings.get_args()
 
 	torch.cuda.set_device(args.gpu)
@@ -128,6 +146,7 @@ if __name__ == '__main__':
 
 	loss_df = pd.DataFrame([],index=pd.Index(range(args.max_epochs), name='Epoch'), columns=['Train_loss', 'Vali_loss'])
 
+<<<<<<< HEAD
 	for epoch in range(1, args.max_epochs+1):
 		lr = optimizer.param_groups[0]['lr']
 		print('Epoch {:03d}, Learning rate: {}'.format(epoch, lr))
@@ -143,4 +162,21 @@ if __name__ == '__main__':
 			save_model(epoch, optimizer, model, args)
 
 	loss_df_path = os.path(args.result_folder, 'loss.csv')
+=======
+	for epoch in range(args.max_epochs):
+		lr = optimizer.param_groups[0]['lr']
+		print('Epoch {:03d}, Learning rate: {}'.format(epoch+1, lr))
+ 
+		loss_df.iloc[epoch,0] = train_epoch(model, trainloader, optimizer, args)
+		loss_df.iloc[epoch,1] = eval_epoch(model, valiloader, args)
+
+		if (epoch+1) > 10:
+			lr_scheduler.gamma = 0.95
+		lr_scheduler.step()
+
+		if (epoch+1) % 10 == 0:
+			save_model(epoch, optimizer, model, args)
+
+	loss_df_path = os.path.join(args.result_folder, 'loss.csv')
+>>>>>>> 70d62b76e577abd76e1ca359c601e615f35b94ed
 	loss_df.csv(loss_df_path)

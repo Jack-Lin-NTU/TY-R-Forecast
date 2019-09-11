@@ -95,7 +95,10 @@ if __name__ == '__main__':
     settings.initial_args.batch_size = 8
     settings.initial_args.max_epochs = 100
     settings.initial_args.model = 'convGRU'
+<<<<<<< HEAD
     settings.initial_args.lr = 0.0005
+=======
+>>>>>>> 70d62b76e577abd76e1ca359c601e615f35b94ed
     args = settings.get_args()
 
     torch.cuda.set_device(args.gpu)
@@ -130,7 +133,11 @@ if __name__ == '__main__':
                 P.forecaster_upsample_s, P.forecaster_upsample_p, P.forecaster_gru_k, \
                 P.forecaster_gru_s, P.forecaster_gru_p, P.forecaster_n_cells, P.forecaster_output_channels, \
                 P.forecaster_output_k, P.forecaster_output_s, P.forecaster_output_p, \
+<<<<<<< HEAD
                 P.forecaster_output_layers, batch_norm=True, target_RAD=False) \
+=======
+                P.forecaster_output_layers, batch_norm=True, target_RAD=False)\
+>>>>>>> 70d62b76e577abd76e1ca359c601e615f35b94ed
                 .to(device=args.device, dtype=args.value_dtype)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)

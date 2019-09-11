@@ -259,9 +259,9 @@ class Forecaster(nn.Module):
         cells = []
         for i in range(n_cells):
             if i == 0:
-                cell = ConvGRUcell(channel_input, channel_gru[i], gru_k[i], gru_s[i], gru_p[i], batch_norm)
+                cell = DeConvGRUcell(channel_input, channel_gru[i], gru_k[i], gru_s[i], gru_p[i], batch_norm)
             else:
-                cell = ConvGRUcell(channel_upsample[i-1], channel_gru[i], gru_k[i], gru_s[i], gru_p[i], batch_norm)
+                cell = DeConvGRUcell(channel_upsample[i-1], channel_gru[i], gru_k[i], gru_s[i], gru_p[i], batch_norm)
 
             name = 'DeConvGRUcell_' + str(i).zfill(2)
             setattr(self, name, cell)
@@ -274,9 +274,9 @@ class Forecaster(nn.Module):
 
         for i in range(n_output_layers):
             if i == 0:
-                cell = DeCNN2D_cell(channel_upsample[-1], channel_output[i], output_k[i], output_s[i], output_p[i], batch_norm)
+                cell = CNN2D_cell(channel_upsample[-1], channel_output[i], output_k[i], output_s[i], output_p[i], batch_norm)
             else:
-                cell = DeCNN2D_cell(channel_output[i-1], channel_output[i], output_k[i], output_s[i], output_p[i], batch_norm)
+                cell = CNN2D_cell(channel_output[i-1], channel_output[i], output_k[i], output_s[i], output_p[i], batch_norm)
             name = 'OutputLayer_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))

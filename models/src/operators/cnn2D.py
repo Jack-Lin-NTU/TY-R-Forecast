@@ -4,19 +4,21 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class CNN2D_cell(nn.Module):
-    def __init__(self, channel_input, channel_output, kernel=3, stride=1, padding=1, batch_norm=False, negative_slope=0, initial_value=None):
+    def __init__(self, channel_input, channel_output, kernel=3, stride=1, padding=1, batch_norm=False, negative_slope=0, initial_weight=None):
         super().__init__()
 
         layer_sublist = []
         layer_sublist.append(nn.Conv2d(channel_input, channel_output, kernel, stride, padding))
+
         if batch_norm:
             layer_sublist.append(nn.BatchNorm2d(channel_output))
-        layer_sublist.append(nn.ReLU())
+        # layer_sublist.append(nn.ReLU())
+
         if initial_value is not None:
-            nn.init.constant_(layer_sublist[0].weight, initial_value)
+            nn.init.constant_(layer_sublist[0].weight, initial_weight)
         else:
             nn.init.kaiming_normal_(layer_sublist[0].weight, a=negative_slope, mode='fan_in', nonlinearity='leaky_relu')
-        # nn.init.constant_(layer_sublist[0].weight, 0.1)
+
         nn.init.zeros_(layer_sublist[0].bias)
         self.layer = nn.Sequential(*layer_sublist)
         
@@ -25,17 +27,17 @@ class CNN2D_cell(nn.Module):
         return out
 
 class DeCNN2D_cell(nn.Module):
-    def __init__(self, channel_input, channel_output, kernel=3, stride=1, padding=1, batch_norm=False, negative_slope=0, initial_value=None):
+    def __init__(self, channel_input, channel_output, kernel=3, stride=1, padding=1, batch_norm=False, negative_slope=0, initial_weight=None):
         super().__init__()
 
         layer_sublist = []
         layer_sublist.append(nn.ConvTranspose2d(channel_input, channel_output, kernel, stride, padding))
         if batch_norm:
             layer_sublist.append(nn.BatchNorm2d(channel_output))
-        layer_sublist.append(nn.ReLU())
+        # layer_sublist.append(nn.ReLU())
         
-        if initial_value is not None:
-            nn.init.constant_(layer_sublist[0].weight, initial_value)
+        if initial_weight is not None:
+            nn.init.constant_(layer_sublist[0].weight, initial_weight)
         else:
             nn.init.kaiming_normal_(layer_sublist[0].weight, a=negative_slope, mode='fan_in', nonlinearity='leaky_relu')
         nn.init.zeros_(layer_sublist[0].bias)

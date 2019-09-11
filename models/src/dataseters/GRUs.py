@@ -20,7 +20,7 @@ class TyDataset(Dataset):
         super(TyDataset, self).__init__()
 
         if args is not None:
-            ty_list = pd.read_csv(args.ty_list, index_col='En name').drop('Ch name', axis=1)
+            ty_list = pd.read_csv(args.ty_list, index_col='En name').drop('Ch name', axis=1).iloc[:-2]
             ty_list['Time of issuing'] = pd.to_datetime(ty_list['Time of issuing'])
             ty_list['Time of canceling'] = pd.to_datetime(ty_list['Time of canceling'])
             ty_list.index.name = 'Typhoon'

@@ -40,7 +40,7 @@ class parser():
 			'batch_size': 8,
 			'lr': 0.0001,
 			'lr_scheduler': True,
-			'weight_decay': 0.05,
+			'weight_decay': 0.08,
 			'clip': True,
 			'clip_max_norm': 1,
 			'batch_norm': True,

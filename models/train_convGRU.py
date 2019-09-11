@@ -46,7 +46,7 @@ def train_epoch(model, dataloader, optimizer, args):
 		total_loss += loss.item()/total_idx
 
 		if (idx+1) % (total_idx//3) == 0:
-			print('Training Process: {:d}/{:d}, Loss = {:.2f}'.format(idx+1, total_idx, tmp_loss))
+			print('[{:s}] Training Process: {:d}/{:d}, Loss = {:.2f}'.format(args.model, idx+1, total_idx, tmp_loss))
 			tmp_loss = 0
 
 	time_e =time.time()
@@ -78,7 +78,7 @@ def eval_epoch(model, dataloader, args):
 			loss = loss_function(pred, tgt.squeeze(2))
 			total_loss += loss.item()/total_idx
 
-	print('Validating Process: {:d}, Loss = {:.2f}'.format(total_idx, total_loss))
+	print('[{:s}] Validating Process: {:d}, Loss = {:.2f}'.format(args.model,total_idx, total_loss))
 
 	time_e =time.time()
 	time_step = (time_e-time_s)/60
@@ -89,7 +89,7 @@ def eval_epoch(model, dataloader, args):
 if __name__ == '__main__':
 	settings = parser()
 	# print(settings.initial_args)
-	settings.initial_args.gpu = 3
+	settings.initial_args.gpu = 1
 	settings.initial_args.I_size = 120
 	settings.initial_args.F_size = 120
 	settings.initial_args.batch_size = 16
@@ -137,7 +137,7 @@ if __name__ == '__main__':
 
 	for epoch in range(args.max_epochs):
 		lr = optimizer.param_groups[0]['lr']
-		print('Epoch {:03d}, Learning rate: {}'.format(epoch+1, lr))
+		print('[{:s}] Epoch {:03d}, Learning rate: {}'.format(args.model, epoch+1, lr))
 
 		loss_df.iloc[epoch,0] = train_epoch(model, trainloader, optimizer, args)
 		loss_df.iloc[epoch,1] = eval_epoch(model, valiloader, args)

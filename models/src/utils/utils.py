@@ -3,6 +3,7 @@ import os
 import math
 import torch
 import pandas as pd
+import logging
 from torch.optim import Optimizer
 
 class Adam16(Optimizer):
@@ -118,3 +119,29 @@ def save_model(epoch, optimizer, model, args):
                 'optimizer_state_dict': optimizer.state_dict()},
                 params_pt
                 )
+
+def get_logger(filename):
+    # create logger
+    logger = logging.getLogger('')
+    logger.setLevel(logging.DEBUG)
+
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+
+    # create file handler and set level to debug
+    f = logging.FileHandler(filename=filename)
+    f.setLevel(logging.DEBUG)
+
+    # create formatter
+    formatter = logging.Formatter('%(message)s')
+
+    # add formatter
+    ch.setFormatter(formatter)
+    f.setFormatter(formatter)
+
+    # add handlers to logger
+    logger.addHandler(ch)
+    logger.addHandler(f)
+
+    return logger

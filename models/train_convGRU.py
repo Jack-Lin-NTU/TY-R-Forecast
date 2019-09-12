@@ -130,7 +130,7 @@ if __name__ == '__main__':
                 P.forecaster_gru_k, P.forecaster_gru_s, P.forecaster_gru_p, P.forecaster_n_cells,
                 P.forecaster_output_channels, P.forecaster_output_k, P.forecaster_output_s, P.forecaster_output_p, P.forecaster_output_layers, batch_norm=True, target_RAD=False).to(device=args.device, dtype=args.value_dtype)
 
-	optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+	optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, betas=(0.5,0.99), weight_decay=args.weight_decay)
 	lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=1.25)
 
 	loss_df = pd.DataFrame([],index=pd.Index(range(args.max_epochs), name='Epoch'), columns=['Train_loss', 'Vali_loss'])

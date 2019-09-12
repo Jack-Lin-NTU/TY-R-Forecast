@@ -81,11 +81,11 @@ def eval_epoch(model, dataloader, args, logger):
 			loss = loss_function(pred, tgt.squeeze(2))
 			total_loss += loss.item()/total_idx
 		
-	print('[{:s}] Validating Process: {:d} samples, Loss = {:.2f}'.format(args.model, total_idx*args.batch_size, total_loss))
+	logger.debug('[{:s}] Validating Process: {:d} samples, Loss = {:.2f}'.format(args.model, total_idx*args.batch_size, total_loss))
 			
 	time_e =time.time()
 	time_step = (time_e-time_s)/60
-	print('Time spend: {:.1f} min'.format(time_step))
+	logger.debug('[{:s}] Time spend: {:.1f} min'.format(args.model, time_step))
 
 	return total_loss
 

@@ -57,7 +57,7 @@ def train_epoch(model, dataloader, optimizer, args, logger):
 
 	return total_loss
 
-def eval_epoch(model, dataloader, args):
+def eval_epoch(model, dataloader, args, logger):
 	time_s = time.time()
 	model.eval()
 

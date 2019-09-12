@@ -47,14 +47,14 @@ def train_epoch(model, dataloader, optimizer, args, logger):
 		total_loss += loss.item()/total_idx
 		
 		if (idx+1) % (total_idx//3) == 0:
-			logger.debug('Training Process: {:d}/{:d}, Loss = {:.2f}'.format(idx+1, total_idx, tmp_loss))
+			logger.debug('[{:s}] Training Process: {:d}/{:d}, Loss = {:.2f}'.format(args.model, idx+1, total_idx, tmp_loss))
 			tmp_loss = 0
 			
 	time_e =time.time()
 	time_step = (time_e-time_s)/60
 
-	logger.debug('Training Process: Ave_Loss = {:.2f}'.format(total_loss))
-	logger.debug('Time spend: {:.1f} min'.format(time_step))
+	logger.debug('[{:s}] Training Process: Ave_Loss = {:.2f}'.format(args.model, total_loss))
+	logger.debug('[{:s}] Time spend: {:.1f} min'.format(args.model, time_step))
 	
 	return total_loss
 
@@ -81,7 +81,7 @@ def eval_epoch(model, dataloader, args, logger):
 			loss = loss_function(pred, tgt.squeeze(2))
 			total_loss += loss.item()/total_idx
 		
-	print('Validating Process: {:d} samples, Loss = {:.2f}'.format(total_idx*args.batch_size, total_loss))
+	print('[{:s}] Validating Process: {:d} samples, Loss = {:.2f}'.format(args.model, total_idx*args.batch_size, total_loss))
 			
 	time_e =time.time()
 	time_step = (time_e-time_s)/60
@@ -136,7 +136,7 @@ if __name__ == '__main__':
 
 	for epoch in range(args.max_epochs):
 		lr = optimizer.param_groups[0]['lr']
-		logger.debug('Epoch {:03d}, Learning rate: {}'.format(epoch+1, lr))
+		logger.debug('[{:s}] Epoch {:03d}, Learning rate: {}'.format(args.model, epoch+1, lr))
  
 		loss_df.iloc[epoch,0] = train_epoch(model, trainloader, optimizer, args, logger)
 		loss_df.iloc[epoch,1] = eval_epoch(model, valiloader, args, logger)
@@ -148,4 +148,4 @@ if __name__ == '__main__':
 		if (epoch+1) % 10 == 0:
 			save_model(epoch, optimizer, model, args)
 
-	loss_df.to_csv(loss_df_path)
+	loss_df.to_csv(loss_file)

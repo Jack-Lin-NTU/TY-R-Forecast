@@ -202,9 +202,10 @@ class PositionwiseCNN(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
+        output = []
         for i in range(x.shape[1]):
-            x[:,i,:,:,:] = self.w_2(self.dropout(F.relu(self.w_1(x[:,i,:,:,:]))))
-        return x
+            output.append(self.w_2(self.dropout(F.relu(self.w_1(x[:,i,:,:,:])))).unsqueeze(1))
+        return torch.cat(output, dim=1)
 
 class PositionEncodeing(nn.Module):
     def __init__(self, H, W, dropout=0.1, max_len=30):

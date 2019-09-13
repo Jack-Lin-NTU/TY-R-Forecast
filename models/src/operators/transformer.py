@@ -195,10 +195,10 @@ class MultiHeadedAttention(nn.Module):
 
 class PositionwiseCNN(nn.Module):
     "Implements FFN equation."
-    def __init__(self, d_channel, d_ff, dropout=0.1, group=6):
+    def __init__(self, d_channel, d_ff, dropout=0.1, groups=6):
         super(PositionwiseCNN, self).__init__()
-        self.w_1 = nn.Conv2d(d_channel, d_ff, kernel_size=1, stride=1, padding=0, group=group)
-        self.w_2 = nn.Conv2d(d_ff, d_channel, kernel_size=1, stride=1, padding=0, group=group)
+        self.w_1 = nn.Conv2d(d_channel, d_ff, kernel_size=1, stride=1, padding=0, groups=groups)
+        self.w_2 = nn.Conv2d(d_ff, d_channel, kernel_size=1, stride=1, padding=0, groups=groups)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
@@ -237,8 +237,8 @@ def make_model(H, W, input_channel=1, d_channel=1, d_channel_ff=3, N=6, h=8, dro
     # attention layer
     attn = MultiHeadedAttention(h, d_channel)
     # CNN feedforward layer
-    encnnff = PositionwiseCNN(d_channel, d_channel_ff, dropout, group=6)
-    decnnff = PositionwiseCNN(d_channel, d_channel_ff, dropout, group=18)
+    encnnff = PositionwiseCNN(d_channel, d_channel_ff, dropout, groups=6)
+    decnnff = PositionwiseCNN(d_channel, d_channel_ff, dropout, groups=18)
     # position encoding layer
     position = PositionEncodeing(H, W, dropout)
     model = EncoderDecoder(

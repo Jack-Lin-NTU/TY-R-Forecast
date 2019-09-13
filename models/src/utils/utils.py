@@ -7,16 +7,16 @@ import logging
 from torch.optim import Optimizer
 
 class Adam16(Optimizer):
-    '''
+    """
     This version of Adam keeps an fp32 copy of the paramargseters and 
     does all of the parameter updates in fp32, while still doing the
     forwards and backwards passes using fp16 (i.e. fp16 copies of the 
     parameters and fp16 activations).
-    
     Note that this calls .float().cuda() on the params such that it 
     moves them to gpu 0--if you're using a different GPU or want to 
     do multi-GPU you may need to deal with this.
-    '''
+    """
+    
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0, device=None):
         defaults = dict(lr=lr, betas=betas, eps=eps,
                         weight_decay=weight_decay)
@@ -122,6 +122,7 @@ def save_model(epoch, optimizer, model, args):
 
 def get_logger(filename):
     # create logger
+    remove_file(filename)
     logger = logging.getLogger('')
     logger.setLevel(logging.DEBUG)
 

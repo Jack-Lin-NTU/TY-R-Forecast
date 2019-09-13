@@ -78,7 +78,7 @@ def eval_epoch(model, dataloader, args, logger):
 			loss = loss_function(pred, tgt.squeeze(2))
 			total_loss += loss.item()/total_idx
 
-	logger.debug('[{:s}] Validating Process: {:d}, Loss = {:.2f}'.format(args.model,total_idx, total_loss))
+	logger.debug('[{:s}] Validating Process: {:d}, Loss = {:.2f}'.format(args.model, total_idx, total_loss))
 
 	time_e =time.time()
 	time_step = (time_e-time_s)/60
@@ -153,4 +153,4 @@ if __name__ == '__main__':
 		if (epoch+1) % 10 == 0:
 			save_model(epoch, optimizer, model, args)
 
-	loss_df.csv(loss_file)
+	loss_df.to_csv(loss_file)

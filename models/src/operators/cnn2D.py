@@ -19,7 +19,7 @@ class CNN2D_cell(nn.Module):
             nn.init.zeros_(layer_sublist[0].bias)
         else:
             nn.init.kaiming_normal_(layer_sublist[0].weight, a=negative_slope, mode='fan_in', nonlinearity='leaky_relu')
-            nn.init.kaiming_normal_(layer_sublist[0].bias, a=negative_slope, mode='fan_in', nonlinearity='leaky_relu')
+            nn.init.kaiming_normal_(layer_sublist[0].bias, a=negative_slope, mode='fan_out', nonlinearity='leaky_relu')
         self.layer = nn.Sequential(*layer_sublist)
         
     def forward(self, x):
@@ -41,7 +41,7 @@ class DeCNN2D_cell(nn.Module):
             nn.init.zeros_(layer_sublist[0].bias)
         else:
             nn.init.kaiming_normal_(layer_sublist[0].weight, a=negative_slope, mode='fan_in', nonlinearity='leaky_relu')
-            nn.init.kaiming_normal_(layer_sublist[0].bias, a=negative_slope, mode='fan_in', nonlinearity='leaky_relu')
+            nn.init.kaiming_normal_(layer_sublist[0].bias, a=negative_slope, mode='fan_out', nonlinearity='leaky_relu')
 
         self.layer = nn.Sequential(*layer_sublist)
 

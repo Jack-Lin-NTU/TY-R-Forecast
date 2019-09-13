@@ -197,8 +197,8 @@ class PositionwiseCNN(nn.Module):
     "Implements FFN equation."
     def __init__(self, d_channel, d_ff, dropout=0.1, groups=6):
         super(PositionwiseCNN, self).__init__()
-        self.w_1 = nn.Conv2d(d_channel, d_ff, kernel_size=1, stride=1, padding=0, groups=groups)
-        self.w_2 = nn.Conv2d(d_ff, d_channel, kernel_size=1, stride=1, padding=0, groups=groups)
+        self.w_1 = nn.Conv2d(d_channel*groups, d_ff*groups, kernel_size=3, stride=1, padding=1, groups=groups)
+        self.w_2 = nn.Conv2d(d_ff, d_channel*groups, kernel_size=3, stride=1, padding=1, groups=groups)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):

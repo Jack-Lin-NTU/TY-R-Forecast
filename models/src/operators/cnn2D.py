@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 class CNN2D_cell(nn.Module):
     def __init__(self, channel_input, channel_output, kernel=3, stride=1, padding=1, batch_norm=False, negative_slope=0, initial_weight=None):
-        super().__init__()
+        super(CNN2D_cell, self).__init__()
 
         layer_sublist = []
         layer_sublist.append(nn.Conv2d(channel_input, channel_output, kernel, stride, padding))

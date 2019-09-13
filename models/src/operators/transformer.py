@@ -195,18 +195,20 @@ class MultiHeadedAttention(nn.Module):
 
 class PositionwiseCNN(nn.Module):
     "Implements FFN equation."
-    def __init__(self, d_channel, d_ff, dropout=0.1):
+    def __init__(self, d_channel, d_ff, dropout=0.1, group=6):
         super(PositionwiseCNN, self).__init__()
-        self.w_1 = nn.Conv2d(d_channel, d_ff, kernel_size=1, stride=1, padding=0)
-        self.w_2 = nn.Conv2d(d_ff, d_channel, kernel_size=1, stride=1, padding=0)
+        self.w_1 = nn.Conv2d(d_channel, d_ff, kernel_size=1, stride=1, padding=0, group=group)
+        self.w_2 = nn.Conv2d(d_ff, d_channel, kernel_size=1, stride=1, padding=0, group=group)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
-        output = []
-        for i in range(x.shape[1]):
-            output.append(self.w_2(self.dropout(F.relu(self.w_1(x[:,i,:,:,:])))).unsqueeze(1))
-        return torch.cat(output, dim=1)
-
+#        output = []
+#        for i in range(x.shape[1]):
+#            output.append(self.w_2(self.dropout(F.relu(self.w_1(x[:,i,:,:,:])))).unsqueeze(1))
+#        return torch.cat(output, dim=1)
+        B, T, C, H, W = x.shape
+        return self.w_2(self.dropout(F.relu(self.w_1(x.reshape(B,T*C,H,W))))).reshape(B,T,C,H,W)
+        
 class PositionEncodeing(nn.Module):
     def __init__(self, H, W, dropout=0.1, max_len=30):
         super(PositionEncodeing, self).__init__()
@@ -235,12 +237,13 @@ def make_model(H, W, input_channel=1, d_channel=1, d_channel_ff=3, N=6, h=8, dro
     # attention layer
     attn = MultiHeadedAttention(h, d_channel)
     # CNN feedforward layer
-    cnnff = PositionwiseCNN(d_channel, d_channel_ff, dropout)
+    encnnff = PositionwiseCNN(d_channel, d_channel_ff, dropout, group=6)
+    decnnff = PositionwiseCNN(d_channel, d_channel_ff, dropout, group=18)
     # position encoding layer
     position = PositionEncodeing(H, W, dropout)
     model = EncoderDecoder(
-            Encoder(layer=EncoderLayer([H,W], c(attn), c(cnnff), dropout), N=N),
-            Decoder(layer=DecoderLayer([H,W], c(attn), c(attn), c(cnnff), dropout), N=N),
+            Encoder(layer=EncoderLayer([H,W], c(attn), c(encnnff), dropout), N=N),
+            Decoder(layer=DecoderLayer([H,W], c(attn), c(attn), c(decnnff), dropout), N=N),
             src_net=nn.Sequential(FlowNet(input_channel, d_channel, k=3, s=1, p=1), c(position)),
             trg_net=nn.Sequential(FlowNet(input_channel, d_channel, k=3, s=1, p=1), c(position)),
             generator=Generator(d_channel, 1)

@@ -146,3 +146,7 @@ def get_logger(filename):
     logger.addHandler(f)
 
     return logger
+
+
+def dbz2pixel(data):
+    return ((data+10)/90 * 255 + 0.5) / 255

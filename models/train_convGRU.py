@@ -90,10 +90,11 @@ if __name__ == '__main__':
 	settings = parser()
 	# print(settings.initial_args)
 	settings.initial_args.gpu = 0
-	settings.initial_args.I_size = 120
-	settings.initial_args.F_size = 120
+	settings.initial_args.I_size = 150
+	settings.initial_args.F_size = 150
 	settings.initial_args.batch_size = 16
 	settings.initial_args.max_epochs = 100
+	settings.initial_args.lr = 0.0001
 	settings.initial_args.model = 'convGRU'
 	args = settings.get_args()
 
@@ -131,7 +132,7 @@ if __name__ == '__main__':
                 P.forecaster_output_channels, P.forecaster_output_k, P.forecaster_output_s, P.forecaster_output_p, P.forecaster_output_layers, batch_norm=True, target_RAD=False).to(device=args.device, dtype=args.value_dtype)
 
 	optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, betas=(0.5,0.99), weight_decay=args.weight_decay)
-	lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=1.25)
+	lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.8)
 
 	loss_df = pd.DataFrame([],index=pd.Index(range(args.max_epochs), name='Epoch'), columns=['Train_loss', 'Vali_loss'])
 

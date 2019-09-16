@@ -10,69 +10,35 @@ class ConvGRUcell(nn.Module):
     Generate a convolutional GRU cell
     '''
     def __init__(self, channel_input, channel_output, kernel, stride, padding, batch_norm=False):
-        super().__init__()
+        super(ConvGRUcell, self).__init__()
+        self.channel_input = channel_input
         self.channel_output = channel_output
         self.reset_gate = CNN2D_cell(channel_input+channel_output, channel_output, kernel, stride, padding, batch_norm)
         self.update_gate = CNN2D_cell(channel_input+channel_output, channel_output, kernel, stride, padding, batch_norm)
         self.out_gate = CNN2D_cell(channel_input+channel_output, channel_output, kernel, stride, padding, batch_norm, negative_slope=0.2)
+        self.dropout = nn.Dropout(0.1)
 
-    def forward(self, x, prev_state=None):
-        input_ = x
-        batch_size = input_.data.shape[0]
-        spatial_size = input_.data.shape[2:]
-
+    def forward(self, x=None, prev_state=None):
         # get device and dtype
         device = self.reset_gate.layer[0].weight.device
         dtype = self.reset_gate.layer[0].weight.dtype
-
         # generate empty prev_state, if None is provided
         if prev_state is None:
-            state_size = [batch_size, self.channel_output] + list(spatial_size)
+            state_size = [x.shape[0], self.channel_output] + list(x.shape[2:])
             prev_state = torch.zeros(state_size).to(device=device, dtype=dtype)
+        if x is None:
+            state_size = [prev_state.shape[0], self.channel_input] + list(prev_state.shape[2:])
+            x = torch.zeros(state_size).to(device=device, dtype=dtype)
+        
+        stacked_inputs = torch.cat([x, prev_state], dim=1)
 
         # data size is [batch, channel, height, width]
-        stacked_inputs = torch.cat([input_, prev_state], dim=1)
-        update = torch.sigmoid(self.update_gate(stacked_inputs))
-        reset = torch.sigmoid(self.reset_gate(stacked_inputs))
-        out_inputs = F.leaky_relu(self.out_gate(torch.cat([input_, prev_state*reset], dim=1)), negative_slope=0.2)
+        update = self.dropout(torch.sigmoid(self.update_gate(stacked_inputs)))
+        reset = self.dropout(torch.sigmoid(self.reset_gate(stacked_inputs)))
+        out_inputs = self.out_gate(torch.cat([x, prev_state*reset], dim=1))
         new_state = prev_state*update + out_inputs*(1-update)
 
         return new_state
-
-class DeConvGRUcell(nn.Module):
-    '''
-    Generate a convolutional GRU cell
-    '''
-    def __init__(self, channel_input, channel_output, kernel, stride, padding, batch_norm=False):
-        super().__init__()
-        self.reset_gate = CNN2D_cell(channel_input+channel_output, channel_output, kernel, stride, padding, batch_norm)
-        self.update_gate = CNN2D_cell(channel_input+channel_output, channel_output, kernel, stride, padding, batch_norm)
-        self.out_gate = CNN2D_cell(channel_input+channel_output, channel_output, kernel, stride, padding, batch_norm, negative_slope=0.2)
-    
-    def forward(self, x=None, prev_state=None):
-        input_ = x
-        
-        # get device and dtype
-        device = self.reset_gate.layer[0].weight.device
-        dtype = self.reset_gate.layer[0].weight.dtype
-        # data size is [batch, channel, height, width]
-        if input_ is None:
-            stacked_inputs = prev_state
-        else:
-            stacked_inputs = torch.cat([input_, prev_state], dim=1)
-        
-        update = torch.sigmoid(self.update_gate(stacked_inputs))
-        reset = torch.sigmoid(self.reset_gate(stacked_inputs))
-
-        if input_ is None:
-            out_inputs = F.leaky_relu(self.out_gate(prev_state*reset), negative_slope=0.2)
-        else:
-            out_inputs = F.leaky_relu(self.out_gate(torch.cat([input_, prev_state*reset], dim=1)), negative_slope=0.2)
-
-        new_state = prev_state*(1-update) + out_inputs*update
-
-        return new_state
-
 
 class Encoder(nn.Module):
     def __init__(self, channel_input, channel_downsample, channel_gru, 
@@ -259,11 +225,11 @@ class Forecaster(nn.Module):
         cells = []
         for i in range(n_cells):
             if i == 0:
-                cell = DeConvGRUcell(channel_input, channel_gru[i], gru_k[i], gru_s[i], gru_p[i], batch_norm)
+                cell = ConvGRUcell(channel_input, channel_gru[i], gru_k[i], gru_s[i], gru_p[i], batch_norm)
             else:
-                cell = DeConvGRUcell(channel_upsample[i-1], channel_gru[i], gru_k[i], gru_s[i], gru_p[i], batch_norm)
+                cell = ConvGRUcell(channel_upsample[i-1], channel_gru[i], gru_k[i], gru_s[i], gru_p[i], batch_norm)
 
-            name = 'DeConvGRUcell_' + str(i).zfill(2)
+            name = 'ConvGRUcell_' + str(i).zfill(2)
             setattr(self, name, cell)
             cells.append(getattr(self, name))
 

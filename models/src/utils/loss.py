@@ -5,47 +5,43 @@ import numpy as np
 def R2DBZ(x):
     return 10*np.log10(x**(8/5)*200)
 
-def mse(x,y):
-    return torch.sum((x-y)**2)
-
-def mae(x,y):
-    return torch.sum(torch.abs(x-y))
 
 class Loss():
     def __init__(self, args):
         super().__init__()
-        self.weights = np.array([1., 2., 5., 10., 20.])
-        self.value_list = np.array([0., 2., 5., 10., 40., 200.])
-        max_values = args.max_values['RAD']
-        self.value_list[1:] = R2DBZ(self.value_list[1:])
+        self.weights = np.array([1., 2., 5., 10., 30.])
+        self.value_list = np.array([0, 0.283, 0.353, 0.424, 0.565, 1])
         self.name = args.loss_function
-        # breakpoint()
-
-        if args.normalize_target:
-            self.value_list = self.value_list / max_values
         
         if args.loss_function.upper() == 'BMSE':
-            self.loss = F.mse_loss
+            self.loss = self._bmse
         if args.loss_function.upper() == 'BMAE':
-            self.loss = F.l1_loss
+            self.loss = self._bmae
         if args.loss_function.upper() == 'MSE':
-            self.loss = F.mse_loss
-            self.weights = np.ones_like(self.weights)
+            self.loss = self._mse
         if args.loss_function.upper() == 'MAE':
-            self.loss = F.l1_loss
-            self.weights = np.ones_like(self.weights)
+            self.loss = self._mae
 
     def __call__ (self, outputs, targets):
-        loss = 0.
+        return self.loss(outputs, targets)
+
+    def _mse(self, x, y):
+        return torch.sum((x-y)**2)
+
+    def _mae(self, x, y):
+        return torch.sum(torch.abs(x-y))
+
+    def _bmse(self, x, y):
+        w = torch.clone(y)
         for i in range(len(self.weights)):
-            mask = (targets>=self.value_list[i]) & (targets<self.value_list[i+1])
-            tmp = self.weights[i] * self.loss(outputs[mask], targets[mask], reduction='mean')
-            # make sure the loss is not nan value
-            if torch.isnan(tmp):
-                continue
-            else:
-                loss += tmp 
-        return loss
+            w[w < self.value_list[i]] = self.weights[i]
+        return torch.sum(w*((y-x)** 2)) / x.shape[1]
+
+    def _bmae(self, x, y):
+        w = torch.clone(y)
+        for i in range(len(self.weights)):
+            w[w < self.value_list[i]] = self.weights[i]
+        return torch.sum(w*(abs(y - x))) / x.shape[1]
 
 class LOSS_pytorch():
     def __init__(self, args):

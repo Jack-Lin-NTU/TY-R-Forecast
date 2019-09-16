@@ -35,7 +35,7 @@ class ConvGRUcell(nn.Module):
         # data size is [batch, channel, height, width]
         update = self.dropout(torch.sigmoid(self.update_gate(stacked_inputs)))
         reset = self.dropout(torch.sigmoid(self.reset_gate(stacked_inputs)))
-        out_inputs = self.out_gate(torch.cat([x, prev_state*reset], dim=1))
+        out_inputs = F.leaky_relu(self.out_gate(torch.cat([x, prev_state*reset], dim=1)), negative_slope=0.2)
         new_state = prev_state*update + out_inputs*(1-update)
 
         return new_state

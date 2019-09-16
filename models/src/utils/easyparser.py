@@ -43,7 +43,7 @@ class parser():
 			'weight_decay': 0.08,
 			'clip': True,
 			'clip_max_norm': 1,
-			'batch_norm': True,
+			'batch_norm': False,
 			'normalize_input': False,
 			'normalize_target': False,
 			'optimizer': 'Adam',

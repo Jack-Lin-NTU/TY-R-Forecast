@@ -99,6 +99,5 @@ def get_model(args):
     PRED_LEN = args.F_nframes
     encoder_elements, forecaster_elements = get_elements(args.model)
     encoder = Encoder(subnets=encoder_elements[0], rnns=encoder_elements[1])
-import torch
     forecaster = Forecaster(subnets=forecaster_elements[0], rnns=forecaster_elements[1], seq_len=PRED_LEN)
     return EF(encoder, forecaster)

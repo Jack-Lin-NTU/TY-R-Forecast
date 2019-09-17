@@ -5,7 +5,6 @@ import numpy as np
 def R2DBZ(x):
     return 10*np.log10(x**(8/5)*200)
 
-
 class Loss():
     def __init__(self, args):
         super().__init__()
@@ -21,9 +20,6 @@ class Loss():
             self.loss = self._mse
         if args.loss_function.upper() == 'MAE':
             self.loss = self._mae
-
-    def __call__ (self, outputs, targets):
-        return self.loss(outputs, targets)
 
     def _mse(self, x, y):
         return torch.sum((x-y)**2)
@@ -42,6 +38,9 @@ class Loss():
         for i in range(len(self.weights)):
             w[w < self.value_list[i]] = self.weights[i]
         return torch.sum(w*(abs(y - x))) / x.shape[1]
+
+    def __call__ (self, outputs, targets):
+        return self.loss(outputs, targets)
 
 class LOSS_pytorch():
     def __init__(self, args):

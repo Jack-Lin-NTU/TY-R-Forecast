@@ -1,11 +1,12 @@
 # import modules
 import os
 import math
-import torch
-from torch import nn
+import numpy as np
 import pandas as pd
 import logging
 from collections import OrderedDict
+import torch
+from torch import nn
 from torch.optim import Optimizer
 
 class Adam16(Optimizer):
@@ -148,7 +149,6 @@ def get_logger(filename):
     logger.addHandler(f)
 
     return logger
-
 
 def make_layers(block):
     layers = []

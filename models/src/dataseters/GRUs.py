@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
-from src.utils.utils import dbz2pixel
+from src.utils.utils import dBZ_to_pixel
 
 class TyDataset(Dataset):
     '''
@@ -165,7 +165,7 @@ class TyDataset(Dataset):
 
                 height = (height-np.min(height))/(np.max(height)-np.min(height))
 
-                self.sample = {'inputs': dbz2pixel(input_data), 'targets': dbz2pixel(target_data), 'ty_infos': ty_infos, 'height': height}
+                self.sample = {'inputs': dBZ_to_pixel(input_data), 'targets': dBZ_to_pixel(target_data), 'ty_infos': ty_infos, 'height': height}
                 
                 if self.transform:
                     self.sample = self.transform(self.sample)

@@ -51,7 +51,7 @@ class TyDataset(Dataset):
         self.transform = transform
 
         # set random seed
-        np.random.seed(args.random_seed)
+        np.random.seed(args.seed)
         randon_events = np.random.choice(len(ty_list), len(ty_list), replace=False)
         
         if train:

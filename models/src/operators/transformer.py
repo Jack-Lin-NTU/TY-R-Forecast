@@ -26,7 +26,7 @@ class FlowNet(nn.Module):
         output = []
         for i in range(x.shape[1]):
             output.append(self.flownet(x[:,i,:,:,:]))
-        return torch.stack(output, dim=1)v 
+        return torch.stack(output, dim=1)
 
 ## Model architecture
 class EncoderDecoder(nn.Module):

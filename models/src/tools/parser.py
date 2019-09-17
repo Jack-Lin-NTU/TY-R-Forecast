@@ -125,7 +125,7 @@ def get_args():
     else:
         meteo_overall = pd.read_csv(os.path.join(args.weather_folder, 'overall.csv'), index_col='Measures')
     ty_overall = pd.read_csv(os.path.join(args.ty_info_folder, 'overall.csv'), index_col=0).T
-    if args.catcher_location:
+    if args.loc_catcher:
         ty_overall = ty_overall[['Lat','Lon','distance']]
     else:
         ty_overall = ty_overall.iloc[:,0:-1]
@@ -197,7 +197,7 @@ def get_args():
         args.result_folder += '_clip'+str(args.clip_max_norm)
         args.params_folder += '_clip'+str(args.clip_max_norm)
 
-    if args.catcher_location:
+    if args.loc_catcher:
         args.result_folder += '_chatchloc'
         args.params_folder += '_chatchloc'
 

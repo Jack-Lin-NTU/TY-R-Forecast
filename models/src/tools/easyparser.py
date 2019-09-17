@@ -12,8 +12,7 @@ from src.tools.loss import Loss
 
 class parser():
 	def __init__(self):
-		working_folder = os.path.expanduser('~/ssd/01_ty_research')
-		
+    	working_folder = os.path.expanduser(os.path.join('~','ssd','01_ty_research'))
 		self.initial_args = edict({
 			# Path setting
 			'working_folder': working_folder,
@@ -67,7 +66,7 @@ class parser():
 			'O_y': [20, 27],
 			'O_shape': (441, 561)
 			})
-	
+
 	def get_args(self):
 		args = self.initial_args
 
@@ -140,16 +139,16 @@ class parser():
 		if args.normalize_input:
 			args.result_folder += '_ninput'
 			args.params_folder += '_ninput'
-		
+
 		if args.normalize_target:
 			args.result_folder += '_ntarget'
 			args.params_folder += '_ntarget'
-		
+
 		if args.input_with_grid:
 			args.result_folder += '_grid'
 			args.params_folder += '_grid'
 
-		
+
 		if args.lr_scheduler:
 			args.result_folder += '_scheduler'
 			args.params_folder += '_scheduler'

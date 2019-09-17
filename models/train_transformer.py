@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 from src.tools.easyparser import *
+from src.tools.parser import get_args
 from src.tools.loss import Loss
 from src.tools.utils import save_model, get_logger
 from src.dataseters.GRUs import TyDataset, ToTensor, Normalize
@@ -90,14 +91,15 @@ def eval_epoch(model, dataloader, args, logger):
 	return total_loss
 
 if __name__ == '__main__':
-	settings = parser()
+	# settings = parser()
 	# print(settings.initial_args)
-	settings.initial_args.gpu = 0
-	settings.initial_args.I_size = 120
-	settings.initial_args.F_size = 120
-	settings.initial_args.batch_size = 5
-	settings.initial_args.max_epochs = 30
-	args = settings.get_args()
+	# settings.initial_args.gpu = 0
+	# settings.initial_args.I_size = 150
+	# settings.initial_args.F_size = 150
+	# settings.initial_args.batch_size = 4
+	# settings.initial_args.max_epochs = 30
+	# args = settings.get_args()
+	args = get_args()
 
 	torch.cuda.set_device(args.gpu)
 	np.random.seed(args.seed)

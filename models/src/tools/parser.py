@@ -63,6 +63,8 @@ def get_args():
     parser.add_argument('--clip', action='store_true', help='Clip the weightings in the model.')
     parser.add_argument('--clip-max-norm', metavar='', type=float, default=10, help='Max norm value for clipping weightings. (default: 1)')
     parser.add_argument('--batch-norm', action='store_true', help='Do batch normalization.')
+    parser.add_argument('--normalize-target', action='store_true', help='')
+    parser.add_argument('--normalize-input', action='store_true', help='')
 
     parser.add_argument('--optimizer', metavar='', type=str, default='Adam', help='The optimizer. (default: Adam)')
     parser.add_argument('--loss-function', metavar='', type=str, default='BMSE', help='The loss function. (default: BMSE)')
@@ -167,9 +169,9 @@ def get_args():
     #     args.result_folder += '_munit'
     #     args.params_folder += '_munit'
 
-    # if args.normalize_input:
-    #     args.result_folder += '_ninput'
-    #     args.params_folder += '_ninput'
+    if args.normalize_input:
+        args.result_folder += '_ninput'
+        args.params_folder += '_ninput'
     
     # if args.normalize_target:
     #     args.result_folder += '_ntarget'

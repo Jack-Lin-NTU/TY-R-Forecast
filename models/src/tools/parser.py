@@ -5,13 +5,15 @@ import pandas as pd
 import argparse
 import torch
 import torch.optim as optim
+
 from src.tools.utils import make_path, createfolder
 from src.tools.loss import Loss
+
 
 def get_args():
     parser = argparse.ArgumentParser()
 
-    working_folder = os.path.expanduser('~/ssd/01_ty_research')
+    working_folder = os.path.expanduser(os.path.join('~','ssd','01_ty_research'))
     radar_folder = make_path('01_radar_data', working_folder)
     weather_folder = make_path('02_weather_data', working_folder)
     ty_info_folder =  make_path('03_ty_info', working_folder)
@@ -44,56 +46,54 @@ def get_args():
                     help='The file path of ty-list.csv.')
 
     parser.add_argument('--model', metavar='', type=str, default='trajGRU', help='The GRU model applied here. (default: TRAJGRU)')
-    parser.add_argument('--parallel-compute', action='store_true', help='Parallel computing.')
+    # parser.add_argument('--parallel-compute', action='store_true', help='Parallel computing.')
     parser.add_argument('--able-cuda', action='store_true', help='Able cuda. (default: disable cuda)')
     parser.add_argument('--gpu', metavar='', type=int, default=0, help='GPU device. (default: 0)')
     parser.add_argument('--value-dtype', metavar='', type=str, default='float32', help='The data type of computation. (default: float32)')
-    parser.add_argument('--change-value-dtype', action='store_true', help='Change the data type of computation.')
+    # parser.add_argument('--change-value-dtype', action='store_true', help='Change the data type of computation.')
 
     # hyperparameters for training
-    parser.add_argument('--seed', metavar='', type=int, default=1, help='The setting of random seed. (default: 1)')
+    parser.add_argument('--seed', metavar='', type=int, default=1000, help='The setting of random seed. (default: 1000)')
     parser.add_argument('--train-num', metavar='', type=int, default=10, help='The number of training events. (default: 10)')
     parser.add_argument('--max-epochs', metavar='', type=int, default=30, help='Max epochs. (default: 30)')
-    parser.add_argument('--batch-size', metavar='', type=int, default=4, help='Batch size. (default: 8)')
-    parser.add_argument('--lr', metavar='', type=float, default=1e-3, help='Learning rate. (default: 1e-3)')
+    parser.add_argument('--batch-size', metavar='', type=int, default=8, help='Batch size. (default: 8)')
+    parser.add_argument('--lr', metavar='', type=float, default=0.0001, help='Learning rate. (default: 0.0001)')
     parser.add_argument('--lr-scheduler', action='store_true', help='Set a scheduler for controlling learning rate.')
-    parser.add_argument('--weight-decay', metavar='', type=float, default=0, help='The value setting of wegiht decay. (default: 0)')
+    parser.add_argument('--weight-decay', metavar='', type=float, default=0.1, help='The value setting of wegiht decay. (default: 0.1)')
     parser.add_argument('--clip', action='store_true', help='Clip the weightings in the model.')
     parser.add_argument('--clip-max-norm', metavar='', type=float, default=10, help='Max norm value for clipping weightings. (default: 1)')
     parser.add_argument('--batch-norm', action='store_true', help='Do batch normalization.')
-    parser.add_argument('--normalize-input', action='store_true', help='Normalize inputs.')
-    parser.add_argument('--normalize-target', action='store_true', help='Normalize targets.')
 
     parser.add_argument('--optimizer', metavar='', type=str, default='Adam', help='The optimizer. (default: Adam)')
     parser.add_argument('--loss-function', metavar='', type=str, default='BMSE', help='The loss function. (default: BMSE)')
-    parser.add_argument('--input-frames', metavar='', type=int, default=6, help='The size of input frames. (default: 6)')
-    parser.add_argument('--target-frames', metavar='', type=int, default=18, help='The size of target frames. (default: 18)')
+    parser.add_argument('--I-nframes', metavar='', type=int, default=6, help='The size of input frames. (default: 6)')
+    parser.add_argument('--F-nframes', metavar='', type=int, default=18, help='The size of target frames. (default: 18)')
     parser.add_argument('--input-with-grid', action='store_true', help='Input with grid data.')
-    # parser.add_argument('--input-with-QPE', action='store_true', help='Input with QPE data.')
-    parser.add_argument('--target-RAD', action='store_true', help='Use RAD-transformed data as targets.')
+    parser.add_argument('--input-with-height', action='store_true', help='Input with height data.')
     parser.add_argument('--denoise-RAD', action='store_true', help='Use denoised RAD data as inputs.')
     parser.add_argument('--channel-factor', metavar='', type=int, default=2, help='Channel factor. (default: 2)')
-    parser.add_argument('--multi-unit', action='store_true', help='Use multi-unit.')
 
     # hyperparameters for STN-CONVGRU
-    parser.add_argument('--catcher-location', action='store_true', help='Input only location info of typhoon.')
+    parser.add_argument('--loc-catcher', action='store_true', help='Input only location info of typhoon.')
 
     # tw forecast size (400x400)
-    parser.add_argument('--I-size', metavar='', type=int, default=420, help='The height of inputs (default: 420)')
-    parser.add_argument('--F-size', metavar='', type=int, default=420, help='The height of targets (default: 420)')
+    parser.add_argument('--I-size', metavar='', type=int, default=150, help='The height of inputs (default: 150)')
+    parser.add_argument('--F-size', metavar='', type=int, default=150, help='The height of targets (default: 150)')
 
     parser.add_argument('--weather-list', metavar='', action='append', default=[],
                         help='Weather list. (default: [])')
 
     # Announce the args
     args = parser.parse_args()
+
     # Adjust some settings in the args.
     if args.able_cuda and torch.cuda.is_available():
         args.device = torch.device('cuda:{:02d}'.format(args.gpu))
+        torch.cuda.set_device(args.device)
     else:
         args.device = torch.device('cpu')
-    args.value_dtype = getattr(torch, args.value_dtype)
 
+    args.value_dtype = getattr(torch, args.value_dtype)
 
     # variables for locating maps.
     args.map_center = [120.75, 23.5]
@@ -167,19 +167,18 @@ def get_args():
         args.result_folder += '_munit'
         args.params_folder += '_munit'
 
-    if args.normalize_input:
-        args.result_folder += '_ninput'
-        args.params_folder += '_ninput'
+    # if args.normalize_input:
+    #     args.result_folder += '_ninput'
+    #     args.params_folder += '_ninput'
     
-    if args.normalize_target:
-        args.result_folder += '_ntarget'
-        args.params_folder += '_ntarget'
+    # if args.normalize_target:
+    #     args.result_folder += '_ntarget'
+    #     args.params_folder += '_ntarget'
     
     if args.input_with_grid:
         args.result_folder += '_grid'
         args.params_folder += '_grid'
 
-    
     if args.lr_scheduler:
         args.result_folder += '_scheduler'
         args.params_folder += '_scheduler'
@@ -229,3 +228,8 @@ def print_args(args):
         f.write('Input frames: {}\n'.format(args.input_frames))
         f.write('Input with grid: {}\n'.format(args.input_with_grid))
         f.write('Multi-units: {}\n'.format(args.multi_unit))
+
+
+if __name__ == '__main__':
+    args = get_arg()
+    print_args(args)

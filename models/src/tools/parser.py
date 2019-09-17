@@ -12,7 +12,7 @@ from src.tools.loss import Loss
 
 def get_args():
     parser = argparse.ArgumentParser()
-
+    
     working_folder = os.path.expanduser(os.path.join('~','ssd','01_ty_research'))
     radar_folder = make_path('01_radar_data', working_folder)
     weather_folder = make_path('02_weather_data', working_folder)

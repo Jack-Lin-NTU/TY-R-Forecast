@@ -103,7 +103,7 @@ if __name__ == '__main__':
     torch.cuda.manual_seed(args.seed)
 
     ## Get model
-    model = get_model(args.model).to(device=args.device, dtype=args.value_dtype)
+    model = get_model(args).to(device=args.device, dtype=args.value_dtype)
 
     ## Dataloaders
     # set transform tool for datasets
@@ -136,7 +136,7 @@ if __name__ == '__main__':
 
         loss_df.iloc[epoch,0] = train_epoch(model, trainloader, optimizer, args, logger)
         loss_df.iloc[epoch,1] = eval_epoch(model, valiloader, args, logger)
-        
+
         lr_scheduler.step()
 
         if (epoch+1) % 10 == 0:

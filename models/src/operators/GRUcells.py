@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.utils.utils import make_layers
+from src.utils.utils import make_layers, activation
 from collections import OrderedDict
 
 ## CONVGRU cells
@@ -67,12 +67,13 @@ def warp(inputs, flow):
 
 
 class TrajGRUcell(nn.Module):
-    def __init__(self, c_input, c_hidden, link_size, zoneout=0.0):
+    def __init__(self, c_input, c_hidden, link_size, act_type, zoneout=0.0):
         super(TrajGRUcell, self).__init__()
         self.c_input = c_input
         self.c_hidden = c_hidden
         self.link_size = link_size
         self._zoneout = zoneout
+        self._act_type = act_type
 
         self.flow_conv = nn.Sequential(
                                 nn.Conv2d(c_input+c_hidden, 32, kernel_size=3, stride=1, padding=1),
@@ -80,7 +81,7 @@ class TrajGRUcell(nn.Module):
                                 nn.Conv2d(32, link_size*2, kernel_size=3, stride=1, padding=1)
         )
         self.i2h = nn.Conv2d(c_input, c_hidden*3, kernel_size=3, stride=1, padding=1)
-        self.ret = nn.Conv2d(c_hidden*link_size, c_hidden, kernel_size=1, stride=1, padding=0)
+        self.ret = nn.Conv2d(c_hidden*link_size, c_hidden*3, kernel_size=1, stride=1, padding=0)
 
     def _flow_generator(self, inputs=None, states=None):
         if inputs is None:
@@ -119,6 +120,7 @@ class TrajGRUcell(nn.Module):
                 flow = flows[j]
                 warpped_data.append(warp(prev_h, -flow))
             warpped_data = torch.cat(warpped_data, dim=1)
+            # h2h size - 
             h2h = self.ret(warpped_data)
             h2h_slice = torch.split(h2h, self.c_hidden, dim=1)
 
@@ -138,7 +140,7 @@ class TrajGRUcell(nn.Module):
             outputs.append(next_h)
             prev_h = next_h
 
-        return torch.stack(outputs), next_h
+        return torch.stack(outputs, dim=1), next_h
 
 
 def get_cells(model):
@@ -183,9 +185,9 @@ def get_cells(model):
                 make_layers(OrderedDict({'conv3_leaky': [192, 192, 3, 2, 1]})),
             ],
             [
-                TrajGRUcell(c_input=8, c_hidden=64, link_size=13),
-                TrajGRUcell(c_input=192, c_hidden=192, link_size=13),
-                TrajGRUcell(c_input=192, c_hidden=192, link_size=9),
+                TrajGRUcell(c_input=8, c_hidden=64, link_size=13, act_type=activation()),
+                TrajGRUcell(c_input=192, c_hidden=192, link_size=13, act_type=activation()),
+                TrajGRUcell(c_input=192, c_hidden=192, link_size=9, act_type=activation()),
             ]
         ]
 
@@ -200,9 +202,9 @@ def get_cells(model):
                                         })),
             ],
             [
-                TrajGRUcell(c_input=192, c_hidden=192, link_size=9),
-                TrajGRUcell(c_input=192, c_hidden=192, link_size=13),
-                TrajGRUcell(c_input=64, c_hidden=64, link_size=13),
+                TrajGRUcell(c_input=192, c_hidden=192, link_size=9, act_type=activation()),
+                TrajGRUcell(c_input=192, c_hidden=192, link_size=13, act_type=activation()),
+                TrajGRUcell(c_input=64, c_hidden=64, link_size=13, act_type=activation()),
             ]
         ]
     return encoder_elements, forecaster_elements

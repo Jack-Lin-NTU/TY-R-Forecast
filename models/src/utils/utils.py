@@ -5,9 +5,30 @@ import numpy as np
 import pandas as pd
 import logging
 from collections import OrderedDict
+
 import torch
 from torch import nn
 from torch.optim import Optimizer
+import torch.nn.functional as F
+
+
+class activation():
+    def __init__(self, act_type='leaky', negative_slope=0.2, inplace=True):
+        super().__init__()
+        self._act_type = act_type
+        self.negative_slope = negative_slope
+        self.inplace = inplace
+
+    def __call__(self, input_):
+        if self._act_type == 'leaky':
+            return F.leaky_relu(input_, negative_slope=self.negative_slope, inplace=self.inplace)
+        elif self._act_type == 'relu':
+            return F.relu(input_, inplace=self.inplace)
+        elif self._act_type == 'sigmoid':
+            return torch.sigmoid(input_)
+        else:
+            raise NotImplementedError
+
 
 class Adam16(Optimizer):
     """

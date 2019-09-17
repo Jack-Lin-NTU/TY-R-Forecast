@@ -91,7 +91,7 @@ if __name__ == '__main__':
     settings.initial_args.gpu = 0
     settings.initial_args.I_size = 150
     settings.initial_args.F_size = 150
-    settings.initial_args.batch_size = 16
+    settings.initial_args.batch_size = 8
     settings.initial_args.max_epochs = 100
     settings.initial_args.lr = 0.0001
     settings.initial_args.model = 'trajGRU'

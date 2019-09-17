@@ -88,7 +88,7 @@ def eval_epoch(model, dataloader, args, logger):
 if __name__ == '__main__':
     settings = parser()
     # print(settings.initial_args)
-    settings.initial_args.gpu = 0
+    settings.initial_args.gpu = 2
     settings.initial_args.I_size = 150
     settings.initial_args.F_size = 150
     settings.initial_args.batch_size = 16

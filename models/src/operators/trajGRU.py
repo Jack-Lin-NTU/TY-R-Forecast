@@ -42,10 +42,9 @@ class TrajGRU(nn.Module):
         flows = self.flow_conv(torch.cat([inputs, states],dim=1))
         return flows
     
-    def forward(self, inputs=None, states=None):
+    def forward(self, inputs=None, states=None, seq_len=6):
         self.device = self.ret.weight.device
         self.dtype = self.ret.weight.dtype
-        seq_len = inputs.shape[1]
 
         if states is None:
             h_shape = [inputs.shape[0], self.c_hidden] + list(inputs.shape[3:])

@@ -12,14 +12,14 @@ class ConvGRUcell(nn.Module):
         self.out_gate = nn.Conv2d(input_size+hidden_size, hidden_size, kernel_size=3, stride=1, padding=1)
         self.dropout = nn.Dropout2d(0.1)
     
-    def forward(self, inputs=None, states=None):
+    def forward(self, inputs=None, states=None, seq_len=6):
         '''
         inputs size: B*S*C*H*W
         states size: B*C*H*W
         '''
         device = self.conv_gates.weight.device
         dtype = self.conv_gates.weight.dtype
-        seq_len = 
+
         if states is None:
             h_shape = [inputs.shape[0], self.c_hidden] + list(inputs.shape[3:])
             states = torch.zeros(h_shape).to(device=device, dtype=dtype)

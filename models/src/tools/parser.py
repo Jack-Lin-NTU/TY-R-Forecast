@@ -134,7 +134,7 @@ def get_args():
     args.min_values = pd.concat([rad_overall, meteo_overall, ty_overall], axis=1, sort=False).T['min_value']
 
     # define loss function
-    args.loss_function = LOSS(args=args)
+    args.loss_function = Loss(args=args)
 
     args.compression = 'bz2'
     args.figure_dpi = 120

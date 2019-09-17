@@ -54,6 +54,7 @@ def get_args():
 
     # hyperparameters for training
     parser.add_argument('--seed', metavar='', type=int, default=1000, help='The setting of random seed. (default: 1000)')
+    parser.add_argument('--random-seed', metavar='', type=int, default=1000, help='The setting of random seed. (default: 1000)')
     parser.add_argument('--train-num', metavar='', type=int, default=10, help='The number of training events. (default: 10)')
     parser.add_argument('--max-epochs', metavar='', type=int, default=30, help='Max epochs. (default: 30)')
     parser.add_argument('--batch-size', metavar='', type=int, default=8, help='Batch size. (default: 8)')

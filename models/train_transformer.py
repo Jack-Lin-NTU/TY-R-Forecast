@@ -32,10 +32,10 @@ def train_epoch(model, dataloader, optimizer, args, logger):
 	total_idx = len(dataloader)
 
 	for idx, data in enumerate(dataloader,0):
-		src = data['inputs'].to(device=device,dtype=dtype)
-		tgt = data['targets'].to(device=device,dtype=dtype).unsqueeze(2)
-		src_mask = torch.ones(1, src.shape[1]).to(device=device,dtype=dtype)
-		tgt_mask = subsequent_mask(tgt.shape[1]).to(device=device,dtype=dtype)
+		src = data['inputs'].to(device=device, dtype=dtype)
+		tgt = data['targets'].to(device=device, dtype=dtype).unsqueeze(2)
+		src_mask = torch.ones(1, src.shape[1]).to(device=device, dtype=dtype)
+		tgt_mask = subsequent_mask(tgt.shape[1]).to(device=device, dtype=dtype)
 		pred = model(src, tgt, src_mask, tgt_mask)
 		
 		optimizer.zero_grad()

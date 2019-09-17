@@ -163,9 +163,9 @@ def get_args():
         args.result_folder = os.path.join(args.result_folder, 'RAD_weather')
         args.params_folder = os.path.join(args.params_folder, 'RAD_weather')
 
-    if args.multi_unit:
-        args.result_folder += '_munit'
-        args.params_folder += '_munit'
+    # if args.multi_unit:
+    #     args.result_folder += '_munit'
+    #     args.params_folder += '_munit'
 
     # if args.normalize_input:
     #     args.result_folder += '_ninput'

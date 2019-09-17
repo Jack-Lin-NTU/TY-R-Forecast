@@ -5,9 +5,8 @@ import pandas as pd
 import argparse
 import torch
 import torch.optim as optim
-
-from.utils import make_path, createfolder
-from.loss import LOSS
+from src.tools.utils import make_path, createfolder
+from src.tools.loss import Loss
 
 def get_args():
     parser = argparse.ArgumentParser()

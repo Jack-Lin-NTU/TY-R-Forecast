@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.utils.utils import make_layers, activation
+from src.tools.utils import make_layers, activation
 from collections import OrderedDict
 
 ## CONVGRU cells

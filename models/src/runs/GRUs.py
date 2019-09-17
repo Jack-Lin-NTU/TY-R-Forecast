@@ -14,9 +14,9 @@ from torch.utils.data import DataLoader
 from torchvision import transforms, utils
 
 # import our model and dataloader
-from src.utils.utils import createfolder, remove_file, Adam16
-from src.utils.loss import Criterion
-from src.utils.GRUs_hparams import TRAJGRU_HYPERPARAMs, CONVGRU_HYPERPARAMs, MYMODEL_HYPERPARAMs, TEST_HYPERPARAMs, FLOWGRU_HYPERPARAMs
+from src.tools.utils import createfolder, remove_file, Adam16
+from src.tools.loss import Criterion
+from src.tools.GRUs_hparams import TRAJGRU_HYPERPARAMs, CONVGRU_HYPERPARAMs, MYMODEL_HYPERPARAMs, TEST_HYPERPARAMs, FLOWGRU_HYPERPARAMs
 
 def get_dataloader(args, train_num=None):
     '''

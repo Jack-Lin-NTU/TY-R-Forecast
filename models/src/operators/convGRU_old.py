@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .cnn2D import CNN2D_cell, DeCNN2D_cell
+from src.operators.cnn2D import CNN2D_cell, DeCNN2D_cell
 
 class ConvGRUcell(nn.Module):
     '''

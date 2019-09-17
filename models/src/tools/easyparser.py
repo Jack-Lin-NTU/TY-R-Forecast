@@ -6,8 +6,8 @@ from easydict import EasyDict as edict
 import torch
 import torch.optim as optim
 
-from.utils import make_path, createfolder
-from.loss import Loss
+from src.tools.utils import make_path, createfolder
+from src.tools.loss import Loss
 
 
 class parser():

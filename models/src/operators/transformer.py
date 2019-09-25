@@ -49,6 +49,28 @@ class EncoderDecoder(nn.Module):
     def decode(self, memory, src_mask, trg, trg_mask):
         return self.decoder(self.trg_net(trg), memory, src_mask, trg_mask)
 
+# class EncoderDecoder_infer(nn.Module):
+#     ''' A standard Encoder-Decoder archtecture. Base for this model and other models. '''
+#     def __init__(self, encoder, decoder, src_net, trg_net, generator):
+#         super(EncoderDecoder, self).__init__()
+#         self.encoder = encoder
+#         self.decoder = decoder
+#         self.src_net = src_net
+#         self.trg_net = trg_net
+#         self.generator = generator
+    
+#     def forward(self, src, src_mask, trg_seq=18):
+#         encoder_attention = self.encode(src, src_mask)
+#         for i in range(trg_seq):
+#             output
+#         return self.generator(self.decode(self.encode(src, src_mask), src_mask, trg, trg_mask))
+    
+#     def encode(self, src, src_mask):
+#         return self.encoder(self.src_net(src), src_mask)
+    
+#     def decode(self, memory, src_mask, trg, trg_mask):
+#         return self.decoder(self.trg_net(trg), memory, src_mask, trg_mask)
+
 ## Generator
 class Generator(nn.Module):
     def __init__(self, d_channel, out_channel):
@@ -174,8 +196,10 @@ class MultiHeadedAttention(nn.Module):
         # original image size
         n_batch, T1, C, H, W = query.shape
         n_batch, T2, C, H, W = key.shape
+
         # Shape of query, key, and value: n_batch x T x C x H x W -> (n_batch*T) x C x H x W
         query, key, value = query.view(n_batch*T1, C, H, W), key.view(n_batch*T2, C, H, W), value.view(n_batch*T2, C, H, W)
+
         # 1) Do all the CNN projections in batch 
         # query and key: (n_batch*T) x C x H x W  => (n_batch*T) x h x H' x W'
         # value: (n_batch*T) x C x H x W  => (n_batch*T) x C x H x W 
@@ -231,7 +255,7 @@ class PositionEncodeing(nn.Module):
         x = x + self.pe[:, :x.shape[1]]
         return self.dropout(x)
 
-def make_model(H, W, input_channel=1, d_channel=1, d_channel_ff=3, N=6, h=8, dropout=0.1):
+def make_train_model(H, W, input_channel=1, d_channel=1, d_channel_ff=3, N=6, h=8, dropout=0.1, load_params=None):
     ''' Helper: Construct a model from hyperparameters. '''
     c = copy.deepcopy
     # attention layer
@@ -251,7 +275,38 @@ def make_model(H, W, input_channel=1, d_channel=1, d_channel_ff=3, N=6, h=8, dro
     
     # This was important from their code. 
     # Initialize parameters with Glorot / fan_avg.
-    for p in model.parameters():
-        if p.dim() > 1:
-            nn.init.xavier_normal_(p)
+    if load_params is not None:
+        model.load_state_dict(load_params)
+    else:
+        for p in model.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_normal_(p)
+    return model
+
+def make_infer_model(encoder, decoder_attention):
+    ''' Helper: Construct a model from hyperparameters. '''
+    c = copy.deepcopy
+    # attention layer
+    attn = MultiHeadedAttention(h, d_channel)
+    # CNN feedforward layer
+    encnnff = PositionwiseCNN(d_channel, d_channel_ff, dropout, groups=6)
+    decnnff = PositionwiseCNN(d_channel, d_channel_ff, dropout, groups=18)
+    # position encoding layer
+    position = PositionEncodeing(H, W, dropout)
+    model = EncoderDecoder(
+            Encoder(layer=EncoderLayer([H,W], c(attn), c(encnnff), dropout), N=N),
+            Decoder(layer=DecoderLayer([H,W], c(attn), c(attn), c(decnnff), dropout), N=N),
+            src_net=nn.Sequential(FlowNet(input_channel, d_channel, k=3, s=1, p=1), c(position)),
+            trg_net=nn.Sequential(FlowNet(input_channel, d_channel, k=3, s=1, p=1), c(position)),
+            generator=Generator(d_channel, 1)
+            )
+    
+    # This was important from their code. 
+    # Initialize parameters with Glorot / fan_avg.
+    if load_params is not None:
+        model.load_state_dict(load_params)
+    else:
+        for p in model.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_normal_(p)
     return model

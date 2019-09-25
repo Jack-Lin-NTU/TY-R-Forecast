@@ -93,12 +93,12 @@ if __name__ == '__main__':
 	settings = parser()
 	# print(settings.initial_args)
 	settings.initial_args.gpu = 0
-	settings.initial_args.I_size = 120
-	settings.initial_args.F_size = 120
-	settings.initial_args.batch_size = 5
-	settings.initial_args.max_epochs = 30
+	settings.initial_args.I_size = 150
+	settings.initial_args.F_size = 150
+	settings.initial_args.batch_size = 3
+	settings.initial_args.max_epochs = 100
 	args = settings.get_args()
-
+	args.weight_decay = 0.2
 	torch.cuda.set_device(args.gpu)
 	np.random.seed(args.seed)
 	torch.manual_seed(args.seed)

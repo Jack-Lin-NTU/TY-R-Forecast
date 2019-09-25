@@ -2,6 +2,7 @@ import os
 import time
 import datetime as dt
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -11,9 +12,10 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from src.utils.easyparser import *
-from src.utils.loss import Loss
-from src.utils.utils import save_model, get_logger
+# from src.tools.easyparser import *
+from src.tools.parser import get_args
+from src.tools.loss import Loss
+from src.tools.utils import save_model, get_logger
 from src.dataseters.GRUs import TyDataset, ToTensor, Normalize
 from src.operators.transformer import *
 
@@ -30,10 +32,10 @@ def train_epoch(model, dataloader, optimizer, args, logger):
 	total_idx = len(dataloader)
 
 	for idx, data in enumerate(dataloader,0):
-		src = data['inputs'].to(device=device,dtype=dtype)
-		tgt = data['targets'].to(device=device,dtype=dtype).unsqueeze(2)
-		src_mask = torch.ones(1, src.shape[1]).to(device=device,dtype=dtype)
-		tgt_mask = subsequent_mask(tgt.shape[1]).to(device=device,dtype=dtype)
+		src = data['inputs'].to(device=device, dtype=dtype)
+		tgt = data['targets'].to(device=device, dtype=dtype).unsqueeze(2)
+		src_mask = torch.ones(1, src.shape[1]).to(device=device, dtype=dtype)
+		tgt_mask = subsequent_mask(tgt.shape[1]).to(device=device, dtype=dtype)
 		pred = model(src, tgt, src_mask, tgt_mask)
 		
 		optimizer.zero_grad()
@@ -90,8 +92,9 @@ def eval_epoch(model, dataloader, args, logger):
 	return total_loss
 
 if __name__ == '__main__':
-	settings = parser()
+	# settings = parser()
 	# print(settings.initial_args)
+<<<<<<< HEAD
 	settings.initial_args.gpu = 0
 	settings.initial_args.I_size = 150
 	settings.initial_args.F_size = 150
@@ -99,6 +102,16 @@ if __name__ == '__main__':
 	settings.initial_args.max_epochs = 100
 	args = settings.get_args()
 	args.weight_decay = 0.2
+=======
+	# settings.initial_args.gpu = 0
+	# settings.initial_args.I_size = 150
+	# settings.initial_args.F_size = 150
+	# settings.initial_args.batch_size = 4
+	# settings.initial_args.max_epochs = 30
+	# args = settings.get_args()
+	args = get_args()
+
+>>>>>>> 642a72ebf11bd0efe6d8bce4cf30451e5444f5e4
 	torch.cuda.set_device(args.gpu)
 	np.random.seed(args.seed)
 	torch.manual_seed(args.seed)

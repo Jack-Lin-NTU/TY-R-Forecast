@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .src.operators.convGRU import *
+from src.operators.convGRU import *
 
 class model(nn.Module):
     def __init__(encoder, attention, decoder, generator, input_frames, pred_frames):

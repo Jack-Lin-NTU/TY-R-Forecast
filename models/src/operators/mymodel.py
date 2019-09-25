@@ -2,8 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .cnn2D import CNN2D_cell, DeCNN2D_cell
-from .convGRU import Encoder
+from src.operators.cnn2D import CNN2D_cell, DeCNN2D_cell
+from src.operators.convGRU import Encoder
 
 class TyCatcher(nn.Module):
     def __init__(self, channel_input, channel_hidden, n_layers, x_iloc, y_iloc):

@@ -49,27 +49,8 @@ class EncoderDecoder(nn.Module):
     def decode(self, memory, src_mask, trg, trg_mask):
         return self.decoder(self.trg_net(trg), memory, src_mask, trg_mask)
 
-# class EncoderDecoder_infer(nn.Module):
-#     ''' A standard Encoder-Decoder archtecture. Base for this model and other models. '''
-#     def __init__(self, encoder, decoder, src_net, trg_net, generator):
-#         super(EncoderDecoder, self).__init__()
-#         self.encoder = encoder
-#         self.decoder = decoder
-#         self.src_net = src_net
-#         self.trg_net = trg_net
-#         self.generator = generator
-    
-#     def forward(self, src, src_mask, trg_seq=18):
-#         encoder_attention = self.encode(src, src_mask)
-#         for i in range(trg_seq):
-#             output
-#         return self.generator(self.decode(self.encode(src, src_mask), src_mask, trg, trg_mask))
-    
-#     def encode(self, src, src_mask):
-#         return self.encoder(self.src_net(src), src_mask)
-    
-#     def decode(self, memory, src_mask, trg, trg_mask):
-#         return self.decoder(self.trg_net(trg), memory, src_mask, trg_mask)
+    def infer(self, src, src_mask):
+        return self.generator(self.infer_decoder(self.encode(src, src_mask))
 
 ## Generator
 class Generator(nn.Module):
@@ -151,6 +132,7 @@ class DecoderLayer(nn.Module):
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, trg_mask))
         x = self.sublayer[1](x, lambda x: self.src_attn(x, m, m, src_mask))
         return self.sublayer[2](x, self.feed_forward)
+
 
 def subsequent_mask(size):
     "Mask out subsequent positions."

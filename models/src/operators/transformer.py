@@ -47,11 +47,15 @@ class EncoderDecoder(nn.Module):
         return self.encoder(self.src_net(src), src_mask)
     
     def decode(self, memory, src_mask, trg, trg_mask):
+        if len(trg) == 0:
+            trg = None
         return self.decoder(self.trg_net(trg), memory, src_mask, trg_mask)
 
-    def infer(self, src, src_mask):
-        return self.generator(self.infer_decoder(self.encode(src, src_mask))
-
+    def infer(self, src, src_mask, trg_mask):
+        pred = []
+        pred.append(self.generator(self.decode(self.encode(src, src_mask), src_mask, trg=pred, trg_mask=trg_mask)))
+        return torch.cat(pred, dim=1)
+                                                                                                                                              
 ## Generator
 class Generator(nn.Module):
     def __init__(self, d_channel, out_channel):
@@ -133,7 +137,6 @@ class DecoderLayer(nn.Module):
         x = self.sublayer[1](x, lambda x: self.src_attn(x, m, m, src_mask))
         return self.sublayer[2](x, self.feed_forward)
 
-
 def subsequent_mask(size):
     "Mask out subsequent positions."
     attn_shape = (1, size, size)
@@ -148,7 +151,7 @@ def attention(query, key, value, mask=None, dropout=None):
     n_batch, h, T2, d_k = key.shape
     # n_batch x T x T
     score = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
-
+    
     if mask is not None:
         score = score.masked_fill(mask==0, 1e-9)
     p_attn = F.softmax(score, dim=-1)
@@ -237,35 +240,7 @@ class PositionEncodeing(nn.Module):
         x = x + self.pe[:, :x.shape[1]]
         return self.dropout(x)
 
-def make_train_model(H, W, input_channel=1, d_channel=1, d_channel_ff=3, N=6, h=8, dropout=0.1, load_params=None):
-    ''' Helper: Construct a model from hyperparameters. '''
-    c = copy.deepcopy
-    # attention layer
-    attn = MultiHeadedAttention(h, d_channel)
-    # CNN feedforward layer
-    encnnff = PositionwiseCNN(d_channel, d_channel_ff, dropout, groups=6)
-    decnnff = PositionwiseCNN(d_channel, d_channel_ff, dropout, groups=18)
-    # position encoding layer
-    position = PositionEncodeing(H, W, dropout)
-    model = EncoderDecoder(
-            Encoder(layer=EncoderLayer([H,W], c(attn), c(encnnff), dropout), N=N),
-            Decoder(layer=DecoderLayer([H,W], c(attn), c(attn), c(decnnff), dropout), N=N),
-            src_net=nn.Sequential(FlowNet(input_channel, d_channel, k=3, s=1, p=1), c(position)),
-            trg_net=nn.Sequential(FlowNet(input_channel, d_channel, k=3, s=1, p=1), c(position)),
-            generator=Generator(d_channel, 1)
-            )
-    
-    # This was important from their code. 
-    # Initialize parameters with Glorot / fan_avg.
-    if load_params is not None:
-        model.load_state_dict(load_params)
-    else:
-        for p in model.parameters():
-            if p.dim() > 1:
-                nn.init.xavier_normal_(p)
-    return model
-
-def make_infer_model(encoder, decoder_attention):
+def make_model(H, W, input_channel=1, d_channel=1, d_channel_ff=3, N=6, h=8, dropout=0.1, load_params=None):
     ''' Helper: Construct a model from hyperparameters. '''
     c = copy.deepcopy
     # attention layer

@@ -55,8 +55,7 @@ def train_epoch(model, dataloader, optimizer, args, logger):
 	time_e =time.time()
 	time_step = (time_e-time_s)/60
 
-	logger.debug('[{:s}] Training Process: Ave_Loss = {:.2f}'.format(args.model, total_loss))
-	logger.debug('[{:s}] Time spend: {:.1f} min'.format(args.model, time_step))
+	logger.debug('[{:s}] Training Process: Ave_Loss = {:.2f} Time spend: {:.1f} mins'.format(args.model, total_loss, time_step))
 	
 	return total_loss
 
@@ -81,13 +80,12 @@ def eval_epoch(model, dataloader, args, logger):
 			pred = model(src, tgt, src_mask, tgt_mask)
 			
 			loss = loss_function(pred, tgt.squeeze(2))
-			total_loss += loss.item()/total_idx
+			total_loss += loss.item()/total_idx 
 		
-	logger.debug('[{:s}] Validating Process: {:d} samples, Loss = {:.2f}'.format(args.model, total_idx*args.batch_size, total_loss))
-			
 	time_e =time.time()
 	time_step = (time_e-time_s)/60
-	logger.debug('[{:s}] Time spend: {:.1f} min'.format(args.model, time_step))
+	logger.debug('[{:s}] Validating Process: {:d} samples, Loss = {:.2f} Time spend: {:.1f} mins'.format(args.model, total_idx*args.batch_size, total_loss, time_step))
+			
 
 	return total_loss
 
@@ -108,43 +106,31 @@ def infer_epoch(model, dataloader, args, logger):
 		for idx, data in enumerate(dataloader,0):
 			src = data['inputs'].to(device=device,dtype=dtype)
 			tgt = data['targets'].to(device=device,dtype=dtype).unsqueeze(2)
-			pred = torch.zeros_like(data['targets']).to(device=device,dtype=dtype)
+			pred = torch.zeros_like(tgt).to(device=device,dtype=dtype)
 			src_mask = torch.ones(1, src.shape[1]).to(device=device,dtype=dtype)
 			tgt_mask = subsequent_mask(tgt.shape[1]).to(device=device,dtype=dtype)
 			for i in range(pred.shape[1]):
-				pred[:,i] = (model(src, pred, src_mask, tgt_mask)[:,i]).detach()
+				pred[:,i,0] = (model(src, pred, src_mask, tgt_mask)[:,i]).detach()
 			
-			loss = loss_function(pred, tgt.squeeze(2))
+			loss = loss_function(pred, tgt)
 			total_loss += loss.item()/total_idx
 		
-	logger.debug('[{:s}] Inference Process: {:d} samples, Loss = {:.2f}'.format(args.model, total_idx*args.batch_size, total_loss))
-			
-	time_e =time.time()
+	time_e = time.time()
 	time_step = (time_e-time_s)/60
-	logger.debug('[{:s}] Time spend: {:.1f} min'.format(args.model, time_step))
+
+	logger.debug('[{:s}] Inference Process: {:d} samples, Loss = {:.2f} Time spend: {:.1f} mins'.format(args.model, total_idx*args.batch_size, total_loss, time_step))
 
 	return total_loss
 if __name__ == '__main__':
-	# settings = parser()
+	args = get_args()
 	# print(settings.initial_args)
-<<<<<<< HEAD
-	settings.initial_args.gpu = 0
-	settings.initial_args.I_size = 150
-	settings.initial_args.F_size = 150
-	settings.initial_args.batch_size = 3
-	settings.initial_args.max_epochs = 100
-	args = settings.get_args()
-	args.weight_decay = 0.2
-=======
 	# settings.initial_args.gpu = 0
 	# settings.initial_args.I_size = 150
 	# settings.initial_args.F_size = 150
-	# settings.initial_args.batch_size = 4
-	# settings.initial_args.max_epochs = 30
+	# settings.initial_args.batch_size = 3
+	# settings.initial_args.max_epochs = 100
 	# args = settings.get_args()
-	args = get_args()
-
->>>>>>> 642a72ebf11bd0efe6d8bce4cf30451e5444f5e4
+	# args.weight_decay = 0.2
 	torch.cuda.set_device(args.gpu)
 	np.random.seed(args.seed)
 	torch.manual_seed(args.seed)
@@ -167,6 +153,7 @@ if __name__ == '__main__':
 
 	trainloader = DataLoader(dataset=trainset, batch_size=args.batch_size, shuffle=True, **train_kws)
 	valiloader = DataLoader(dataset=valiset, batch_size=args.batch_size, shuffle=False, **test_kws)
+	# testloader = DataLoader(dataset=valiset, batch_size=args.batch_size, shuffle=False, **test_kws)
 
 	model = make_model(H=args.I_size, W=args.I_size, input_channel=1, d_channel=5, d_channel_ff=10) \
 						.to(device=args.device, dtype=args.value_dtype)
@@ -174,7 +161,7 @@ if __name__ == '__main__':
 	optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 	lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=1.25)
 
-	loss_df = pd.DataFrame([],index=pd.Index(range(args.max_epochs), name='Epoch'), columns=['Train_loss', 'Vali_loss'])
+	loss_df = pd.DataFrame([],index=pd.Index(range(args.max_epochs), name='Epoch'), columns=['Train_loss', 'Vali_loss', 'Vali_infer_loss'])
 	
 	log_file = os.path.join(args.result_folder, 'log.txt')
 	loss_file = os.path.join(args.result_folder, 'loss.csv')
@@ -186,6 +173,7 @@ if __name__ == '__main__':
  
 		loss_df.iloc[epoch,0] = train_epoch(model, trainloader, optimizer, args, logger)
 		loss_df.iloc[epoch,1] = eval_epoch(model, valiloader, args, logger)
+		loss_df.iloc[epoch,2] = infer_epoch(model, valiloader, args, logger)
 
 		if (epoch+1) > 10:
 			lr_scheduler.gamma = 0.95

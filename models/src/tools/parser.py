@@ -64,6 +64,7 @@ def get_args():
     parser.add_argument('--clip', action='store_true', help='Clip the weightings in the model.')
     parser.add_argument('--clip-max-norm', metavar='', type=float, default=10, help='Max norm value for clipping weightings. (default: 1)')
     parser.add_argument('--batch-norm', action='store_true', help='Do batch normalization.')
+    parser.add_argument('--dropout', metavar='', type=float, default=0.2, help='Dropout. (default: 0.2)')
     parser.add_argument('--normalize-target', action='store_true', help='')
     parser.add_argument('--normalize-input', action='store_true', help='')
 

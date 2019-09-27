@@ -155,7 +155,7 @@ if __name__ == '__main__':
 	valiloader = DataLoader(dataset=valiset, batch_size=args.batch_size, shuffle=False, **test_kws)
 	# testloader = DataLoader(dataset=valiset, batch_size=args.batch_size, shuffle=False, **test_kws)
 
-	model = make_model(H=args.I_size, W=args.I_size, input_channel=1, d_channel=5, d_channel_ff=10) \
+	model = make_model(H=args.I_size, W=args.I_size, input_channel=1, d_channel=5, d_channel_ff=10, dropout=args.dropout) \
 						.to(device=args.device, dtype=args.value_dtype)
 
 	optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)

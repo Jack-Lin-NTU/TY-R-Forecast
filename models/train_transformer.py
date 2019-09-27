@@ -159,7 +159,7 @@ if __name__ == '__main__':
 						.to(device=args.device, dtype=args.value_dtype)
 
 	optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-	lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=1.25)
+	lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
 	loss_df = pd.DataFrame([],index=pd.Index(range(args.max_epochs), name='Epoch'), columns=['Train_loss', 'Vali_loss', 'Vali_infer_loss'])
 	

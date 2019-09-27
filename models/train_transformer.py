@@ -91,6 +91,39 @@ def eval_epoch(model, dataloader, args, logger):
 
 	return total_loss
 
+
+def infer_epoch(model, dataloader, args, logger):
+	time_s = time.time()
+	model.eval()
+
+	tmp_loss = 0
+	total_loss = 0
+	device = args.device
+	dtype = args.value_dtype
+	loss_function = args.loss_function
+
+	total_idx = len(dataloader)
+
+	with torch.no_grad():
+		for idx, data in enumerate(dataloader,0):
+			src = data['inputs'].to(device=device,dtype=dtype)
+			tgt = data['targets'].to(device=device,dtype=dtype).unsqueeze(2)
+			pred = torch.zeros_like(data['targets']).to(device=device,dtype=dtype)
+			src_mask = torch.ones(1, src.shape[1]).to(device=device,dtype=dtype)
+			tgt_mask = subsequent_mask(tgt.shape[1]).to(device=device,dtype=dtype)
+			for i in range(pred.shape[1]):
+				pred[:,i] = (model(src, pred, src_mask, tgt_mask)[:,i]).detach()
+			
+			loss = loss_function(pred, tgt.squeeze(2))
+			total_loss += loss.item()/total_idx
+		
+	logger.debug('[{:s}] Inference Process: {:d} samples, Loss = {:.2f}'.format(args.model, total_idx*args.batch_size, total_loss))
+			
+	time_e =time.time()
+	time_step = (time_e-time_s)/60
+	logger.debug('[{:s}] Time spend: {:.1f} min'.format(args.model, time_step))
+
+	return total_loss
 if __name__ == '__main__':
 	# settings = parser()
 	# print(settings.initial_args)

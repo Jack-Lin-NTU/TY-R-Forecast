@@ -89,9 +89,7 @@ class TrajGRUcell(nn.Module):
             i_shape = [states.shape[0], self.c_input] + list(states.shape[2:])
             inputs = torch.zeros(i_shape).to(device=self.device, dtype=self.dtype)
         
-        print(inputs.shape, states.shape)
-        if inputs.shape[-1] != states.shape[-1]:
-            breakpoint()
+        # print(inputs.shape, states.shape)
         flows = self.flow_conv(torch.cat([inputs, states], dim=1))
         flows = torch.split(flows, 2, dim=1)
         return flows
@@ -149,7 +147,7 @@ class TrajGRUcell(nn.Module):
         return torch.stack(outputs, dim=1), next_h
 
 
-def get_cells(model):
+def get_cells(model, dataset):
     if 'CONVGRU' in model.upper():
         # build model
         encoder_elements = [
@@ -181,36 +179,68 @@ def get_cells(model):
                 ConvGRUcell(c_input=64, c_hidden=64),
             ]
         ]
-
     elif 'TRAJGRU' in model.upper():
-        # build model
-        encoder_elements = [
-            [
-                make_layers(OrderedDict({'conv1_leaky': [1, 8, 5, 3, 1]})),
-                make_layers(OrderedDict({'conv2_leaky': [64, 192, 4, 2, 1]})),
-                make_layers(OrderedDict({'conv3_leaky': [192, 192, 3, 2, 1]})),
-            ],
-            [
-                TrajGRUcell(c_input=8, c_hidden=64, link_size=13, act_type=activation()),
-                TrajGRUcell(c_input=192, c_hidden=192, link_size=13, act_type=activation()),
-                TrajGRUcell(c_input=192, c_hidden=192, link_size=9, act_type=activation()),
+        if 'CWB' in dataset.upper():
+            # build model
+            encoder_elements = [
+                [
+                    make_layers(OrderedDict({'conv1_leaky': [1, 8, 5, 3, 1]})),
+                    make_layers(OrderedDict({'conv2_leaky': [64, 192, 4, 2, 1]})),
+                    make_layers(OrderedDict({'conv3_leaky': [192, 192, 3, 2, 1]})),
+                ],
+                [
+                    TrajGRUcell(c_input=8, c_hidden=64, link_size=13, act_type=activation()),
+                    TrajGRUcell(c_input=192, c_hidden=192, link_size=13, act_type=activation()),
+                    TrajGRUcell(c_input=192, c_hidden=192, link_size=9, act_type=activation()),
+                ]
             ]
-        ]
 
-        forecaster_elements = [
-            [
-                make_layers(OrderedDict({'deconv1_leaky': [192, 192, 3, 2, 1]})),
-                make_layers(OrderedDict({'deconv2_leaky': [192, 64, 4, 2, 1]})),
-                make_layers(OrderedDict({
-                                        'deconv3_leaky': [64, 8, 5, 3, 1],
-                                        'conv3_leaky': [8, 8, 3, 1, 1],
-                                        'conv3': [8, 1, 1, 1, 0]
-                                        })),
-            ],
-            [
-                TrajGRUcell(c_input=192, c_hidden=192, link_size=9, act_type=activation()),
-                TrajGRUcell(c_input=192, c_hidden=192, link_size=13, act_type=activation()),
-                TrajGRUcell(c_input=64, c_hidden=64, link_size=13, act_type=activation()),
+            forecaster_elements = [
+                [
+                    make_layers(OrderedDict({'deconv1_leaky': [192, 192, 3, 2, 1]})),
+                    make_layers(OrderedDict({'deconv2_leaky': [192, 64, 4, 2, 1]})),
+                    make_layers(OrderedDict({
+                                            'deconv3_leaky': [64, 8, 5, 3, 1],
+                                            'conv3_leaky': [8, 8, 3, 1, 1],
+                                            'conv3': [8, 1, 1, 1, 0]
+                                            })),
+                ],
+                [
+                    TrajGRUcell(c_input=192, c_hidden=192, link_size=9, act_type=activation()),
+                    TrajGRUcell(c_input=192, c_hidden=192, link_size=13, act_type=activation()),
+                    TrajGRUcell(c_input=64, c_hidden=64, link_size=13, act_type=activation()),
+                ]
             ]
-        ]
+        elif 'CIKM' in dataset.upper():
+            # build model
+            encoder_elements = [
+                [
+                    make_layers(OrderedDict({'conv1_leaky': [1, 8, 3, 2, 1]})),
+                    make_layers(OrderedDict({'conv2_leaky': [64, 192, 3, 2, 1]})),
+                    make_layers(OrderedDict({'conv3_leaky': [192, 192, 3, 2, 1]})),
+                ],
+                [
+                    TrajGRUcell(c_input=8, c_hidden=64, link_size=13, act_type=activation()),
+                    TrajGRUcell(c_input=192, c_hidden=192, link_size=13, act_type=activation()),
+                    TrajGRUcell(c_input=192, c_hidden=192, link_size=9, act_type=activation()),
+                ]
+            ]
+
+            forecaster_elements = [
+                [
+                    make_layers(OrderedDict({'deconv1_leaky': [192, 192, 4, 2, 1]})),
+                    make_layers(OrderedDict({'deconv2_leaky': [192, 64, 3, 2, 1]})),
+                    make_layers(OrderedDict({
+                                            'deconv3_leaky': [64, 8, 3, 2, 1],
+                                            'conv3_leaky': [8, 8, 3, 1, 1],
+                                            'conv3': [8, 1, 1, 1, 0]
+                                            })),
+                ],
+                [
+                    TrajGRUcell(c_input=192, c_hidden=192, link_size=9, act_type=activation()),
+                    TrajGRUcell(c_input=192, c_hidden=192, link_size=13, act_type=activation()),
+                    TrajGRUcell(c_input=64, c_hidden=64, link_size=13, act_type=activation()),
+                ]
+            ]
+
     return encoder_elements, forecaster_elements

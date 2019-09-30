@@ -31,11 +31,13 @@ def train_epoch(model, dataloader, optimizer, args, logger):
     for idx, data in enumerate(dataloader,0):
         src = data['inputs'].to(device=device,dtype=dtype)
         tgt = data['targets'].to(device=device,dtype=dtype)
-        pred = model(src)
+
+        pred = model(src)   ## B, S, C, H, W
 
         optimizer.zero_grad()
 
-        loss = loss_function(pred.squeeze(2), tgt)
+        # breakpoint()
+        loss = loss_function(pred, tgt)
         loss.backward()
 
         optimizer.step()

@@ -80,7 +80,7 @@ def get_model(args):
     from src.operators.GRUcells import get_cells
     IN_LEN = args.I_nframes
     PRED_LEN = args.F_nframes
-    encoder_elements, forecaster_elements = get_cells(args.model)
+    encoder_elements, forecaster_elements = get_cells(args.model, args.dataset)
     encoder = Encoder(subnets=encoder_elements[0], rnns=encoder_elements[1], seq_len=IN_LEN)
     forecaster = Forecaster(subnets=forecaster_elements[0], rnns=forecaster_elements[1], seq_len=PRED_LEN)
     return EF(encoder, forecaster)

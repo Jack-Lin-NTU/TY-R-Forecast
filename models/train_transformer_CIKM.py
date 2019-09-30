@@ -43,7 +43,7 @@ def train_epoch(model, dataloader, optimizer, args, logger):
 		
 		optimizer.step()
 		
-		tmp_loss += loss.item()/(total_idx//3)
+		tmp_loss += loss.item()/(total_idx//5)
 		total_loss += loss.item()/total_idx
 		
 		if (idx+1) % (total_idx//3) == 0:

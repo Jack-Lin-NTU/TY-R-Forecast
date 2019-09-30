@@ -162,8 +162,8 @@ if __name__ == '__main__':
 		lr = optimizer.param_groups[0]['lr']
 		logger.debug('[{:s}] Epoch {:03d}, Learning rate: {}'.format(args.model, epoch+1, lr))
  
-		# loss_df.iloc[epoch,0] = train_epoch(model, trainloader, optimizer, args, logger)
-		# loss_df.iloc[epoch,1] = eval_epoch(model, valiloader, args, logger)
+		loss_df.iloc[epoch,0] = train_epoch(model, trainloader, optimizer, args, logger)
+		loss_df.iloc[epoch,1] = eval_epoch(model, valiloader, args, logger)
 		loss_df.iloc[epoch,2] = infer_epoch(model, valiloader, args, logger)
 
 		if (epoch+1) > 10:

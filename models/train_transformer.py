@@ -112,7 +112,7 @@ def infer_epoch(model, dataloader, args, logger):
 			for i in range(pred.shape[1]):
 				pred[:,i,0] = (model(src, pred, src_mask, tgt_mask)[:,i]).detach()
 			
-			loss = loss_function(pred, tgt)
+			loss = loss_function(pred, tgt.squeeze(2))
 			total_loss += loss.item()/total_idx
 		
 	time_e = time.time()

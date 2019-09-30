@@ -109,8 +109,7 @@ def infer_epoch(model, dataloader, args, logger):
 			tgt_mask = subsequent_mask(tgt.shape[1]).to(device=device,dtype=dtype)
 			for i in range(pred.shape[1]):
 				pred[:,i,0] = (model(src, pred, src_mask, tgt_mask)[:,i]).detach()
-			
-			loss = loss_function(pred, tgt.squeeze(2))
+			loss = loss_function(pred, tgt)
 			total_loss += loss.item()/total_idx
 
 	time_e = time.time()
@@ -163,8 +162,8 @@ if __name__ == '__main__':
 		lr = optimizer.param_groups[0]['lr']
 		logger.debug('[{:s}] Epoch {:03d}, Learning rate: {}'.format(args.model, epoch+1, lr))
  
-		loss_df.iloc[epoch,0] = train_epoch(model, trainloader, optimizer, args, logger)
-		loss_df.iloc[epoch,1] = eval_epoch(model, valiloader, args, logger)
+		# loss_df.iloc[epoch,0] = train_epoch(model, trainloader, optimizer, args, logger)
+		# loss_df.iloc[epoch,1] = eval_epoch(model, valiloader, args, logger)
 		loss_df.iloc[epoch,2] = infer_epoch(model, valiloader, args, logger)
 
 		if (epoch+1) > 10:

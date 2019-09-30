@@ -29,7 +29,7 @@ class CIKMDataset(Dataset):
 
     def __getitem__(self, idx):
         assert idx < self.__len__(), 'Index is out of the range of all data!'
-        data = np.load(self.filepath[idx])[:,3]
+        data = np.load(self.filepath[idx])[:,3]/256
         self.sample = {'inputs': data[:5], 'targets': data[5:]}
 
         if self.transform:

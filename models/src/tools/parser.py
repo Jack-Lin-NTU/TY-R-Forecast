@@ -83,6 +83,7 @@ def get_args():
     # tw forecast size (400x400)
     parser.add_argument('--I-size', metavar='', type=int, default=150, help='The height of inputs (default: 150)')
     parser.add_argument('--F-size', metavar='', type=int, default=150, help='The height of targets (default: 150)')
+    parser.add_argument('--dataset', metavar='', type=str, default='CWB', help='DATASET (default: CWB)')
 
     parser.add_argument('--weather-list', metavar='', action='append', default=[],
                         help='Weather list. (default: [])')
@@ -159,6 +160,9 @@ def get_args():
     args.params_folder = os.path.join(args.params_folder, args.model.upper())
 
     size = '{}X{}'.format(args.F_shape[0], args.F_shape[1])
+
+    args.result_folder = os.path.join(args.result_folder, args.dataset.upper())
+    args.params_folder = os.path.join(args.params_folder, args.dataset.upper())
 
     if args.weather_list == []:
         args.result_folder = os.path.join(args.result_folder, 'RAD')

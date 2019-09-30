@@ -37,7 +37,7 @@ def train_epoch(model, dataloader, optimizer, args, logger):
 		pred = model(src, tgt, src_mask, tgt_mask)
 		
 		optimizer.zero_grad()
-		
+
 		loss = loss_function(pred, tgt.squeeze(2))
 		loss.backward()
 		
@@ -111,7 +111,7 @@ def infer_epoch(model, dataloader, args, logger):
 				pred[:,i,0] = (model(src, pred, src_mask, tgt_mask)[:,i]).detach()
 			
 			loss = loss_function(pred, tgt.squeeze(2))
-			total_loss += loss.item()/total_idx
+			total_loss += loss.item()/total_idxㄖ
 		
 	time_e = time.time()
 	time_step = (time_e-time_s)/60

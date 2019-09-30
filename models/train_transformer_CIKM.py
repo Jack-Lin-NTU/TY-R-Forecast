@@ -46,7 +46,7 @@ def train_epoch(model, dataloader, optimizer, args, logger):
 		tmp_loss += loss.item()/(total_idx//5)
 		total_loss += loss.item()/total_idx
 		
-		if (idx+1) % (total_idx//3) == 0:
+		if (idx+1) % (total_idx//5) == 0:
 			logger.debug('[{:s}] Training Process: {:d}/{:d}, Loss = {:.2f}'.format(args.model, idx+1, total_idx, tmp_loss))
 			tmp_loss = 0
 			

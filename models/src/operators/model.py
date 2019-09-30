@@ -1,15 +1,16 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from src.utils.utils import make_layers
+from src.tools.utils import make_layers
 
 
 class Encoder(nn.Module):
-    def __init__(self, subnets, rnns):
+    def __init__(self, subnets, rnns, seq_len):
         super().__init__()
         assert len(subnets)==len(rnns)
 
         self.blocks = len(subnets)
+        self.seq_len = seq_len
 
         for index, (subnet, rnn) in enumerate(zip(subnets, rnns), 1):
             setattr(self, 'stage'+str(index), subnet)
@@ -20,7 +21,7 @@ class Encoder(nn.Module):
         input_ = torch.reshape(input_, (-1, input_channel, height, width))
         input_ = subnet(input_)
         input_ = torch.reshape(input_, (batch_size, seq_number, input_.shape[1], input_.shape[2], input_.shape[3]))
-        outputs_stage, state_stage = rnn(input_, None)
+        outputs_stage, state_stage = rnn(input_, None, self.seq_len)
 
         return outputs_stage, state_stage
 
@@ -80,6 +81,6 @@ def get_model(args):
     IN_LEN = args.I_nframes
     PRED_LEN = args.F_nframes
     encoder_elements, forecaster_elements = get_cells(args.model)
-    encoder = Encoder(subnets=encoder_elements[0], rnns=encoder_elements[1])
+    encoder = Encoder(subnets=encoder_elements[0], rnns=encoder_elements[1], seq_len=IN_LEN)
     forecaster = Forecaster(subnets=forecaster_elements[0], rnns=forecaster_elements[1], seq_len=PRED_LEN)
     return EF(encoder, forecaster)

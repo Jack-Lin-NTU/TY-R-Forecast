@@ -16,11 +16,12 @@ class ConvGRUcell(nn.Module):
         self.out_gate = nn.Conv2d(c_input+c_hidden, c_hidden, kernel_size=3, stride=1, padding=1)
         self.dropout = nn.Dropout2d(0.1)
     
-    def forward(self, inputs=None, states=None, seq_len=6):
+    def forward(self, inputs=None, states=None, seq_num=6):
         '''
         inputs size: B*S*C*H*W
         states size: B*C*H*W
         '''
+        S = seq_num
         device = self.conv_gates.weight.device
         dtype = self.conv_gates.weight.dtype
 
@@ -30,7 +31,7 @@ class ConvGRUcell(nn.Module):
         
         outputs = []
 
-        for i in range(seq_len):
+        for i in range(S):
             if inputs is None:
                 i_shape = [states.shape[0], self.c_hidden] + list(states.shape[2:])
                 x = torch.zeros(i_shape).to(device=device, dtype=dtype)
@@ -87,17 +88,22 @@ class TrajGRUcell(nn.Module):
         if inputs is None:
             i_shape = [states.shape[0], self.c_input] + list(states.shape[2:])
             inputs = torch.zeros(i_shape).to(device=self.device, dtype=self.dtype)
+        
+        print(inputs.shape, states.shape)
+        if inputs.shape[-1] != states.shape[-1]:
+            breakpoint()
         flows = self.flow_conv(torch.cat([inputs, states], dim=1))
         flows = torch.split(flows, 2, dim=1)
         return flows
     
-    def forward(self, inputs=None, states=None, seq_len=6):
+    def forward(self, inputs=None, states=None, seq_num=6):
+        S = seq_num
         self.device = self.ret.weight.device
         self.dtype = self.ret.weight.dtype
-
         if states is None:
             h_shape = [inputs.shape[0], self.c_hidden] + list(inputs.shape[3:])
             states = torch.zeros(h_shape).to(device=self.device, dtype=self.dtype)
+
         if inputs is not None:
             B, S, C, H, W = inputs.shape
             i2h = self.i2h(torch.reshape(inputs, (-1, C, H, W)))
@@ -110,7 +116,7 @@ class TrajGRUcell(nn.Module):
         
         prev_h = states
         outputs = []
-        for i in range(seq_len):
+        for i in range(S):
             if inputs is not None:
                 flows = self._flow_generator(inputs[:,i], prev_h)
             else:

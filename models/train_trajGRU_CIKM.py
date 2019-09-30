@@ -1,10 +1,9 @@
 import os
 import time
 import datetime as dt
-# import matplotlib.pyplot as plt
-# import seaborn as sns
 
 import numpy as np
+import pandas as pd
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -14,7 +13,7 @@ from torchvision import transforms
 from src.tools.parser import get_args
 from src.tools.loss import Loss
 from src.tools.utils import save_model, get_logger
-from src.dataseters.GRUs import TyDataset, ToTensor
+from src.dataseters.CIKM import CIKMDataset, ToTensor
 from src.operators.model import get_model
 
 def train_epoch(model, dataloader, optimizer, args, logger):
@@ -41,10 +40,10 @@ def train_epoch(model, dataloader, optimizer, args, logger):
 
         optimizer.step()
 
-        tmp_loss += loss.item()/(total_idx//3)
+        tmp_loss += loss.item()/(total_idx//5)
         total_loss += loss.item()/total_idx
 
-        if (idx+1) % (total_idx//3) == 0:
+        if (idx+1) % (total_idx//5) == 0:
             logger.debug('[{:s}] Training Process: {:d}/{:d}, Loss = {:.2f}'.format(args.model, idx+1, total_idx, tmp_loss))
             tmp_loss = 0
 
@@ -86,16 +85,7 @@ def eval_epoch(model, dataloader, args, logger):
     return total_loss
 
 if __name__ == '__main__':
-    settings = parser()
-    # print(settings.initial_args)
-    settings.initial_args.gpu = 0
-    settings.initial_args.I_size = 150
-    settings.initial_args.F_size = 150
-    settings.initial_args.batch_size = 8
-    settings.initial_args.max_epochs = 100
-    settings.initial_args.lr = 0.0001
-    settings.initial_args.model = 'trajGRU'
-    args = settings.get_args()
+    args = get_args()
 
     torch.cuda.set_device(args.gpu)
     np.random.seed(args.seed)
@@ -110,8 +100,8 @@ if __name__ == '__main__':
     transform = transforms.Compose([ToTensor()])
 
     # training and validating data
-    trainset = TyDataset(args, train=True, transform=transform)
-    valiset = TyDataset(args, train=False, transform=transform)
+    trainset = CIKMDataset(train=True, test=False, args=args, transform=transform)
+    valiset = CIKMDataset(train=False, test=False, args=args, transform=transform)
 
     # dataloader
     train_kws = {'num_workers': 4, 'pin_memory': True} if args.able_cuda else {}

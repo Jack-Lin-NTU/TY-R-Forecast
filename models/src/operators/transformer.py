@@ -231,7 +231,7 @@ class PositionEncodeing(nn.Module):
         # shape: (H*W)/2
         div_term = torch.exp(torch.arange(0, H*W, 2, dtype=torch.float) * -(math.log(10000.0) / (H*W)))
         pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)[:,:pe[:, 1::2].shape[1]]
         # shape: 1 x max_len x (H*W)
         pe = pe.reshape(-1,H,W).unsqueeze(0).unsqueeze(2)
         self.register_buffer('pe', pe)
@@ -240,14 +240,14 @@ class PositionEncodeing(nn.Module):
         x = x + self.pe[:, :x.shape[1]]
         return self.dropout(x)
 
-def make_model(H, W, input_channel=1, d_channel=1, d_channel_ff=3, N=6, h=8, dropout=0.1, load_params=None):
+def make_model(H, W, input_num=6, target_num=18,input_channel=1, d_channel=1, d_channel_ff=3, N=6, h=8, dropout=0.1, load_params=None):
     ''' Helper: Construct a model from hyperparameters. '''
     c = copy.deepcopy
     # attention layer
     attn = MultiHeadedAttention(h, d_channel)
     # CNN feedforward layer
-    encnnff = PositionwiseCNN(d_channel, d_channel_ff, dropout, groups=6)
-    decnnff = PositionwiseCNN(d_channel, d_channel_ff, dropout, groups=18)
+    encnnff = PositionwiseCNN(d_channel, d_channel_ff, dropout, groups=input_num)
+    decnnff = PositionwiseCNN(d_channel, d_channel_ff, dropout, groups=target_num)
     # position encoding layer
     position = PositionEncodeing(H, W, dropout)
     model = EncoderDecoder(

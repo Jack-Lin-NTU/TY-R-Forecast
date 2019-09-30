@@ -23,22 +23,22 @@ class Loss():
             self.loss = self._mae
 
     def _mse(self, x, y):
-        return torch.sum((x-y)**2)
+        return torch.sum((x-y)**2) / x.shape[0] / x.shape[1]
 
     def _mae(self, x, y):
-        return torch.sum(torch.abs(x-y))
+        return torch.sum(torch.abs(x-y)) / x.shape[0] / x.shape[1]
 
     def _bmse(self, x, y):
         w = torch.clone(y)
         for i in range(len(self.weights)):
             w[w < self.value_list[i]] = self.weights[i]
-        return torch.sum(w*((y-x)** 2)) / x.shape[1]
+        return torch.sum(w*((y-x)** 2)) / x.shape[0] / x.shape[1]
 
     def _bmae(self, x, y):
         w = torch.clone(y)
         for i in range(len(self.weights)):
             w[w < self.value_list[i]] = self.weights[i]
-        return torch.sum(w*(abs(y - x))) / x.shape[1]
+        return torch.sum(w*(abs(y - x))) / x.shape[0] / x.shape[1]
 
     def __call__ (self, outputs, targets):
         return self.loss(outputs, targets)

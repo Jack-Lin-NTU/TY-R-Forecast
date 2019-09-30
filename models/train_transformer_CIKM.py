@@ -3,8 +3,6 @@ import time
 import datetime as dt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 import torch
 import torch.nn as nn
@@ -16,7 +14,7 @@ from torchvision import transforms
 from src.tools.parser import get_args
 from src.tools.loss import Loss
 from src.tools.utils import save_model, get_logger
-from src.dataseters.GRUs import TyDataset, ToTensor, Normalize
+from src.dataseters.CIKM import CIKMDataset, ToTensor
 from src.operators.transformer import *
 
 def train_epoch(model, dataloader, optimizer, args, logger):
@@ -33,7 +31,7 @@ def train_epoch(model, dataloader, optimizer, args, logger):
 
 	for idx, data in enumerate(dataloader,0):
 		src = data['inputs'].to(device=device, dtype=dtype)
-		tgt = data['targets'].to(device=device, dtype=dtype).unsqueeze(2)
+		tgt = data['targets'].to(device=device, dtype=dtype)
 		src_mask = torch.ones(1, src.shape[1]).to(device=device, dtype=dtype)
 		tgt_mask = subsequent_mask(tgt.shape[1]).to(device=device, dtype=dtype)
 		pred = model(src, tgt, src_mask, tgt_mask)
@@ -74,7 +72,7 @@ def eval_epoch(model, dataloader, args, logger):
 	with torch.no_grad():
 		for idx, data in enumerate(dataloader,0):
 			src = data['inputs'].to(device=device,dtype=dtype)
-			tgt = data['targets'].to(device=device,dtype=dtype).unsqueeze(2)
+			tgt = data['targets'].to(device=device,dtype=dtype)
 			src_mask = torch.ones(1, src.shape[1]).to(device=device,dtype=dtype)
 			tgt_mask = subsequent_mask(tgt.shape[1]).to(device=device,dtype=dtype)
 			pred = model(src, tgt, src_mask, tgt_mask)
@@ -105,14 +103,14 @@ def infer_epoch(model, dataloader, args, logger):
 	with torch.no_grad():
 		for idx, data in enumerate(dataloader,0):
 			src = data['inputs'].to(device=device,dtype=dtype)
-			tgt = data['targets'].to(device=device,dtype=dtype).unsqueeze(2)
+			tgt = data['targets'].to(device=device,dtype=dtype)
 			pred = torch.zeros_like(tgt).to(device=device,dtype=dtype)
 			src_mask = torch.ones(1, src.shape[1]).to(device=device,dtype=dtype)
 			tgt_mask = subsequent_mask(tgt.shape[1]).to(device=device,dtype=dtype)
 			for i in range(pred.shape[1]):
 				pred[:,i,0] = (model(src, pred, src_mask, tgt_mask)[:,i]).detach()
 			
-			loss = loss_function(pred, tgt)
+			loss = loss_function(pred, tgt.squeeze(2))
 			total_loss += loss.item()/total_idx
 		
 	time_e = time.time()
@@ -123,14 +121,6 @@ def infer_epoch(model, dataloader, args, logger):
 	return total_loss
 if __name__ == '__main__':
 	args = get_args()
-	# print(settings.initial_args)
-	# settings.initial_args.gpu = 0
-	# settings.initial_args.I_size = 150
-	# settings.initial_args.F_size = 150
-	# settings.initial_args.batch_size = 3
-	# settings.initial_args.max_epochs = 100
-	# args = settings.get_args()
-	# args.weight_decay = 0.2
 	torch.cuda.set_device(args.gpu)
 	np.random.seed(args.seed)
 	torch.manual_seed(args.seed)
@@ -144,8 +134,10 @@ if __name__ == '__main__':
 		transform = transforms.Compose([ToTensor()])
 
 	# training and validating data
-	trainset = TyDataset(args, train=True, transform=transform)
-	valiset = TyDataset(args, train=False, transform=transform)
+	trainset = CIKMDataset(train=True, test=False, args=args, transform=transform)
+	valiset = CIKMDataset(train=False, test=False, args=args, transform=transform)
+	testset = CIKMDataset(train=False, test=True, args=args, transform=transform)
+
 
 	# dataloader
 	train_kws = {'num_workers': 4, 'pin_memory': True} if args.able_cuda else {}
@@ -153,9 +145,9 @@ if __name__ == '__main__':
 
 	trainloader = DataLoader(dataset=trainset, batch_size=args.batch_size, shuffle=True, **train_kws)
 	valiloader = DataLoader(dataset=valiset, batch_size=args.batch_size, shuffle=False, **test_kws)
-	# testloader = DataLoader(dataset=valiset, batch_size=args.batch_size, shuffle=False, **test_kws)
+	testloader = DataLoader(dataset=testset, batch_size=args.batch_size, shuffle=False, **test_kws)
 
-	model = make_model(H=args.I_size, W=args.I_size, input_channel=1, d_channel=5, d_channel_ff=10, dropout=args.dropout) \
+	model = make_model(H=args.I_size, W=args.I_size, input_num=5, target_num=10, input_channel=1, d_channel=5, d_channel_ff=10, dropout=args.dropout) \
 						.to(device=args.device, dtype=args.value_dtype)
 
 	optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
